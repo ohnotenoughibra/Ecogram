@@ -216,20 +216,48 @@ export default function SkillBalance({ showSuggestions = true, compact = false }
         </div>
       )}
 
-      {/* Suggestions for weakest topic */}
-      {showSuggestions && weakestTopic && totalGames > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-            <span>💡</span>
-            Suggested {topicInfo[weakestTopic].label} Games to Add
-          </h4>
-          <div className="space-y-2">
-            {gameSuggestions[weakestTopic].slice(0, 2).map((suggestion, i) => (
-              <GameSuggestionCard key={i} suggestion={suggestion} topic={weakestTopic} />
-            ))}
+      {/* Suggestions for weakest topic - filtered based on library */}
+      {showSuggestions && weakestTopic && totalGames > 0 && (() => {
+        // Filter out suggestions that are similar to existing games
+        const existingGameNames = games.map(g => g.name.toLowerCase());
+        const existingSkills = games.flatMap(g => g.skills || []).map(s => s.toLowerCase());
+
+        const filteredSuggestions = gameSuggestions[weakestTopic].filter(suggestion => {
+          // Check if a similar game already exists
+          const suggestionName = suggestion.name.toLowerCase();
+          const hasSimilarName = existingGameNames.some(name =>
+            name.includes(suggestionName) || suggestionName.includes(name.split(' ')[0])
+          );
+          // Check if the core concept is already covered
+          const suggestionWords = suggestionName.split(' ');
+          const hasOverlappingConcept = existingSkills.some(skill =>
+            suggestionWords.some(word => word.length > 3 && skill.includes(word))
+          );
+          return !hasSimilarName && !hasOverlappingConcept;
+        });
+
+        // If all suggestions are filtered, show first 2 anyway with "variation" label
+        const suggestionsToShow = filteredSuggestions.length > 0
+          ? filteredSuggestions.slice(0, 2)
+          : gameSuggestions[weakestTopic].slice(0, 2);
+
+        return (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <span>💡</span>
+              Suggested {topicInfo[weakestTopic].label} Games to Add
+              {filteredSuggestions.length === 0 && (
+                <span className="text-xs text-gray-400">(variations of existing)</span>
+              )}
+            </h4>
+            <div className="space-y-2">
+              {suggestionsToShow.map((suggestion, i) => (
+                <GameSuggestionCard key={i} suggestion={suggestion} topic={weakestTopic} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

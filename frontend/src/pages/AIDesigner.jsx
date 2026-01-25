@@ -106,13 +106,30 @@ export default function AIDesigner() {
     }
   }, []);
 
-  // Generate skill level variations
+  // Generate skill level variations (only missing levels)
   const generateVariations = async (game) => {
+    // Calculate missing levels
+    const getBaseName = (name) => name.replace(/^(Beginner: |Advanced: )/, '').trim();
+    const baseName = getBaseName(game.name);
+    const relatedGames = games.filter(g => getBaseName(g.name) === baseName);
+    const existingLevels = relatedGames.map(g => g.difficulty || 'intermediate');
+    const missingLevels = ['beginner', 'intermediate', 'advanced'].filter(
+      level => !existingLevels.includes(level)
+    );
+
+    if (missingLevels.length === 0) {
+      showToast('All variations already exist!', 'info');
+      return;
+    }
+
     setLoadingVariations(true);
     try {
-      const response = await api.post('/ai/generate-variations', { game });
+      const response = await api.post('/ai/generate-variations', {
+        game,
+        missingLevels
+      });
       setGeneratedVariations(response.data.allVariations);
-      showToast('Variations generated!', 'success');
+      showToast(`Generated ${missingLevels.length} variation(s)!`, 'success');
       // Auto-scroll to show variations
       setTimeout(() => {
         const variationsSection = document.getElementById('generated-variations');

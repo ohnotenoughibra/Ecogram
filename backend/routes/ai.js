@@ -1410,11 +1410,16 @@ router.post('/check-duplicates', protect, async (req, res) => {
 // @access  Private
 router.post('/generate-variations', protect, async (req, res) => {
   try {
-    const { game, targetDifficulty } = req.body;
+    const { game, targetDifficulty, missingLevels } = req.body;
 
     if (!game || !game.name) {
       return res.status(400).json({ message: 'Game information is required' });
     }
+
+    // Determine which levels to generate
+    const levelsToGenerate = missingLevels && missingLevels.length > 0
+      ? missingLevels
+      : (targetDifficulty ? [targetDifficulty] : ['beginner', 'intermediate', 'advanced']);
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
@@ -1502,20 +1507,22 @@ router.post('/generate-variations', protect, async (req, res) => {
     };
 
     if (!apiKey) {
-      // Generate template-based variation
-      const variation = generateTemplateVariation(game, targetDifficulty || 'intermediate');
+      // Generate template-based variation for only the requested levels
+      const allVariations = {};
+      levelsToGenerate.forEach(level => {
+        allVariations[level] = generateTemplateVariation(game, level);
+      });
+
       return res.json({
-        variation,
+        variation: allVariations[levelsToGenerate[0]],
         source: 'template',
-        allVariations: targetDifficulty ? null : {
-          beginner: generateTemplateVariation(game, 'beginner'),
-          intermediate: generateTemplateVariation(game, 'intermediate'),
-          advanced: generateTemplateVariation(game, 'advanced')
-        }
+        allVariations,
+        generatedLevels: levelsToGenerate
       });
     }
 
     // Use Claude for smarter variation generation
+    const levelsDescription = levelsToGenerate.map(l => l.toUpperCase()).join(', ');
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -1533,37 +1540,43 @@ For each difficulty level:
 - INTERMEDIATE: Standard pace, moderate complexity, balanced offense/defense
 - ADVANCED: Competition pace, complex scenarios, chained techniques, disadvantaged starts
 
-Return a JSON object with this structure:
+Return a JSON object with ONLY the requested levels: ${levelsDescription}
+Example structure:
 {
-  "beginner": { full game object for beginner level },
-  "intermediate": { full game object for intermediate level },
-  "advanced": { full game object for advanced level }
+  "${levelsToGenerate[0]}": { full game object }${levelsToGenerate.length > 1 ? `,\n  "${levelsToGenerate[1]}": { full game object }` : ''}${levelsToGenerate.length > 2 ? `,\n  "${levelsToGenerate[2]}": { full game object }` : ''}
 }
 
 Each game object should have: name, topic, topPlayer, bottomPlayer, coaching, skills, gameType, difficulty, aiMetadata (with startPosition, constraints, winConditions, progressions, pedagogicalNote)`,
         messages: [
           {
             role: 'user',
-            content: `Create beginner, intermediate, and advanced variations of this training game:
+            content: `Create ${levelsDescription} variation(s) of this training game:
 
 Name: ${game.name}
 Topic: ${game.topic}
+Current Difficulty: ${game.difficulty || 'intermediate'}
 Top Player: ${game.topPlayer}
 Bottom Player: ${game.bottomPlayer}
 Coaching: ${game.coaching}
 Skills: ${(game.skills || []).join(', ')}
 
-Keep the core learning objective but adjust complexity, pace, and constraints for each level.`
+ONLY generate these levels: ${levelsDescription}. Keep the core learning objective but adjust complexity, pace, and constraints appropriately.`
           }
         ]
       })
     });
 
     if (!response.ok) {
-      const variation = generateTemplateVariation(game, targetDifficulty || 'intermediate');
+      // Fallback to template for requested levels
+      const allVariations = {};
+      levelsToGenerate.forEach(level => {
+        allVariations[level] = generateTemplateVariation(game, level);
+      });
       return res.json({
-        variation,
+        variation: allVariations[levelsToGenerate[0]],
         source: 'template',
+        allVariations,
+        generatedLevels: levelsToGenerate,
         apiError: true
       });
     }
@@ -1576,28 +1589,42 @@ Keep the core learning objective but adjust complexity, pace, and constraints fo
       const jsonMatch = textContent.match(/\{[\s\S]*\}/);
       variations = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(textContent);
 
-      // Ensure all levels exist
-      ['beginner', 'intermediate', 'advanced'].forEach(level => {
+      // Ensure only requested levels exist, fill with templates if needed
+      levelsToGenerate.forEach(level => {
         if (!variations[level]) {
           variations[level] = generateTemplateVariation(game, level);
         }
         variations[level].aiGenerated = true;
         variations[level].difficulty = level;
       });
+
+      // Remove any levels we didn't request
+      Object.keys(variations).forEach(key => {
+        if (!levelsToGenerate.includes(key)) {
+          delete variations[key];
+        }
+      });
     } catch (parseError) {
       console.error('Failed to parse variations:', parseError);
-      const variation = generateTemplateVariation(game, targetDifficulty || 'intermediate');
+      // Fallback to template for requested levels
+      const allVariations = {};
+      levelsToGenerate.forEach(level => {
+        allVariations[level] = generateTemplateVariation(game, level);
+      });
       return res.json({
-        variation,
+        variation: allVariations[levelsToGenerate[0]],
         source: 'template',
+        allVariations,
+        generatedLevels: levelsToGenerate,
         parseError: true
       });
     }
 
     res.json({
-      variation: targetDifficulty ? variations[targetDifficulty] : variations.intermediate,
+      variation: variations[levelsToGenerate[0]],
       source: 'claude',
-      allVariations: variations
+      allVariations: variations,
+      generatedLevels: levelsToGenerate
     });
   } catch (error) {
     console.error('Generate variations error:', error);
