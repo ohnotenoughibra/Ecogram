@@ -210,11 +210,18 @@ body {
   }
 }
 
-/* Floating action button */
+/* Floating action button - positioned above bottom nav on mobile */
 .fab {
-  @apply fixed bottom-6 right-6 w-14 h-14 bg-primary-600 text-white rounded-full
+  @apply fixed right-4 sm:right-6 w-14 h-14 bg-primary-600 text-white rounded-full
          shadow-lg hover:bg-primary-700 hover:shadow-xl transition-all duration-200
          flex items-center justify-center z-40;
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); /* Above bottom nav */
+}
+
+@media (min-width: 1024px) {
+  .fab {
+    bottom: 1.5rem; /* Normal position on desktop (no bottom nav) */
+  }
 }
 
 .fab:hover {
@@ -248,4 +255,30 @@ body {
   @apply inline-flex items-center justify-center px-2 py-0.5 text-xs font-mono
          bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600
          rounded shadow-sm;
+}
+
+/* Safe area handling for mobile devices with notches/home bars */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Mobile viewport fix - prevent content from being hidden behind system bars */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Hide scrollbars on mobile for horizontal scroll containers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

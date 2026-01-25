@@ -232,7 +232,7 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
   );
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Audio element for timer end sound */}
       <audio ref={audioRef} preload="auto">
         <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleVEpNYzn7IVEGRx4zfKDQhQOZLrshk0hF1yt7INHHRRkseqOUCMRZbXvjUkgC2ax8YtMIBBptPCKSx8OaLXyjkoeDmi28Y5LHw5otfCOSx8OaLXwjksfDWm28I1JHg1otfCOSx4NabXwjkkeDmi28I5KHg5otfCOSR4OaLbwjkkeDWm28I1JHg1otfCOSR4NaLXwjkkeDWi28I5JHQ1ptvCNSR4NaLbwjUkeDWi18I1KHg1otvCOSR4NaLXwjkkeDWm18I5JHQ5otvCNSR4NaLbwjUkeDWm28I1JHg1otfCOSR4NabXwjUkeDWi28I5JHQ5ptvCNSR4NaLbwjUkeDWm28I1JHw1otfCOSR4NaLXwjkkeDWm18I5JHQ1otfCOSh0OaLXwjUkeDWm28I1JHg1ptfCNSR4NaLXwjkkdDWm28I5JHQ5otfCNSR4NaLXwjkkeDWm28I5JHQ1ptvCNSR4NaLXwjUkeDmi28I1JHg5otfCNSR4OaLXwjUoeDWm28I1JHg1otfCNSR4NaLXwjUkeDWi18I5JHg1ptfCNSR4OaLXwjkkdDWm28I1JHg1otvCNSR4OaLXwjUkeDmi28I5JHQ1ptvCOSR4NaLXwjUkeDWi28I5JHQ5otfCOSR4NaLXwjkkdDWm18I5JHg1otvCNSR4OaLXwjUkeDWi28I5KHg1ptfCNSR4NaLXwjkkdDWi28I1JHg1ptvCNSR4NabXwjUkeDWi28I5JHQ5ptvCNSR4OaLXwjUkeDWi18I5JHg5otfCOSR4NaLXwjkkeDWi28I1JHg1ptvCOSR4NaLXwjkkeDWi28I5JHQ5ptvCNSR4NaLXwjkkdDmi28I5JHg1otvCNSR0OaLXwjUoeDWm28I5JHg1otfCNSR4NaLbwjUkeDWm18I5JHg1ptvCNSR4NaLXwjkkdDmi28I1JHg5otfCNSR4OaLXwjkkdDWm28I5JHQ1ptvCNSR4NaLXwjkkeDWm28I5JHQ1ptvCOSR4NaLXwjUkeDWm28I5JHQ1otvCNSR4OaLXwjUkeDWi28I5JHg1ptvCOSR4NaLXwjUkeDWm28I5JHQ5otfCNSR4OaLXwjUkeDWi28I5JHQ1ptvCNSR4OaLbwjUkeDWi28I5JHQ1ptvCNSR4NaLXwjUkeDWm28I1JHg1ptvCOSR4NaLXwjkkeDmi28I5JHQ5ptvCNSR4NaLXwjUkeDWm28I5JHQ1ptvCNSR4OaLXwjUkeDWi28I5JHQ5ptvCNSR4OaLbwjUkeDWi28I1JHw1ptvCOSR4NaLXwjUkeDWm28I5JHQ1otvCNSR4OaLXwjUkeDWi28I5JHQ5ptvCNSR4OaLXwjUkeDWm28I1JHg1ptvCOSR4NaLXwjkkeDWi28I5KHQ5otvCNSR4OaLXwjUkeDWi28I5JHQ5otvCNSR4NaLXwjUkeDWm28I5JHQ1otvCNSR4OaLXwjUkeDWi28I5KHQ5ptvCNSR4OaLXwjUkeDWi28I1JHg1ptvCNSR4OaLbwjUkeDWi28I5JHQ5ptvCNSR4OaLXwjUkeDWi28I5JHg1otvCNSR4OaLXwjkkeDWi28I5JHg1ptvCNSR4NaLXwjUkeDWi28I5JHQ5otvCNSR4NaLXwjkkeDWm28I5JHQ1otvCOSR4NaLXwjUkeDWm28I5JHg1otvCNSR4NaLXwjUkdDWm28I1JHg5ptvCNSR4NaLXwjUkeDWi28I5JHg1ptvCNSR4OaLXwjkkdDWm28I5JHg1otvCNSR0OaLXwjUkeDWi18I5JHQ1otvCNSR4OaLXwjkkeDWm28I5JHQ1otvCNSR4OaLXwjUkeDWm28I5JHg1otvCOSR4NaLXwjUoeDWi28I1JHg1ptvCNSR4NaLXwjkkdDWm28I5JHQ5ptvCNSR4OaLXwjUkeDWm28I5JHQ5otvCNSR4NaLXwjkkeDWi28I5JHQ1ptvCNSR4OaLXwjUkeDWm28I5JHQ5ptvCNSR4OaLbwjUkeDWi28I5JHQ1ptvCNSR4OaLXwjkkeDWi28I5JHQ1ptvCOSR4OaLXwjUkeDWm28I5JHQ1otvCNSR4OaLXwjkkdDWm28I5JHQ1otvCNSR4OaLXwjUkeDWi28I5JHQ==" type="audio/wav" />
@@ -249,12 +249,12 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
       </div>
 
       {/* Filters */}
-      <div className="card p-4">
-        <div className="flex flex-wrap gap-3 mb-3">
+      <div className="card p-3 sm:p-4">
+        <div className="flex flex-wrap gap-2 sm:gap-3 mb-3">
           <select
             value={filterTopic}
             onChange={(e) => setFilterTopic(e.target.value)}
-            className="input py-2 flex-1 min-w-[130px]"
+            className="input py-2 flex-1 min-w-[120px] text-sm sm:text-base"
           >
             <option value="">All Topics</option>
             <option value="offensive">Offensive ({games.filter(g => g.topic === 'offensive').length})</option>
@@ -265,48 +265,48 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
 
           <button
             onClick={() => setFavoritesOnly(!favoritesOnly)}
-            className={`chip ${favoritesOnly ? 'chip-active' : ''}`}
+            className={`chip text-sm ${favoritesOnly ? 'chip-active' : ''}`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${favoritesOnly ? 'text-yellow-400' : ''}`}>
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
             </svg>
-            Favorites
+            <span className="hidden sm:inline">Favorites</span>
           </button>
         </div>
 
-        {/* Game Type Filter */}
-        <div className="flex flex-wrap gap-2">
+        {/* Game Type Filter - horizontal scroll on mobile */}
+        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
           <button
             onClick={() => setFilterGameType('')}
-            className={`chip text-sm ${filterGameType === '' ? 'chip-active' : ''}`}
+            className={`chip text-xs sm:text-sm flex-shrink-0 ${filterGameType === '' ? 'chip-active' : ''}`}
           >
-            All Types
+            All
           </button>
           {Object.entries(gameTypeInfo).map(([value, info]) => (
             <button
               key={value}
               onClick={() => setFilterGameType(value)}
-              className={`chip text-sm ${filterGameType === value ? 'chip-active' : ''}`}
+              className={`chip text-xs sm:text-sm flex-shrink-0 ${filterGameType === value ? 'chip-active' : ''}`}
             >
               <span>{info.icon}</span>
               <span>{info.label}</span>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 hidden sm:inline">
                 ({games.filter(g => (g.gameType || 'main') === value).length})
               </span>
             </button>
           ))}
         </div>
 
-        <div className="flex items-center justify-end gap-2 text-sm text-gray-500 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-end gap-2 text-xs sm:text-sm text-gray-500 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
           {filteredGames.length} games available
         </div>
       </div>
 
       {/* Timer */}
-      <div className="card p-6">
-        {/* Timer display */}
-        <div className="relative flex items-center justify-center mb-6">
-          <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 100 100">
+      <div className="card p-4 sm:p-6">
+        {/* Timer display - smaller on mobile */}
+        <div className="relative flex items-center justify-center mb-4 sm:mb-6">
+          <svg className="w-36 h-36 sm:w-48 sm:h-48 transform -rotate-90" viewBox="0 0 100 100">
             <circle
               cx="50"
               cy="50"
@@ -330,25 +330,25 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
             />
           </svg>
           <div className="absolute flex flex-col items-center">
-            <span className={`text-5xl font-bold ${timeRemaining === 0 ? 'text-red-500 animate-pulse' : 'text-gray-900 dark:text-white'}`}>
+            <span className={`text-4xl sm:text-5xl font-bold ${timeRemaining === 0 ? 'text-red-500 animate-pulse' : 'text-gray-900 dark:text-white'}`}>
               {formatTime(timeRemaining)}
             </span>
             {rounds > 0 && (
-              <span className="text-sm text-gray-500 mt-1">
+              <span className="text-xs sm:text-sm text-gray-500 mt-1">
                 Round {rounds}
               </span>
             )}
           </div>
         </div>
 
-        {/* Timer duration selector */}
-        <div className="flex justify-center gap-2 mb-4">
+        {/* Timer duration selector - scrollable on mobile */}
+        <div className="flex justify-start sm:justify-center gap-1.5 sm:gap-2 mb-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[60, 120, 180, 300, 420].map(duration => (
             <button
               key={duration}
               onClick={() => setTimerDuration(duration)}
               disabled={isRunning}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 timerDuration === duration
                   ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -359,15 +359,15 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
           ))}
         </div>
 
-        {/* Timer controls */}
-        <div className="flex justify-center gap-3">
+        {/* Timer controls - responsive */}
+        <div className="flex justify-center gap-2 sm:gap-3">
           {!isRunning ? (
             <button
               onClick={startTimer}
               disabled={filteredGames.length === 0}
-              className="btn-primary px-8 py-3"
+              className="btn-primary px-6 sm:px-8 py-2.5 sm:py-3"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1 sm:mr-2">
                 <path fillRule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z" clipRule="evenodd" />
               </svg>
               {timeRemaining === 0 ? 'Restart' : 'Start'}
@@ -375,9 +375,9 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
           ) : (
             <button
               onClick={pauseTimer}
-              className="btn-secondary px-8 py-3"
+              className="btn-secondary px-6 sm:px-8 py-2.5 sm:py-3"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1 sm:mr-2">
                 <path fillRule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm5-2.25A.75.75 0 017.75 7h.5a.75.75 0 01.75.75v4.5a.75.75 0 01-.75.75h-.5a.75.75 0 01-.75-.75v-4.5zm4 0a.75.75 0 01.75-.75h.5a.75.75 0 01.75.75v4.5a.75.75 0 01-.75.75h-.5a.75.75 0 01-.75-.75v-4.5z" clipRule="evenodd" />
               </svg>
               Pause
@@ -386,7 +386,7 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
 
           <button
             onClick={resetTimer}
-            className="btn-secondary px-4 py-3"
+            className="btn-secondary px-3 sm:px-4 py-2.5 sm:py-3"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
@@ -400,14 +400,15 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
         className="card p-4 select-none"
         {...swipeHandlers}
       >
-        <div className="flex items-center justify-between mb-4">
+        {/* Header - stacks on small screens */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h2 className="font-semibold text-gray-900 dark:text-white">Current Game</h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             {currentGame && (
               <>
                 <button
                   onClick={copyGameToClipboard}
-                  className="btn-secondary px-3"
+                  className="btn-secondary px-2.5 sm:px-3 py-2"
                   title="Copy game details"
                 >
                   {copied ? (
@@ -423,7 +424,7 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
                 </button>
                 <button
                   onClick={skipGame}
-                  className="btn-secondary px-3"
+                  className="btn-secondary px-2.5 sm:px-3 py-2"
                   title="Skip this game"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -435,9 +436,9 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
             <button
               onClick={startNewRound}
               disabled={filteredGames.length === 0}
-              className="btn-primary"
+              className="btn-primary py-2 text-sm sm:text-base"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1 sm:mr-2">
                 <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
               </svg>
               New Round
@@ -620,12 +621,12 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
 
       {/* Session History & Actions */}
       {(sessionHistory.length > 0 || skippedGames.size > 0) && (
-        <div className="card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900 dark:text-white">
+        <div className="card p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 mb-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">
               Session: {sessionHistory.length} games
             </h3>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {skippedGames.size > 0 && (
                 <button
                   onClick={clearSkipped}
@@ -637,26 +638,26 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
               <button
                 onClick={saveAsSession}
                 disabled={sessionHistory.length === 0}
-                className="btn-secondary text-sm py-1.5 disabled:opacity-50"
+                className="btn-secondary text-xs sm:text-sm py-1 sm:py-1.5 disabled:opacity-50"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
                   <path fillRule="evenodd" d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h12.5c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0016.25 5h-4.836a.25.25 0 01-.177-.073L9.823 3.513A1.75 1.75 0 008.586 3H3.75zM3.75 9A1.75 1.75 0 002 10.75v4.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0018 15.25v-4.5A1.75 1.75 0 0016.25 9H3.75z" clipRule="evenodd" />
                 </svg>
-                Save Session
+                Save
               </button>
             </div>
           </div>
 
           {/* Games list */}
           {sessionHistory.length > 0 && (
-            <div className="space-y-1 max-h-40 overflow-y-auto">
+            <div className="space-y-1 max-h-32 sm:max-h-40 overflow-y-auto">
               {sessionHistory.map((game, idx) => (
                 <div
                   key={`${game._id}-${idx}`}
-                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 py-1"
+                  className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 py-1"
                 >
                   <span className="text-xs text-gray-400 w-5">{idx + 1}.</span>
-                  <span className={`w-2 h-2 rounded-full ${topicColors[game.topic]}`} />
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${topicColors[game.topic]}`} />
                   <span className="truncate">{game.name}</span>
                 </div>
               ))}
@@ -664,9 +665,6 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
           )}
         </div>
       )}
-
-      {/* Bottom padding for mobile nav */}
-      <div className="h-20 lg:h-0"></div>
     </div>
   );
 }

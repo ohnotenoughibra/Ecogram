@@ -107,7 +107,7 @@ function MainLayout({ children }) {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
       <Navbar />
-      <main className="pb-24 lg:pb-8">
+      <main className="pb-28 lg:pb-8" style={{ paddingBottom: 'max(7rem, calc(5rem + env(safe-area-inset-bottom, 0px)))' }}>
         {children}
       </main>
 
