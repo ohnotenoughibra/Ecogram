@@ -19,6 +19,28 @@ const categoryColors = {
   custom: { bg: 'bg-gray-100 dark:bg-gray-800', border: 'border-gray-300 dark:border-gray-600', text: 'text-gray-700 dark:text-gray-400' }
 };
 
+// Custom color options for topics
+const customColorOptions = [
+  { name: 'Red', value: '#ef4444', bg: 'bg-red-500' },
+  { name: 'Orange', value: '#f97316', bg: 'bg-orange-500' },
+  { name: 'Amber', value: '#f59e0b', bg: 'bg-amber-500' },
+  { name: 'Yellow', value: '#eab308', bg: 'bg-yellow-500' },
+  { name: 'Lime', value: '#84cc16', bg: 'bg-lime-500' },
+  { name: 'Green', value: '#22c55e', bg: 'bg-green-500' },
+  { name: 'Emerald', value: '#10b981', bg: 'bg-emerald-500' },
+  { name: 'Teal', value: '#14b8a6', bg: 'bg-teal-500' },
+  { name: 'Cyan', value: '#06b6d4', bg: 'bg-cyan-500' },
+  { name: 'Sky', value: '#0ea5e9', bg: 'bg-sky-500' },
+  { name: 'Blue', value: '#3b82f6', bg: 'bg-blue-500' },
+  { name: 'Indigo', value: '#6366f1', bg: 'bg-indigo-500' },
+  { name: 'Violet', value: '#8b5cf6', bg: 'bg-violet-500' },
+  { name: 'Purple', value: '#a855f7', bg: 'bg-purple-500' },
+  { name: 'Fuchsia', value: '#d946ef', bg: 'bg-fuchsia-500' },
+  { name: 'Pink', value: '#ec4899', bg: 'bg-pink-500' },
+  { name: 'Rose', value: '#f43f5e', bg: 'bg-rose-500' },
+  { name: 'Gray', value: '#6b7280', bg: 'bg-gray-500' }
+];
+
 export default function SessionCalendar({
   sessions,
   onScheduleSession,
@@ -202,10 +224,17 @@ export default function SessionCalendar({
       {currentTopic && (
         <div
           className={`p-4 rounded-xl border-2 ${categoryColors[currentTopic.category]?.bg || categoryColors.custom.bg} ${categoryColors[currentTopic.category]?.border || categoryColors.custom.border}`}
+          style={currentTopic.color ? { borderLeftWidth: '6px', borderLeftColor: currentTopic.color } : {}}
         >
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
+                {currentTopic.color && (
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: currentTopic.color }}
+                  />
+                )}
                 <span className={`text-xs font-medium uppercase ${categoryColors[currentTopic.category]?.text || categoryColors.custom.text}`}>
                   Current Focus
                 </span>
@@ -304,10 +333,17 @@ export default function SessionCalendar({
                       setEditingTopic(topic);
                       setShowTopicModal(true);
                     }}
-                    className={`text-xs px-2 py-1 rounded-full border ${colors.bg} ${colors.border} ${colors.text} hover:opacity-80 transition-opacity`}
+                    className={`text-xs px-2 py-1 rounded-full border ${colors.bg} ${colors.border} ${colors.text} hover:opacity-80 transition-opacity flex items-center gap-1.5`}
+                    style={topic.color ? { borderColor: topic.color } : {}}
                   >
+                    {topic.color && (
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: topic.color }}
+                      />
+                    )}
                     {topic.name}
-                    <span className="ml-1 opacity-60">
+                    <span className="opacity-60">
                       ({new Date(topic.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(topic.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
                     </span>
                   </button>
@@ -457,6 +493,11 @@ export default function SessionCalendar({
             });
             setShowTopicModal(true);
           }}
+          onEditTopic={(topic) => {
+            setShowDayModal(false);
+            setEditingTopic(topic);
+            setShowTopicModal(true);
+          }}
         />
       )}
 
@@ -478,7 +519,7 @@ export default function SessionCalendar({
   );
 }
 
-function DayDetailModal({ date, sessions, topic, allSessions, onClose, onSchedule, onStart, onEdit, onAddTopic }) {
+function DayDetailModal({ date, sessions, topic, allSessions, onClose, onSchedule, onStart, onEdit, onAddTopic, onEditTopic }) {
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
   const isToday = date.toDateString() === new Date().toDateString();
@@ -524,13 +565,38 @@ function DayDetailModal({ date, sessions, topic, allSessions, onClose, onSchedul
 
           {/* Topic for this day */}
           {topic ? (
-            <div className={`p-3 rounded-lg mb-4 border ${topicColors.bg} ${topicColors.border}`}>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-medium uppercase ${topicColors.text}`}>
-                  Training Focus
-                </span>
+            <div
+              className={`p-3 rounded-lg mb-4 border ${topicColors.bg} ${topicColors.border} cursor-pointer hover:shadow-md transition-shadow`}
+              onClick={() => onEditTopic && onEditTopic(topic)}
+              style={topic.color ? { borderLeftWidth: '4px', borderLeftColor: topic.color } : {}}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {topic.color && (
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: topic.color }}
+                    />
+                  )}
+                  <span className={`text-xs font-medium uppercase ${topicColors.text}`}>
+                    Training Focus
+                  </span>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditTopic && onEditTopic(topic);
+                  }}
+                  className="text-xs text-gray-500 hover:text-primary-500 flex items-center gap-1"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                    <path d="M13.488 2.513a1.75 1.75 0 00-2.475 0L6.75 6.774a2.75 2.75 0 00-.596.892l-.848 2.047a.75.75 0 00.98.98l2.047-.848a2.75 2.75 0 00.892-.596l4.261-4.262a1.75 1.75 0 000-2.474z" />
+                    <path d="M4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0114 9v2.25A2.75 2.75 0 0111.25 14h-6.5A2.75 2.75 0 012 11.25v-6.5A2.75 2.75 0 014.75 2H7a.75.75 0 010 1.5H4.75z" />
+                  </svg>
+                  Edit
+                </button>
               </div>
-              <h4 className="font-medium text-gray-900 dark:text-white">
+              <h4 className="font-medium text-gray-900 dark:text-white mt-1">
                 {topic.name}
               </h4>
               {topic.description && (
@@ -702,6 +768,8 @@ function TopicModal({ topic, onClose, onSave, onDelete, recentTopics = [], recen
   const [name, setName] = useState(isEditing ? topic.name : '');
   const [description, setDescription] = useState(isEditing ? topic.description || '' : '');
   const [category, setCategory] = useState(isEditing ? topic.category : 'custom');
+  const [color, setColor] = useState(isEditing ? topic.color || '' : '');
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [startDate, setStartDate] = useState(
     topic?.startDate
       ? new Date(topic.startDate).toISOString().split('T')[0]
@@ -772,6 +840,7 @@ function TopicModal({ topic, onClose, onSave, onDelete, recentTopics = [], recen
       name,
       description,
       category,
+      color: color || null,
       startDate,
       endDate,
       goals: goals.split(',').map(g => g.trim()).filter(Boolean)
@@ -834,6 +903,76 @@ function TopicModal({ topic, onClose, onSave, onDelete, recentTopics = [], recen
                     <span className="truncate">{cat.label}</span>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Custom Color Picker */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="label mb-0">Custom Color (optional)</label>
+                {color && (
+                  <button
+                    type="button"
+                    onClick={() => setColor('')}
+                    className="text-xs text-gray-500 hover:text-red-500"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowColorPicker(!showColorPicker)}
+                  className="w-full flex items-center gap-3 p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  {color ? (
+                    <>
+                      <span
+                        className="w-6 h-6 rounded-full flex-shrink-0 border-2 border-white shadow"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {customColorOptions.find(c => c.value === color)?.name || 'Custom color'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-6 h-6 rounded-full flex-shrink-0 border-2 border-dashed border-gray-300 dark:border-gray-600" />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Choose a custom color
+                      </span>
+                    </>
+                  )}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 ml-auto text-gray-400">
+                    <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 011.06 0L8 8.94l2.72-2.72a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 7.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+                  </svg>
+                </button>
+
+                {showColorPicker && (
+                  <div className="absolute z-10 mt-1 w-full p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                    <div className="grid grid-cols-6 gap-2">
+                      {customColorOptions.map((colorOption) => (
+                        <button
+                          key={colorOption.value}
+                          type="button"
+                          onClick={() => {
+                            setColor(colorOption.value);
+                            setShowColorPicker(false);
+                          }}
+                          className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${
+                            color === colorOption.value ? 'ring-2 ring-offset-2 ring-primary-500' : ''
+                          }`}
+                          style={{ backgroundColor: colorOption.value }}
+                          title={colorOption.name}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                      This color will be shown on the calendar
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
