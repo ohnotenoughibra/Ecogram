@@ -1423,85 +1423,113 @@ router.post('/generate-variations', protect, async (req, res) => {
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
-    // Template-based variation generation
+    // Template-based variation generation - Modern grappling & CLA principles
     const generateTemplateVariation = (baseGame, difficulty) => {
+      const topic = baseGame.topic || 'control';
+      const skills = baseGame.skills || [];
+      const originalName = baseGame.name.replace(/^(Beginner: |Advanced: )/, '');
+
+      // Analyze the game content to make specific variations
+      const hasLegLocks = /leg|heel|ankle|knee|50.?50|ashi|saddle|inside\s?sankaku/i.test(JSON.stringify(baseGame));
+      const hasGuard = /guard|closed|open|half|butterfly|dlr|rdlr|lasso|spider|x.?guard/i.test(JSON.stringify(baseGame));
+      const hasPassing = /pass|smash|pressure|torreando|knee.?cut|slice|body.?lock|over.?under/i.test(JSON.stringify(baseGame));
+      const hasBack = /back|rear|rnc|collar|turtle|seatbelt/i.test(JSON.stringify(baseGame));
+      const hasSubs = /sub|choke|arm|triangle|kimura|guillotine|darce|anaconda|strangle/i.test(JSON.stringify(baseGame));
+
       const difficultyModifiers = {
         beginner: {
-          namePrefix: 'Beginner: ',
+          namePrefix: 'Foundation: ',
+          // CLA: Reduce task complexity, increase environmental stability
           constraints: [
-            'Start from a stable, non-threatening position',
-            'Both players move at 50% speed',
-            'Reset after each successful attempt',
-            'Coach can pause to give feedback'
-          ],
+            'Start from the exact position described - no movement before "go"',
+            `Partner gives ${hasSubs ? '30%' : '40%'} resistance - enough to feel real but allows success`,
+            'Reset immediately when position is lost - repetition builds pattern recognition',
+            'No submissions until position is secured for 3 seconds',
+            hasLegLocks ? 'Inside position only - no outside heel hooks' : null,
+            hasGuard ? 'Grips must be established before attacking' : null,
+            hasPassing ? 'Control head or hips before advancing' : null
+          ].filter(Boolean),
           progressions: [
-            'Walk through the position with no resistance',
-            'Add light, predictable resistance',
-            'Increase to moderate resistance with pauses'
+            'Rep 1-5: Walk through with verbal cues, partner creates the "puzzle"',
+            'Rep 6-10: Add timing - partner moves but telegraphs',
+            'Rep 11-15: Increase resistance, maintain same timing windows'
           ],
-          topMod: 'Move slowly and deliberately. Focus on proper technique over speed. Allow your partner to work the position. Give clear feedback.',
-          bottomMod: 'Move slowly and deliberately. Focus on proper technique over speed. Ask questions if unsure. Focus on one concept at a time.',
-          coachingMod: 'Break down each movement. Emphasize correct body position before adding resistance. Celebrate small wins.'
+          topMod: `Focus on the FEELING of correct weight distribution and frames. ${hasPassing ? 'Keep chest-to-chest connection, hips low.' : ''} ${hasBack ? 'Maintain seatbelt, keep hooks shallow initially.' : ''} Your partner should feel controlled but not crushed.`,
+          bottomMod: `Focus on recognizing the TIMING windows. ${hasGuard ? 'Feel when their weight shifts - that\'s your moment.' : ''} ${hasLegLocks ? 'Learn to identify inside vs outside position before attacking.' : ''} Ask partner to pause when you miss a window.`,
+          coachingMod: `CLA Focus: Perception-action coupling. Athletes should recognize patterns before reacting. ${hasSubs ? 'Submission is the last step - control comes first.' : ''} Use external focus cues: "feel their weight shift" not "move your hips."`
         },
         intermediate: {
           namePrefix: '',
           constraints: baseGame.aiMetadata?.constraints || [
-            'Standard rules apply',
-            'Full speed allowed',
-            'Reset on position loss'
-          ],
+            'Start from described position - brief hand fight allowed',
+            `Partner gives ${hasSubs ? '70%' : '60%'} resistance with realistic reactions`,
+            'Position resets after sweep/pass/escape - track success rate',
+            hasLegLocks ? 'All leg lock entries legal, controlled heel hooks' : null,
+            hasGuard ? 'Reguarding allowed - punishment for failed pass' : null,
+            hasPassing ? 'Must advance position, not just maintain' : null,
+            hasBack ? 'Escape = reset, submission = point' : null
+          ].filter(Boolean),
           progressions: baseGame.aiMetadata?.progressions || [
-            'Basic technique',
-            'Add combinations',
-            'Full situational sparring'
+            'Phase 1: Focus on primary attack chain',
+            'Phase 2: Add secondary options when primary is defended',
+            'Phase 3: Full positional sparring from the position'
           ],
           topMod: '',
           bottomMod: '',
           coachingMod: ''
         },
         advanced: {
-          namePrefix: 'Advanced: ',
+          namePrefix: 'Competition: ',
+          // CLA: Increase task complexity, add performer constraints
           constraints: [
-            'Start from disadvantaged position',
-            'Time pressure (30-second rounds)',
-            'Opponent actively counters',
-            'Chain to next technique required'
-          ],
+            'Start from a WORSE version of the position (partially escaped, grips broken)',
+            'Partner at 90-100% - active hunting and counters',
+            'Time limit: 30 seconds to achieve objective or lose',
+            hasLegLocks ? 'Full leg lock game - heel hooks, calf slicers, toe holds' : null,
+            hasGuard ? 'Passer can disengage - you must re-engage within 3 sec' : null,
+            hasPassing ? 'Guard player can stand up - must pass before they disengage' : null,
+            hasBack ? 'Must finish or transition - riding time limited to 10 sec' : null,
+            hasSubs ? 'Submission chains required - single attack = reset' : null,
+            'Fatigue simulation: Start after 10 burpees or during last round'
+          ].filter(Boolean),
           progressions: [
-            'Start with opponent having slight advantage',
-            'Add time pressure and fatigue element',
-            'Multiple opponents rotating in'
+            'Phase 1: Competition scenario - bad position recovery',
+            'Phase 2: Chain attacks - A fails → B fails → C',
+            'Phase 3: Shark tank - fresh opponent every 30 seconds'
           ],
-          topMod: 'Apply full resistance and active counters. Chain attacks together. Punish mistakes immediately. Work at competition intensity.',
-          bottomMod: 'Apply full resistance and active counters. Chain attacks together. Punish mistakes immediately. Work at competition intensity.',
-          coachingMod: 'Focus on timing windows, common counters, and recovery when technique fails. Address competition-specific scenarios.'
+          topMod: `Gordon Ryan mindset: Position before submission, but constant forward pressure. ${hasPassing ? 'Body lock passing - remove space systematically.' : ''} ${hasBack ? 'Short hooks, tight seatbelt, immediate hand fighting for collar.' : ''} ${hasSubs ? 'Attack in combinations - never single attacks.' : ''} Punish every mistake within 2 seconds.`,
+          bottomMod: `Craig Jones mindset: Always have a threat, even from bottom. ${hasLegLocks ? 'Every defensive position should threaten a leg entry.' : ''} ${hasGuard ? 'Broken guard → immediate leg pummeling or stand up.' : ''} Make them pay for every advancement. Counter-attack windows are small - commit fully.`,
+          coachingMod: `Competition preparation: This is about decision-making under fatigue and pressure. ${hasSubs ? 'Modern submission grappling rewards chains - drill A→B→C sequences.' : ''} ${hasLegLocks ? 'Leg lock defense is as important as offense - drill both sides.' : ''} External chaos (time pressure, fatigue) exposes technical gaps - note them.`
         }
       };
 
       const mod = difficultyModifiers[difficulty];
 
       return {
-        name: `${mod.namePrefix}${baseGame.name}`.replace(/^(Beginner: |Advanced: )*(Beginner: |Advanced: )/, '$2'),
+        name: `${mod.namePrefix}${originalName}`,
         topic: baseGame.topic,
-        topPlayer: mod.topMod ? `${baseGame.topPlayer}\n\n${mod.topMod}` : baseGame.topPlayer,
-        bottomPlayer: mod.bottomMod ? `${baseGame.bottomPlayer}\n\n${mod.bottomMod}` : baseGame.bottomPlayer,
-        coaching: mod.coachingMod ? `${baseGame.coaching}\n\n${mod.coachingMod}` : baseGame.coaching,
-        skills: baseGame.skills || [],
+        topPlayer: mod.topMod ? `${baseGame.topPlayer}\n\n**${difficulty.toUpperCase()} FOCUS:**\n${mod.topMod}` : baseGame.topPlayer,
+        bottomPlayer: mod.bottomMod ? `${baseGame.bottomPlayer}\n\n**${difficulty.toUpperCase()} FOCUS:**\n${mod.bottomMod}` : baseGame.bottomPlayer,
+        coaching: mod.coachingMod ? `${baseGame.coaching || ''}\n\n**${difficulty.toUpperCase()} COACHING:**\n${mod.coachingMod}` : baseGame.coaching,
+        skills: [...skills, difficulty === 'advanced' ? 'competition prep' : difficulty === 'beginner' ? 'fundamentals' : null].filter(Boolean),
         gameType: baseGame.gameType || 'main',
         difficulty: difficulty,
         aiGenerated: true,
         aiMetadata: {
-          startPosition: baseGame.aiMetadata?.startPosition || 'As described',
+          startPosition: difficulty === 'advanced'
+            ? `DEGRADED: ${baseGame.aiMetadata?.startPosition || 'Position partially compromised'}`
+            : baseGame.aiMetadata?.startPosition || 'As described',
           constraints: mod.constraints,
           winConditions: baseGame.aiMetadata?.winConditions || {
-            top: 'Achieve the objective',
-            bottom: 'Defend or counter'
+            top: difficulty === 'advanced' ? 'Submit or advance within time limit' : 'Achieve positional objective',
+            bottom: difficulty === 'advanced' ? 'Escape, reverse, or counter-submit' : 'Defend or improve position'
           },
           progressions: mod.progressions,
-          pedagogicalNote: `${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} variation of "${baseGame.name}". ` +
-            (difficulty === 'beginner' ? 'Focus on learning the movements without pressure.' :
-             difficulty === 'advanced' ? 'Competition-level intensity with realistic resistance.' :
-             'Standard training intensity.')
+          pedagogicalNote: difficulty === 'beginner'
+            ? `Foundation work for "${originalName}". CLA principle: Reduce task constraints to allow pattern recognition. Success rate should be 70-80%. If lower, reduce partner resistance.`
+            : difficulty === 'advanced'
+            ? `Competition prep for "${originalName}". Based on modern grappling meta - continuous pressure, chain attacks, and time pressure. This should feel like a hard competition round.`
+            : `Standard training for "${originalName}". Balanced offense/defense with realistic resistance.`
         }
       };
     };
@@ -1521,8 +1549,16 @@ router.post('/generate-variations', protect, async (req, res) => {
       });
     }
 
-    // Use Claude for smarter variation generation
+    // Use Claude for smarter variation generation with modern grappling principles
     const levelsDescription = levelsToGenerate.map(l => l.toUpperCase()).join(', ');
+
+    // Analyze game content for context-aware generation
+    const gameContent = JSON.stringify(game);
+    const hasLegLocks = /leg|heel|ankle|knee|50.?50|ashi|saddle|inside\s?sankaku/i.test(gameContent);
+    const hasGuard = /guard|closed|open|half|butterfly|dlr|rdlr|lasso|spider|x.?guard/i.test(gameContent);
+    const hasPassing = /pass|smash|pressure|torreando|knee.?cut|slice|body.?lock|over.?under/i.test(gameContent);
+    const hasBack = /back|rear|rnc|collar|turtle|seatbelt/i.test(gameContent);
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -1532,35 +1568,121 @@ router.post('/generate-variations', protect, async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 3000,
-        system: `You are an expert BJJ/NoGi grappling coach specializing in constraint-led training. You adapt training games for different skill levels while maintaining the core learning objective.
+        max_tokens: 4000,
+        system: `You are an elite NoGi grappling coach who has trained with John Danaher, Gordon Ryan, and Craig Jones. You specialize in the Constraints-Led Approach (CLA) to motor learning and modern submission grappling methodology.
 
-For each difficulty level:
-- BEGINNER: Slower pace, simpler constraints, more guidance, focus on understanding the position
-- INTERMEDIATE: Standard pace, moderate complexity, balanced offense/defense
-- ADVANCED: Competition pace, complex scenarios, chained techniques, disadvantaged starts
+## CORE PRINCIPLES
 
-Return a JSON object with ONLY the requested levels: ${levelsDescription}
-Example structure:
+**Constraints-Led Approach (CLA):**
+- Task constraints: Rules, scoring, time limits that shape behavior
+- Environmental constraints: Space, partners, equipment
+- Performer constraints: Skill level, fatigue, body type
+- Learning emerges from the interaction of these constraints
+- Use external focus cues ("feel their weight shift") not internal ("move your hips")
+
+**Modern Grappling Meta (Gordon Ryan, Craig Jones, Danaher):**
+- Position before submission, but always threaten
+- Systematic passing: Body lock, over-under, headquarters
+- Leg lock integration at all positions
+- Chain attacks: A→B→C, never single attempts
+- Back attacks: Short hooks, seatbelt control, collar hand fighting
+- Guard: Every position should have offensive and defensive options
+
+## DIFFICULTY LEVELS
+
+**BEGINNER (Foundation):**
+- CLA: Reduce task constraints, increase environmental stability
+- 30-50% resistance - enough to feel real, allows 70-80% success rate
+- Single concept focus - isolate the key movement pattern
+- Reset frequently - build pattern recognition through repetition
+- External cues only: "feel when..." not "do this..."
+- No time pressure - quality over quantity
+
+**INTERMEDIATE (Development):**
+- CLA: Standard task constraints, moderate environmental variability
+- 60-70% resistance with realistic reactions
+- Primary + secondary attack options
+- Position tracking - awareness of success/failure rate
+- Add combinations when primary is defended
+- Moderate time awareness
+
+**ADVANCED (Competition):**
+- CLA: Increase task complexity, add performer constraints (fatigue)
+- 90-100% resistance - partner actively hunting
+- Start from DEGRADED positions (partially escaped, grips broken)
+- 30-second time limits - decision making under pressure
+- Chain attacks required - single attacks = reset
+- Fatigue simulation - start tired or shark tank format
+- ${hasLegLocks ? 'Full leg lock game including heel hooks' : ''}
+- ${hasBack ? 'Finish or transition - limited riding time' : ''}
+
+## OUTPUT FORMAT
+
+Return ONLY a JSON object with the requested levels. Each variation should:
+1. Keep the EXACT same core technique/position
+2. Adjust constraints based on difficulty principles above
+3. Include specific, actionable instructions (not generic advice)
+4. Reference the original game's specific positions/techniques
+5. Add difficulty-appropriate modifications to top/bottom player instructions
+
 {
-  "${levelsToGenerate[0]}": { full game object }${levelsToGenerate.length > 1 ? `,\n  "${levelsToGenerate[1]}": { full game object }` : ''}${levelsToGenerate.length > 2 ? `,\n  "${levelsToGenerate[2]}": { full game object }` : ''}
-}
-
-Each game object should have: name, topic, topPlayer, bottomPlayer, coaching, skills, gameType, difficulty, aiMetadata (with startPosition, constraints, winConditions, progressions, pedagogicalNote)`,
+  "${levelsToGenerate[0]}": {
+    "name": "string (Prefix: Foundation/Competition for beginner/advanced)",
+    "topic": "offensive|defensive|control|transition",
+    "topPlayer": "Specific instructions with difficulty modifications",
+    "bottomPlayer": "Specific instructions with difficulty modifications",
+    "coaching": "CLA-focused coaching with external cues",
+    "skills": ["array", "of", "skills"],
+    "gameType": "warmup|main|cooldown",
+    "difficulty": "${levelsToGenerate[0]}",
+    "aiMetadata": {
+      "startPosition": "Exact position (degraded for advanced)",
+      "constraints": ["Specific rule 1", "Specific rule 2"],
+      "winConditions": {"top": "...", "bottom": "..."},
+      "progressions": ["Phase 1", "Phase 2", "Phase 3"],
+      "pedagogicalNote": "Why this variation works for this level"
+    }
+  }
+}`,
         messages: [
           {
             role: 'user',
-            content: `Create ${levelsDescription} variation(s) of this training game:
+            content: `Create ${levelsDescription} variation(s) of this training game. Keep the EXACT same technique/position but adjust for the difficulty level using CLA principles and modern grappling methodology.
 
-Name: ${game.name}
-Topic: ${game.topic}
-Current Difficulty: ${game.difficulty || 'intermediate'}
-Top Player: ${game.topPlayer}
-Bottom Player: ${game.bottomPlayer}
-Coaching: ${game.coaching}
-Skills: ${(game.skills || []).join(', ')}
+## ORIGINAL GAME
 
-ONLY generate these levels: ${levelsDescription}. Keep the core learning objective but adjust complexity, pace, and constraints appropriately.`
+**Name:** ${game.name}
+**Topic:** ${game.topic}
+**Current Difficulty:** ${game.difficulty || 'intermediate'}
+
+**Top Player Instructions:**
+${game.topPlayer}
+
+**Bottom Player Instructions:**
+${game.bottomPlayer}
+
+**Coaching Notes:**
+${game.coaching || 'None provided'}
+
+**Skills:** ${(game.skills || []).join(', ') || 'General'}
+
+**Current Constraints:** ${game.aiMetadata?.constraints?.join(', ') || 'Standard rules'}
+
+**Start Position:** ${game.aiMetadata?.startPosition || 'As described'}
+
+---
+
+Generate ONLY these levels: ${levelsDescription}
+
+For each level:
+- Keep the same core position/technique (${game.name})
+- Adjust resistance levels, time pressure, and complexity
+- Make instructions SPECIFIC to this game (reference the actual positions)
+- Include CLA-based coaching cues
+- ${hasLegLocks ? 'Include appropriate leg lock considerations' : ''}
+- ${hasGuard ? 'Include guard-specific progressions' : ''}
+- ${hasPassing ? 'Include passing-specific pressure concepts' : ''}
+- ${hasBack ? 'Include back control specifics (hooks, seatbelt, finishes)' : ''}`
           }
         ]
       })
