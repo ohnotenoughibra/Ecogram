@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import api from '../utils/api';
 
 // Topics with descriptions based on CLA (Constraints-Led Approach) principles
 const topicInfo = {
@@ -233,27 +234,193 @@ export default function SkillBalance({ showSuggestions = true, compact = false }
   );
 }
 
-// Game suggestion card component
+// Game suggestion card component with AI generation
 function GameSuggestionCard({ suggestion, topic }) {
+  const { createGame, showToast, fetchGames } = useApp();
   const info = topicInfo[topic];
+  const [generating, setGenerating] = useState(false);
+  const [generatedGame, setGeneratedGame] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  const generateGame = async () => {
+    setGenerating(true);
+    try {
+      const prompt = `${suggestion.name}: ${suggestion.description}. Key constraint: ${suggestion.constraints}`;
+      const response = await api.post('/ai/generate', { prompt });
+      const game = {
+        ...response.data.game,
+        topic: topic // Ensure correct topic
+      };
+      setGeneratedGame(game);
+      setShowPreview(true);
+    } catch (err) {
+      showToast('Failed to generate game', 'error');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleAddToLibrary = async () => {
+    if (!generatedGame) return;
+    setAdding(true);
+    try {
+      const result = await createGame(generatedGame);
+      if (result.success) {
+        showToast(`"${generatedGame.name}" added to library!`, 'success');
+        setShowPreview(false);
+        setGeneratedGame(null);
+        fetchGames();
+      }
+    } catch (err) {
+      showToast('Failed to add game', 'error');
+    } finally {
+      setAdding(false);
+    }
+  };
 
   return (
-    <div className={`p-3 rounded-lg ${info.lightColor} border border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition-colors cursor-pointer`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className={`font-medium text-sm ${info.textColor}`}>{suggestion.name}</p>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{suggestion.description}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1 italic">
-            Constraint: {suggestion.constraints}
-          </p>
+    <>
+      <div className={`p-3 rounded-lg ${info.lightColor} border border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition-colors`}>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <p className={`font-medium text-sm ${info.textColor}`}>{suggestion.name}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{suggestion.description}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1 italic">
+              Constraint: {suggestion.constraints}
+            </p>
+          </div>
+          <button
+            onClick={generateGame}
+            disabled={generating}
+            className="ml-2 p-1.5 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow transition-shadow disabled:opacity-50"
+            title="Generate with AI"
+          >
+            {generating ? (
+              <span className="w-4 h-4 block border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${info.textColor}`}>
+                <path d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1zM5.05 3.05a.75.75 0 011.06 0l1.062 1.06A.75.75 0 116.11 5.173L5.05 4.11a.75.75 0 010-1.06zm9.9 0a.75.75 0 010 1.06l-1.06 1.062a.75.75 0 01-1.062-1.061l1.061-1.06a.75.75 0 011.06 0zM3 8a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 013 8zm11 0a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 0114 8z" />
+                <path fillRule="evenodd" d="M10 5a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
         </div>
-        <button className="ml-2 p-1.5 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow transition-shadow">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${info.textColor}`}>
-            <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-          </svg>
-        </button>
       </div>
-    </div>
+
+      {/* Quick Preview Modal */}
+      {showPreview && generatedGame && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowPreview(false)}>
+          <div className="bg-white dark:bg-surface-dark rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className={`p-4 ${info.lightColor} border-b border-gray-200 dark:border-gray-700`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-3 h-3 rounded-full ${info.color}`} />
+                  <span className={`text-sm font-medium ${info.textColor}`}>
+                    {info.label} Game
+                  </span>
+                </div>
+                <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded">
+                  AI Generated
+                </span>
+              </div>
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white mt-2">
+                {generatedGame.name}
+              </h3>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[50vh]">
+              {/* Start Position */}
+              {generatedGame.aiMetadata?.startPosition && (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Start Position</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{generatedGame.aiMetadata.startPosition}</p>
+                </div>
+              )}
+
+              {/* Players */}
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">Top Player</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3">{generatedGame.topPlayer}</p>
+                </div>
+                <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mb-1">Bottom Player</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3">{generatedGame.bottomPlayer}</p>
+                </div>
+              </div>
+
+              {/* Constraints */}
+              {generatedGame.aiMetadata?.constraints && (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Constraints</p>
+                  <div className="flex flex-wrap gap-1">
+                    {generatedGame.aiMetadata.constraints.slice(0, 4).map((c, i) => (
+                      <span key={i} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Coaching */}
+              {generatedGame.coaching && (
+                <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-1">Coaching Notes</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300">{generatedGame.coaching}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowPreview(false);
+                  setGeneratedGame(null);
+                }}
+                className="btn-secondary flex-1"
+              >
+                Discard
+              </button>
+              <button
+                onClick={generateGame}
+                disabled={generating}
+                className="btn-ghost px-3"
+                title="Regenerate"
+              >
+                {generating ? (
+                  <span className="w-4 h-4 block border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin" />
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={handleAddToLibrary}
+                disabled={adding}
+                className="btn-primary flex-1"
+              >
+                {adding ? (
+                  <>
+                    <span className="w-4 h-4 mr-2 block border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                    </svg>
+                    Add to Library
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

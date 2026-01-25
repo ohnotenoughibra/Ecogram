@@ -1007,144 +1007,369 @@ export default function AIDesigner() {
 
       {/* Variations Mode */}
       {mode === 'variations' && (
-        <div className="card p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Generate Skill Level Variations
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Select a game from your library to create beginner, intermediate, and advanced versions.
-          </p>
+        <div className="space-y-6">
+          {/* Games Needing Variations Section */}
+          {(() => {
+            // Find games that are missing variations
+            const getBaseName = (name) => name.replace(/^(Beginner: |Advanced: )/, '').trim();
+            const gamesWithVariationStatus = games?.map(game => {
+              const baseName = getBaseName(game.name);
+              const relatedGames = games.filter(g => getBaseName(g.name) === baseName);
+              const existingLevels = relatedGames.map(g => g.difficulty || 'intermediate');
+              const missingLevels = ['beginner', 'intermediate', 'advanced'].filter(
+                level => !existingLevels.includes(level)
+              );
+              return { ...game, baseName, existingLevels, missingLevels, relatedCount: relatedGames.length };
+            }) || [];
 
-          {/* Game selector */}
-          <div className="mb-4">
-            <label className="label">Select a Game</label>
-            <select
-              value={selectedGameForVariation?._id || ''}
-              onChange={(e) => {
-                const game = games?.find(g => g._id === e.target.value);
-                setSelectedGameForVariation(game);
-                setGeneratedVariations(null);
-              }}
-              className="input"
-            >
-              <option value="">Choose a game...</option>
-              {games?.map(game => (
-                <option key={game._id} value={game._id}>
-                  {game.name} ({game.difficulty || 'intermediate'})
-                </option>
-              ))}
-            </select>
-          </div>
+            // Group by base name and find games needing variations
+            const uniqueBaseGames = [];
+            const seenBaseNames = new Set();
+            gamesWithVariationStatus.forEach(game => {
+              if (!seenBaseNames.has(game.baseName) && game.missingLevels.length > 0) {
+                seenBaseNames.add(game.baseName);
+                uniqueBaseGames.push(game);
+              }
+            });
 
-          {selectedGameForVariation && (
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4">
-              <h3 className="font-medium text-gray-900 dark:text-white mb-2">
-                {selectedGameForVariation.name}
-              </h3>
-              <div className="flex flex-wrap gap-2 mb-2">
-                <span className={`badge badge-${selectedGameForVariation.topic}`}>
-                  {selectedGameForVariation.topic}
-                </span>
-                <span className={`badge ${
-                  selectedGameForVariation.difficulty === 'beginner' ? 'bg-green-100 text-green-700' :
-                  selectedGameForVariation.difficulty === 'advanced' ? 'bg-red-100 text-red-700' :
-                  'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {selectedGameForVariation.difficulty || 'intermediate'}
-                </span>
-              </div>
-              {selectedGameForVariation.skills?.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {selectedGameForVariation.skills.map((skill, idx) => (
-                    <span key={idx} className="chip text-xs">#{skill}</span>
+            const gamesNeedingVariations = uniqueBaseGames.slice(0, 5);
+
+            return gamesNeedingVariations.length > 0 && (
+              <div className="card p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-purple-500">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+                  </svg>
+                  <h3 className="font-medium text-gray-900 dark:text-white">Games Needing Variations</h3>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  These games only have {gamesNeedingVariations[0]?.relatedCount === 1 ? 'one difficulty level' : 'some difficulty levels'}. Add variations to serve all skill levels.
+                </p>
+                <div className="space-y-2">
+                  {gamesNeedingVariations.map(game => (
+                    <button
+                      key={game._id}
+                      onClick={() => {
+                        setSelectedGameForVariation(game);
+                        setGeneratedVariations(null);
+                      }}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        selectedGameForVariation?._id === game._id
+                          ? 'border-purple-500 bg-purple-100 dark:bg-purple-900/30'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">{game.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500">Has:</span>
+                            {game.existingLevels.map(level => (
+                              <span key={level} className={`text-xs px-1.5 py-0.5 rounded ${
+                                level === 'beginner' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                level === 'advanced' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}>
+                                {level}
+                              </span>
+                            ))}
+                            <span className="text-xs text-gray-400">|</span>
+                            <span className="text-xs text-gray-500">Missing:</span>
+                            {game.missingLevels.map(level => (
+                              <span key={level} className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                                {level}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-gray-400">
+                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </button>
                   ))}
                 </div>
-              )}
+              </div>
+            );
+          })()}
+
+          <div className="card p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Generate Skill Level Variations
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Create beginner and advanced versions of your games. Only missing difficulty levels will be generated.
+            </p>
+
+            {/* Game selector */}
+            <div className="mb-4">
+              <label className="label">Select a Game</label>
+              <select
+                value={selectedGameForVariation?._id || ''}
+                onChange={(e) => {
+                  const game = games?.find(g => g._id === e.target.value);
+                  setSelectedGameForVariation(game);
+                  setGeneratedVariations(null);
+                }}
+                className="input"
+              >
+                <option value="">Choose a game...</option>
+                {games?.map(game => (
+                  <option key={game._id} value={game._id}>
+                    {game.name} ({game.difficulty || 'intermediate'})
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
 
-          <button
-            onClick={() => selectedGameForVariation && generateVariations(selectedGameForVariation)}
-            disabled={!selectedGameForVariation || loadingVariations}
-            className="btn-primary w-full"
-          >
-            {loadingVariations ? (
-              <>
-                <span className="spinner mr-2" />
-                Generating Variations...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
-                  <path d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" />
-                </svg>
-                Generate All Variations
-              </>
-            )}
-          </button>
+            {selectedGameForVariation && (() => {
+              const getBaseName = (name) => name.replace(/^(Beginner: |Advanced: )/, '').trim();
+              const baseName = getBaseName(selectedGameForVariation.name);
+              const relatedGames = games.filter(g => getBaseName(g.name) === baseName);
+              const existingLevels = relatedGames.map(g => g.difficulty || 'intermediate');
+              const missingLevels = ['beginner', 'intermediate', 'advanced'].filter(
+                level => !existingLevels.includes(level)
+              );
 
-          {/* Generated Variations Display */}
-          {generatedVariations && (
-            <div id="generated-variations" className="mt-6 space-y-4 animate-fade-in">
-              <h3 className="font-medium text-gray-900 dark:text-white">Generated Variations</h3>
-              {['beginner', 'intermediate', 'advanced'].map(level => {
-                const variation = generatedVariations[level];
-                if (!variation) return null;
-                const levelColors = {
-                  beginner: { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', badge: 'bg-green-500' },
-                  intermediate: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800', badge: 'bg-yellow-500' },
-                  advanced: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', badge: 'bg-red-500' }
-                };
-                const colors = levelColors[level];
-
-                return (
-                  <div key={level} className={`p-4 rounded-lg border ${colors.bg} ${colors.border}`}>
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`w-2 h-2 rounded-full ${colors.badge}`} />
-                          <span className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
-                            {level}
-                          </span>
-                        </div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white">
-                          {variation.name}
-                        </h4>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          const result = await createGame(variation);
-                          if (result.success) {
-                            showToast(`${level.charAt(0).toUpperCase() + level.slice(1)} version added!`, 'success');
-                          }
-                        }}
-                        className="btn-primary text-xs"
-                      >
-                        Add to Library
-                      </button>
+              return (
+                <>
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4">
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                      {selectedGameForVariation.name}
+                    </h3>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <span className={`badge badge-${selectedGameForVariation.topic}`}>
+                        {selectedGameForVariation.topic}
+                      </span>
                     </div>
 
-                    {variation.aiMetadata?.pedagogicalNote && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                        {variation.aiMetadata.pedagogicalNote}
+                    {/* Variation status */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className="text-xs text-gray-500">Existing levels:</span>
+                      {['beginner', 'intermediate', 'advanced'].map(level => {
+                        const exists = existingLevels.includes(level);
+                        return (
+                          <span
+                            key={level}
+                            className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                              exists
+                                ? level === 'beginner' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                  level === 'advanced' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                  'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                            }`}
+                          >
+                            {exists && (
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                                <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                            {level}
+                          </span>
+                        );
+                      })}
+                    </div>
+
+                    {missingLevels.length === 0 ? (
+                      <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                        </svg>
+                        All difficulty levels exist for this game!
+                      </p>
+                    ) : (
+                      <p className="text-sm text-purple-600 dark:text-purple-400">
+                        Will generate: {missingLevels.join(', ')} variations
                       </p>
                     )}
 
-                    {variation.aiMetadata?.constraints && (
-                      <div className="mb-2">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Key Constraints:</p>
-                        <ul className="text-xs text-gray-600 dark:text-gray-400 list-disc list-inside">
-                          {variation.aiMetadata.constraints.slice(0, 3).map((c, i) => (
-                            <li key={i}>{c}</li>
-                          ))}
-                        </ul>
+                    {selectedGameForVariation.skills?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {selectedGameForVariation.skills.map((skill, idx) => (
+                          <span key={idx} className="chip text-xs">#{skill}</span>
+                        ))}
                       </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          )}
+
+                  <button
+                    onClick={() => generateVariations(selectedGameForVariation)}
+                    disabled={loadingVariations || missingLevels.length === 0}
+                    className="btn-primary w-full"
+                  >
+                    {loadingVariations ? (
+                      <>
+                        <span className="spinner mr-2" />
+                        Generating {missingLevels.length} Variation{missingLevels.length !== 1 ? 's' : ''}...
+                      </>
+                    ) : missingLevels.length === 0 ? (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                        </svg>
+                        All Variations Complete
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
+                          <path d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" />
+                        </svg>
+                        Generate Missing Variations ({missingLevels.length})
+                      </>
+                    )}
+                  </button>
+                </>
+              );
+            })()}
+
+            {/* Generated Variations Display - Review before adding */}
+            {generatedVariations && (
+              <div id="generated-variations" className="mt-6 space-y-4 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-gray-900 dark:text-white">Review Generated Variations</h3>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    Click "Add to Library" to save each one
+                  </span>
+                </div>
+
+                <p className="text-sm text-gray-600 dark:text-gray-400 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  Review each variation below. Only add the ones that look good to your library.
+                </p>
+
+                {['beginner', 'intermediate', 'advanced'].map(level => {
+                  const variation = generatedVariations[level];
+                  if (!variation) return null;
+
+                  // Check if this level already exists
+                  const getBaseName = (name) => name.replace(/^(Beginner: |Advanced: )/, '').trim();
+                  const baseName = selectedGameForVariation ? getBaseName(selectedGameForVariation.name) : '';
+                  const alreadyExists = games.some(g =>
+                    getBaseName(g.name) === baseName && (g.difficulty || 'intermediate') === level
+                  );
+
+                  if (alreadyExists) return null;
+
+                  const levelColors = {
+                    beginner: { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', badge: 'bg-green-500', text: 'text-green-700 dark:text-green-400' },
+                    intermediate: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800', badge: 'bg-yellow-500', text: 'text-yellow-700 dark:text-yellow-400' },
+                    advanced: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', badge: 'bg-red-500', text: 'text-red-700 dark:text-red-400' }
+                  };
+                  const colors = levelColors[level];
+
+                  return (
+                    <div key={level} className={`p-4 rounded-lg border-2 ${colors.bg} ${colors.border}`}>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`w-2.5 h-2.5 rounded-full ${colors.badge}`} />
+                            <span className={`text-sm font-semibold uppercase ${colors.text}`}>
+                              {level} Version
+                            </span>
+                            <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded">
+                              NEW
+                            </span>
+                          </div>
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-lg">
+                            {variation.name}
+                          </h4>
+                        </div>
+                      </div>
+
+                      {variation.aiMetadata?.pedagogicalNote && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 italic">
+                          "{variation.aiMetadata.pedagogicalNote}"
+                        </p>
+                      )}
+
+                      {/* Show key differences */}
+                      <div className="grid md:grid-cols-2 gap-3 mb-3">
+                        <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Top Player Focus:</p>
+                          <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+                            {variation.topPlayer?.split('\n\n')[1] || variation.topPlayer?.substring(0, 100)}...
+                          </p>
+                        </div>
+                        <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Bottom Player Focus:</p>
+                          <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+                            {variation.bottomPlayer?.split('\n\n')[1] || variation.bottomPlayer?.substring(0, 100)}...
+                          </p>
+                        </div>
+                      </div>
+
+                      {variation.aiMetadata?.constraints && (
+                        <div className="mb-3">
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Key Constraints:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {variation.aiMetadata.constraints.slice(0, 4).map((c, i) => (
+                              <span key={i} className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded">
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <button
+                          onClick={async () => {
+                            const result = await createGame(variation);
+                            if (result.success) {
+                              showToast(`${level.charAt(0).toUpperCase() + level.slice(1)} version added!`, 'success');
+                              // Remove this variation from the generated list
+                              setGeneratedVariations(prev => {
+                                const updated = { ...prev };
+                                delete updated[level];
+                                // If all variations are added, clear
+                                if (Object.keys(updated).length === 0) return null;
+                                return updated;
+                              });
+                              fetchGames();
+                            }
+                          }}
+                          className="btn-primary flex-1"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
+                            <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                          </svg>
+                          Add to Library
+                        </button>
+                        <button
+                          onClick={() => {
+                            setGeneratedVariations(prev => {
+                              const updated = { ...prev };
+                              delete updated[level];
+                              if (Object.keys(updated).length === 0) return null;
+                              return updated;
+                            });
+                            showToast(`${level} variation discarded`, 'info');
+                          }}
+                          className="btn-ghost text-gray-500"
+                        >
+                          Skip
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Show when all variations have been processed */}
+                {generatedVariations && Object.keys(generatedVariations).every(level => {
+                  const getBaseName = (name) => name.replace(/^(Beginner: |Advanced: )/, '').trim();
+                  const baseName = selectedGameForVariation ? getBaseName(selectedGameForVariation.name) : '';
+                  return games.some(g => getBaseName(g.name) === baseName && (g.difficulty || 'intermediate') === level);
+                }) && (
+                  <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-8 h-8 mx-auto text-green-500 mb-2">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                    </svg>
+                    <p className="font-medium text-green-700 dark:text-green-400">All variations complete!</p>
+                    <p className="text-sm text-green-600 dark:text-green-500">Select another game to continue.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
