@@ -191,9 +191,27 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-2">
             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                {game.name}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                  {game.name}
+                </h3>
+                {game.videoUrl && (
+                  <span className="text-red-500" title="Has video reference">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                      <path d="M3 4.75A2.75 2.75 0 015.75 2h4.5A2.75 2.75 0 0113 4.75v.5h.25a.75.75 0 01.64 1.14l-2.5 4.06a.75.75 0 01-.64.36H5.25a.75.75 0 01-.64-.36l-2.5-4.06A.75.75 0 012.75 5.25H3v-.5z" />
+                      <path d="M3 8.354V11.25A2.75 2.75 0 005.75 14h4.5A2.75 2.75 0 0013 11.25V8.354l-1.572 2.555A2.25 2.25 0 019.51 12h-3.02a2.25 2.25 0 01-1.918-1.091L3 8.354z" />
+                    </svg>
+                  </span>
+                )}
+                {game.averageEffectiveness > 0 && (
+                  <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-0.5" title="Effectiveness rating">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                      <path fillRule="evenodd" d="M8 1.75a.75.75 0 01.692.462l1.41 3.393 3.664.293a.75.75 0 01.428 1.317l-2.791 2.39.853 3.575a.75.75 0 01-1.12.814L8 12.093l-3.136 1.9a.75.75 0 01-1.12-.814l.852-3.574-2.79-2.39a.75.75 0 01.427-1.318l3.663-.293 1.41-3.393A.75.75 0 018 1.75z" clipRule="evenodd" />
+                    </svg>
+                    {game.averageEffectiveness.toFixed(1)}
+                  </span>
+                )}
+              </div>
               <span className={`badge ${topicColors[game.topic]} mt-1`}>
                 {topicLabels[game.topic]}
               </span>
@@ -279,6 +297,39 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
                   <p className="text-sm text-yellow-600 dark:text-yellow-400 whitespace-pre-wrap">
                     {game.personalNotes}
                   </p>
+                </div>
+              )}
+
+              {/* Video Reference */}
+              {game.videoUrl && (
+                <div className="flex items-center gap-2">
+                  <a
+                    href={game.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm font-medium"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                      <path d="M3.25 4A2.25 2.25 0 001 6.25v7.5A2.25 2.25 0 003.25 16h7.5A2.25 2.25 0 0013 13.75v-7.5A2.25 2.25 0 0010.75 4h-7.5zM19 4.75a.75.75 0 00-1.28-.53l-3 3a.75.75 0 00-.22.53v4.5c0 .199.079.39.22.53l3 3a.75.75 0 001.28-.53V4.75z" />
+                    </svg>
+                    Watch Video Reference
+                  </a>
+                </div>
+              )}
+
+              {/* Effectiveness Rating */}
+              {game.averageEffectiveness > 0 && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-500">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                  </svg>
+                  <span>
+                    Effectiveness: {game.averageEffectiveness.toFixed(1)}/5
+                    <span className="text-gray-400 ml-1">
+                      ({game.effectivenessRatings?.length || 0} ratings)
+                    </span>
+                  </span>
                 </div>
               )}
 

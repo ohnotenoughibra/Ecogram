@@ -109,6 +109,25 @@ const gameSchema = new mongoose.Schema({
     type: String,
     enum: ['beginner', 'intermediate', 'advanced'],
     default: 'intermediate'
+  },
+  // Video reference for the game
+  videoUrl: {
+    type: String,
+    default: '',
+    maxlength: [500, 'Video URL cannot exceed 500 characters']
+  },
+  // Effectiveness tracking - average rating after each use
+  effectivenessRatings: [{
+    rating: { type: Number, min: 1, max: 5 },
+    sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session' },
+    notes: String,
+    date: { type: Date, default: Date.now }
+  }],
+  averageEffectiveness: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: 0
   }
 }, {
   timestamps: true

@@ -5,6 +5,8 @@ import { useApp } from '../context/AppContext';
 import Timer from '../components/Timer';
 import SessionTimer from '../components/SessionTimer';
 import DrillTimer from '../components/DrillTimer';
+import EffectivenessRating from '../components/EffectivenessRating';
+import SessionPrintShare from '../components/SessionPrintShare';
 import Loading from '../components/Loading';
 import api from '../utils/api';
 import {
@@ -47,6 +49,9 @@ export default function SessionView() {
   const [showAddGame, setShowAddGame] = useState(false);
   const [availableGames, setAvailableGames] = useState([]);
   const [timerMode, setTimerMode] = useState('drill'); // 'simple' | 'drill'
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [gameToRate, setGameToRate] = useState(null);
+  const [showPrintShare, setShowPrintShare] = useState(false);
 
   useEffect(() => {
     loadSession();
@@ -245,6 +250,13 @@ export default function SessionView() {
       if (completed) {
         await markGameUsed(gameId);
         showToast('Game completed!', 'success');
+
+        // Show effectiveness rating modal
+        const gameEntry = session.games.find(g => g.game._id === gameId);
+        if (gameEntry?.game) {
+          setGameToRate(gameEntry.game);
+          setShowRatingModal(true);
+        }
       }
     } catch (error) {
       showToast('Failed to update game status', 'error');
@@ -323,6 +335,15 @@ export default function SessionView() {
               {participants} participants
             </span>
           )}
+          <button
+            onClick={() => setShowPrintShare(true)}
+            className="btn-secondary"
+            title="Print or share session"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+              <path d="M13 4.5a2.5 2.5 0 11.702 1.737L6.97 9.604a2.518 2.518 0 010 .792l6.733 3.367a2.5 2.5 0 11-.671 1.341l-6.733-3.367a2.5 2.5 0 110-3.474l6.733-3.367A2.52 2.52 0 0113 4.5z" />
+            </svg>
+          </button>
           <button
             onClick={() => setEditMode(!editMode)}
             className={`btn-secondary ${editMode ? 'bg-primary-100 dark:bg-primary-900/30' : ''}`}
@@ -734,6 +755,29 @@ export default function SessionView() {
           </div>
         </div>
       )}
+
+      {/* Effectiveness Rating Modal */}
+      <EffectivenessRating
+        isOpen={showRatingModal}
+        onClose={() => {
+          setShowRatingModal(false);
+          setGameToRate(null);
+        }}
+        game={gameToRate}
+        sessionId={id}
+        onRated={(rating) => {
+          if (rating) {
+            showToast('Rating saved!', 'success');
+          }
+        }}
+      />
+
+      {/* Print/Share Modal */}
+      <SessionPrintShare
+        isOpen={showPrintShare}
+        onClose={() => setShowPrintShare(false)}
+        session={session}
+      />
 
       {/* Timer Modal */}
       <Timer

@@ -341,7 +341,7 @@ router.put('/:id', protect, async (req, res) => {
       return res.status(404).json({ message: 'Game not found' });
     }
 
-    const allowedFields = ['name', 'topic', 'topPlayer', 'bottomPlayer', 'coaching', 'skills', 'favorite', 'rating'];
+    const allowedFields = ['name', 'topic', 'topPlayer', 'bottomPlayer', 'coaching', 'skills', 'favorite', 'rating', 'videoUrl', 'personalNotes', 'gameType', 'difficulty'];
 
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -379,6 +379,44 @@ router.put('/:id/use', protect, async (req, res) => {
   } catch (error) {
     console.error('Mark used error:', error);
     res.status(500).json({ message: 'Server error marking game as used' });
+  }
+});
+
+// @route   POST /api/games/:id/rate-effectiveness
+// @desc    Rate game effectiveness after use
+// @access  Private
+router.post('/:id/rate-effectiveness', protect, async (req, res) => {
+  try {
+    const { rating, sessionId, notes } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    const game = await Game.findOne({ _id: req.params.id, user: req.user._id });
+
+    if (!game) {
+      return res.status(404).json({ message: 'Game not found' });
+    }
+
+    // Add the new rating
+    game.effectivenessRatings.push({
+      rating,
+      sessionId: sessionId || null,
+      notes: notes || '',
+      date: new Date()
+    });
+
+    // Calculate new average
+    const totalRatings = game.effectivenessRatings.length;
+    const sum = game.effectivenessRatings.reduce((acc, r) => acc + r.rating, 0);
+    game.averageEffectiveness = Math.round((sum / totalRatings) * 10) / 10;
+
+    await game.save();
+    res.json(game);
+  } catch (error) {
+    console.error('Rate effectiveness error:', error);
+    res.status(500).json({ message: 'Server error rating game' });
   }
 });
 

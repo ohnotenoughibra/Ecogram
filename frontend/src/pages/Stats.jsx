@@ -73,6 +73,95 @@ export default function Stats() {
   }
   const maxWeeklyCount = Math.max(...weeklyUsage.map(w => w.count), 1);
 
+  // Calculate effectiveness stats
+  const gamesWithEffectiveness = games.filter(g => g.averageEffectiveness > 0);
+  const topEffectiveGames = [...gamesWithEffectiveness]
+    .sort((a, b) => b.averageEffectiveness - a.averageEffectiveness)
+    .slice(0, 5);
+  const avgEffectiveness = gamesWithEffectiveness.length > 0
+    ? (gamesWithEffectiveness.reduce((sum, g) => sum + g.averageEffectiveness, 0) / gamesWithEffectiveness.length).toFixed(1)
+    : 0;
+
+  // Calculate training streak (consecutive days with activity)
+  const calculateStreak = () => {
+    const sortedDates = games
+      .filter(g => g.lastUsed)
+      .map(g => new Date(g.lastUsed).toDateString())
+      .filter((date, idx, arr) => arr.indexOf(date) === idx)
+      .sort((a, b) => new Date(b) - new Date(a));
+
+    let streak = 0;
+    let currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+
+    for (const dateStr of sortedDates) {
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((currentDate - date) / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 1) {
+        streak++;
+        currentDate = date;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  };
+  const trainingStreak = calculateStreak();
+
+  // Training recommendations based on data
+  const getRecommendations = () => {
+    const recommendations = [];
+
+    // Low topic coverage
+    topics.forEach(topic => {
+      const status = getBalanceStatus(stats.topicDistribution[topic] || 0);
+      if (status === 'low') {
+        recommendations.push({
+          type: 'topic',
+          priority: 'high',
+          message: `Train more ${topicLabels[topic].toLowerCase()} - only ${stats.topicDistribution[topic] || 0} games`,
+          icon: '🎯'
+        });
+      }
+    });
+
+    // Unused games
+    const unusedCount = games.filter(g => !g.lastUsed).length;
+    if (unusedCount > 5) {
+      recommendations.push({
+        type: 'unused',
+        priority: 'medium',
+        message: `${unusedCount} games have never been used - try them out!`,
+        icon: '📋'
+      });
+    }
+
+    // Low warmup/cooldown
+    if (gameTypeDistribution.warmup < 3) {
+      recommendations.push({
+        type: 'warmup',
+        priority: 'medium',
+        message: 'Add more warmup games for complete sessions',
+        icon: '🔥'
+      });
+    }
+
+    // High effectiveness games to use more
+    if (topEffectiveGames.length > 0) {
+      recommendations.push({
+        type: 'effective',
+        priority: 'low',
+        message: `Your top effective drill: "${topEffectiveGames[0].name}" (${topEffectiveGames[0].averageEffectiveness}/5)`,
+        icon: '⭐'
+      });
+    }
+
+    return recommendations.slice(0, 4);
+  };
+  const recommendations = getRecommendations();
+
   // Session stats
   const totalSessions = sessions.length;
   const completedSessions = sessions.filter(s =>
@@ -109,7 +198,8 @@ export default function Stats() {
         {[
           { id: 'overview', label: 'Overview' },
           { id: 'activity', label: 'Activity' },
-          { id: 'library', label: 'Library' }
+          { id: 'library', label: 'Library' },
+          { id: 'insights', label: 'Insights' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -405,6 +495,169 @@ export default function Stats() {
               {games.filter(g => !g.lastUsed || g.usageCount === 0).length === 0 && (
                 <p className="text-center text-gray-500 py-4">All games have been used. Great work!</p>
               )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Insights Tab */}
+      {activeTab === 'insights' && (
+        <>
+          {/* Training Streak & Quick Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="card p-4 text-center">
+              <div className="text-3xl mb-1">🔥</div>
+              <p className="text-2xl font-bold text-orange-500">{trainingStreak}</p>
+              <p className="text-sm text-gray-500">Day Streak</p>
+            </div>
+            <div className="card p-4 text-center">
+              <div className="text-3xl mb-1">⭐</div>
+              <p className="text-2xl font-bold text-yellow-500">{avgEffectiveness}</p>
+              <p className="text-sm text-gray-500">Avg Effectiveness</p>
+            </div>
+            <div className="card p-4 text-center">
+              <div className="text-3xl mb-1">📊</div>
+              <p className="text-2xl font-bold text-primary-500">{gamesWithEffectiveness.length}</p>
+              <p className="text-sm text-gray-500">Games Rated</p>
+            </div>
+            <div className="card p-4 text-center">
+              <div className="text-3xl mb-1">🎯</div>
+              <p className="text-2xl font-bold text-green-500">{recentlyUsedGames.length}</p>
+              <p className="text-sm text-gray-500">Active (30d)</p>
+            </div>
+          </div>
+
+          {/* Training Recommendations */}
+          <div className="card p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-primary-500">
+                <path d="M10 1a6 6 0 00-3.815 10.631C7.237 12.5 8 13.443 8 14.456v.644a.75.75 0 00.572.729 6.016 6.016 0 002.856 0A.75.75 0 0012 15.1v-.644c0-1.013.762-1.957 1.815-2.825A6 6 0 0010 1zM8.863 17.414a.75.75 0 00-.226 1.483 9.066 9.066 0 002.726 0 .75.75 0 00-.226-1.483 7.553 7.553 0 01-2.274 0z" />
+              </svg>
+              Training Recommendations
+            </h2>
+            {recommendations.length === 0 ? (
+              <div className="text-center py-6">
+                <span className="text-4xl mb-2 block">🎉</span>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Great job! Your training is well-balanced.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recommendations.map((rec, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-start gap-3 p-4 rounded-lg ${
+                      rec.priority === 'high'
+                        ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                        : rec.priority === 'medium'
+                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                        : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    <span className="text-xl">{rec.icon}</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {rec.message}
+                      </p>
+                      <span className={`text-xs ${
+                        rec.priority === 'high'
+                          ? 'text-red-600 dark:text-red-400'
+                          : rec.priority === 'medium'
+                          ? 'text-yellow-600 dark:text-yellow-400'
+                          : 'text-gray-500'
+                      }`}>
+                        {rec.priority === 'high' ? 'High priority' : rec.priority === 'medium' ? 'Suggested' : 'Tip'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Most Effective Games */}
+          <div className="card p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Most Effective Drills
+            </h2>
+            {topEffectiveGames.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                Rate games after training to see effectiveness data
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {topEffectiveGames.map((game, idx) => (
+                  <div key={game._id} className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                      <span className="text-yellow-600 dark:text-yellow-400 font-bold text-sm">
+                        {idx + 1}
+                      </span>
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {game.name}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <svg
+                            key={star}
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                            className={`w-3 h-3 ${
+                              star <= Math.round(game.averageEffectiveness)
+                                ? 'text-yellow-400'
+                                : 'text-gray-300 dark:text-gray-600'
+                            }`}
+                          >
+                            <path d="M8 1.75a.75.75 0 01.692.462l1.41 3.393 3.664.293a.75.75 0 01.428 1.317l-2.791 2.39.853 3.575a.75.75 0 01-1.12.814L8 12.093l-3.136 1.9a.75.75 0 01-1.12-.814l.852-3.574-2.79-2.39a.75.75 0 01.427-1.318l3.663-.293 1.41-3.393A.75.75 0 018 1.75z" />
+                          </svg>
+                        ))}
+                        <span className="text-xs text-gray-500 ml-1">
+                          {game.averageEffectiveness.toFixed(1)} ({game.effectivenessRatings?.length || 0} ratings)
+                        </span>
+                      </div>
+                    </div>
+                    <span className={`w-2 h-2 rounded-full ${topicColors[game.topic]}`} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* What to Train Next */}
+          <div className="card p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Suggested Next Training Focus
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              {topics.map(topic => {
+                const count = stats.topicDistribution[topic] || 0;
+                const status = getBalanceStatus(count);
+                return (
+                  <button
+                    key={topic}
+                    onClick={() => window.location.href = `/?topic=${topic}`}
+                    className={`p-4 rounded-lg text-left transition-colors ${
+                      status === 'low'
+                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700'
+                        : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`w-3 h-3 rounded-full ${topicColors[topic]}`} />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {topicLabels[topic]}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {count} games
+                      {status === 'low' && ' • Needs focus'}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </>
