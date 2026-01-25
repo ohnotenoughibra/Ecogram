@@ -79,6 +79,11 @@ export default function Sessions() {
     showToast('Link copied to clipboard', 'success');
   };
 
+  const handleSessionUpdate = (updatedSession) => {
+    // Update the session in local state without refetching
+    fetchSessions(); // Refetch to get fully populated session data
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Header */}
@@ -137,6 +142,7 @@ export default function Sessions() {
               onEdit={handleEditSession}
               onDelete={handleDeleteClick}
               onShare={handleShare}
+              onSessionUpdate={handleSessionUpdate}
             />
           ))}
         </div>
