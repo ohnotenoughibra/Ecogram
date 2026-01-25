@@ -5,6 +5,7 @@ import { useApp } from './context/AppContext';
 
 // Layout components
 import Navbar from './components/Navbar';
+import BottomNav from './components/BottomNav';
 import ToastContainer from './components/Toast';
 import Loading from './components/Loading';
 import Timer from './components/Timer';
@@ -20,6 +21,7 @@ import SessionView from './pages/SessionView';
 import Stats from './pages/Stats';
 import AIDesigner from './pages/AIDesigner';
 import Import from './pages/Import';
+import Practice from './pages/Practice';
 
 // Protected route wrapper
 function ProtectedRoute({ children }) {
@@ -103,14 +105,17 @@ function MainLayout({ children }) {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
       <Navbar />
-      <main className="pb-20">
+      <main className="pb-24 lg:pb-8">
         {children}
       </main>
 
-      {/* Floating timer button */}
+      {/* Bottom navigation for mobile */}
+      <BottomNav />
+
+      {/* Floating timer button - hidden on mobile (Practice page has integrated timer) */}
       <button
         onClick={() => setShowTimer(true)}
-        className="fab"
+        className="fab hidden lg:flex"
         title="Open Timer (T)"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6">
@@ -228,6 +233,16 @@ export default function App() {
           <ProtectedRoute>
             <MainLayout>
               <Import />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/practice"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Practice />
             </MainLayout>
           </ProtectedRoute>
         }

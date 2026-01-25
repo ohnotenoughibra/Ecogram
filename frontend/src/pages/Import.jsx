@@ -189,14 +189,27 @@ export default function Import() {
 
       if (file.name.endsWith('.json')) {
         const data = JSON.parse(text);
-        if (!data.games || !Array.isArray(data.games)) {
-          showToast('Invalid JSON format. Expected { games: [...] }', 'error');
+
+        // Accept both array format [...] and object format { games: [...] }
+        let gamesArray;
+        if (Array.isArray(data)) {
+          gamesArray = data;
+        } else if (data.games && Array.isArray(data.games)) {
+          gamesArray = data.games;
+        } else {
+          showToast('Invalid JSON format. Expected array or { games: [...] }', 'error');
           return;
         }
+
+        if (gamesArray.length === 0) {
+          showToast('No games found in file', 'error');
+          return;
+        }
+
         setPreviewData({
-          games: data.games,
+          games: gamesArray,
           exportDate: data.exportDate,
-          count: data.games.length,
+          count: gamesArray.length,
           source: 'json'
         });
       } else {
@@ -383,7 +396,7 @@ Skills: mount, submissions, pressure`;
                   Select File
                 </button>
                 <p className="mt-4 text-xs text-gray-400">
-                  Accepts .json or .txt files
+                  Accepts JSON arrays or objects with games
                 </p>
               </div>
             </div>
