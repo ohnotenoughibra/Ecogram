@@ -42,9 +42,11 @@ export default function Games() {
     fetchSessions();
   }, []);
 
-  // Handle ?edit= query parameter from duplicates page
+  // Handle ?edit= and ?new= query parameters
   useEffect(() => {
     const editId = searchParams.get('edit');
+    const isNew = searchParams.get('new');
+
     if (editId && games.length > 0) {
       const gameToEdit = games.find(g => g._id === editId);
       if (gameToEdit) {
@@ -53,6 +55,11 @@ export default function Games() {
         // Clear the query param after opening
         setSearchParams({});
       }
+    } else if (isNew === 'true') {
+      setEditingGame(null);
+      setShowGameModal(true);
+      // Clear the query param after opening
+      setSearchParams({});
     }
   }, [searchParams, games, setSearchParams]);
 

@@ -94,9 +94,19 @@ export default function QuickActions({ onNewGame, onNewSession }) {
     if (action.path) {
       navigate(action.path);
     } else if (action.action === 'new-game') {
-      onNewGame?.();
+      // Navigate to Games page with ?new=true to open modal
+      if (onNewGame) {
+        onNewGame();
+      } else {
+        navigate('/?new=true');
+      }
     } else if (action.action === 'new-session') {
-      onNewSession?.();
+      // Navigate to Sessions page with ?new=true to open modal
+      if (onNewSession) {
+        onNewSession();
+      } else {
+        navigate('/sessions?new=true');
+      }
     }
   };
 

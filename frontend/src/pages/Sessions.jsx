@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import SessionItem from '../components/SessionItem';
 import SessionCalendar from '../components/SessionCalendar';
@@ -11,6 +11,7 @@ import api from '../utils/api';
 
 export default function Sessions() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     sessions,
     sessionsLoading,
@@ -46,6 +47,19 @@ export default function Sessions() {
     fetchSessions();
     fetchTemplates();
   }, []);
+
+  // Handle ?new=true query parameter from QuickActions
+  useEffect(() => {
+    const isNew = searchParams.get('new');
+    if (isNew === 'true') {
+      setEditingSession(null);
+      setSessionName('');
+      setScheduledDate('');
+      setShowCreateModal(true);
+      // Clear the query param after opening
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   const fetchTemplates = async () => {
     try {
