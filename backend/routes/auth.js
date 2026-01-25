@@ -12,13 +12,18 @@ router.post('/register', [
   body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
 ], async (req, res) => {
+  console.log('=== REGISTER REQUEST ===');
+  console.log('Body:', JSON.stringify(req.body, null, 2));
+
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { username, email, password } = req.body;
+    console.log('Attempting to register:', { username, email });
 
     // Check if user exists
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
@@ -39,8 +44,9 @@ router.post('/register', [
       token: generateToken(user._id)
     });
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    console.error('Register error:', error.message);
+    console.error('Full error:', error);
+    res.status(500).json({ message: `Registration failed: ${error.message}` });
   }
 });
 
