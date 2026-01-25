@@ -11,6 +11,7 @@ const gamesRoutes = require('./routes/games');
 const sessionsRoutes = require('./routes/sessions');
 const shareRoutes = require('./routes/share');
 const aiRoutes = require('./routes/ai');
+const topicsRoutes = require('./routes/topics');
 
 // Initialize express app
 const app = express();
@@ -47,6 +48,7 @@ app.use('/api/games', gamesRoutes);
 app.use('/api/sessions', sessionsRoutes);
 app.use('/api/share', shareRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/topics', topicsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

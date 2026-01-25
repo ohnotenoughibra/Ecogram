@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
 
 const topicColors = {
   offensive: 'bg-red-500',
@@ -8,17 +9,52 @@ const topicColors = {
   transition: 'bg-green-500'
 };
 
+const categoryColors = {
+  offensive: { bg: 'bg-red-100 dark:bg-red-900/20', border: 'border-red-300 dark:border-red-700', text: 'text-red-700 dark:text-red-400' },
+  defensive: { bg: 'bg-blue-100 dark:bg-blue-900/20', border: 'border-blue-300 dark:border-blue-700', text: 'text-blue-700 dark:text-blue-400' },
+  control: { bg: 'bg-purple-100 dark:bg-purple-900/20', border: 'border-purple-300 dark:border-purple-700', text: 'text-purple-700 dark:text-purple-400' },
+  transition: { bg: 'bg-green-100 dark:bg-green-900/20', border: 'border-green-300 dark:border-green-700', text: 'text-green-700 dark:text-green-400' },
+  competition: { bg: 'bg-orange-100 dark:bg-orange-900/20', border: 'border-orange-300 dark:border-orange-700', text: 'text-orange-700 dark:text-orange-400' },
+  fundamentals: { bg: 'bg-teal-100 dark:bg-teal-900/20', border: 'border-teal-300 dark:border-teal-700', text: 'text-teal-700 dark:text-teal-400' },
+  custom: { bg: 'bg-gray-100 dark:bg-gray-800', border: 'border-gray-300 dark:border-gray-600', text: 'text-gray-700 dark:text-gray-400' }
+};
+
 export default function SessionCalendar({
   sessions,
   onScheduleSession,
   onEditSession,
   onDeleteSession,
-  onStartSession
+  onStartSession,
+  showToast
 }) {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [showDayModal, setShowDayModal] = useState(false);
+  const [showTopicModal, setShowTopicModal] = useState(false);
+  const [trainingTopics, setTrainingTopics] = useState([]);
+  const [editingTopic, setEditingTopic] = useState(null);
+
+  // Fetch training topics
+  useEffect(() => {
+    fetchTopics();
+  }, [currentDate]);
+
+  const fetchTopics = async () => {
+    try {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const startDate = new Date(year, month - 1, 1).toISOString();
+      const endDate = new Date(year, month + 2, 0).toISOString();
+
+      const response = await api.get('/topics', {
+        params: { startDate, endDate, active: true }
+      });
+      setTrainingTopics(response.data);
+    } catch (err) {
+      console.error('Failed to fetch topics:', err);
+    }
+  };
 
   // Get calendar data
   const calendarData = useMemo(() => {
@@ -30,7 +66,6 @@ export default function SessionCalendar({
     const startPadding = firstDay.getDay();
     const totalDays = lastDay.getDate();
 
-    // Build array of days including padding
     const days = [];
 
     // Previous month padding
@@ -66,17 +101,14 @@ export default function SessionCalendar({
   const sessionsByDate = useMemo(() => {
     const map = {};
     sessions.forEach(session => {
-      // Check scheduledDate
       if (session.scheduledDate) {
         const dateKey = new Date(session.scheduledDate).toDateString();
         if (!map[dateKey]) map[dateKey] = [];
         map[dateKey].push({ ...session, type: 'scheduled' });
       }
-      // Check lastUsed (completed sessions)
       if (session.lastUsed) {
         const dateKey = new Date(session.lastUsed).toDateString();
         if (!map[dateKey]) map[dateKey] = [];
-        // Avoid duplicates if scheduled and completed on same day
         if (!map[dateKey].find(s => s._id === session._id)) {
           map[dateKey].push({ ...session, type: 'completed' });
         }
@@ -84,6 +116,23 @@ export default function SessionCalendar({
     });
     return map;
   }, [sessions]);
+
+  // Get topic for a specific date
+  const getTopicForDate = (date) => {
+    return trainingTopics.find(topic => {
+      const start = new Date(topic.startDate);
+      const end = new Date(topic.endDate);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return date >= start && date <= end;
+    });
+  };
+
+  // Get current topic
+  const currentTopic = useMemo(() => {
+    const today = new Date();
+    return getTopicForDate(today);
+  }, [trainingTopics]);
 
   const navigateMonth = (delta) => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1));
@@ -113,6 +162,33 @@ export default function SessionCalendar({
     return date < today;
   };
 
+  const handleCreateTopic = async (topicData) => {
+    try {
+      if (editingTopic) {
+        await api.put(`/topics/${editingTopic._id}`, topicData);
+        showToast?.('Topic updated', 'success');
+      } else {
+        await api.post('/topics', topicData);
+        showToast?.('Topic created', 'success');
+      }
+      fetchTopics();
+      setShowTopicModal(false);
+      setEditingTopic(null);
+    } catch (err) {
+      showToast?.('Failed to save topic', 'error');
+    }
+  };
+
+  const handleDeleteTopic = async (topicId) => {
+    try {
+      await api.delete(`/topics/${topicId}`);
+      showToast?.('Topic deleted', 'success');
+      fetchTopics();
+    } catch (err) {
+      showToast?.('Failed to delete topic', 'error');
+    }
+  };
+
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -121,127 +197,237 @@ export default function SessionCalendar({
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      {/* Calendar Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </h2>
-          <div className="flex items-center gap-2">
+    <div className="space-y-4">
+      {/* Current Topic Banner */}
+      {currentTopic && (
+        <div
+          className={`p-4 rounded-xl border-2 ${categoryColors[currentTopic.category]?.bg || categoryColors.custom.bg} ${categoryColors[currentTopic.category]?.border || categoryColors.custom.border}`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-medium uppercase ${categoryColors[currentTopic.category]?.text || categoryColors.custom.text}`}>
+                  Current Focus
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {Math.ceil((new Date(currentTopic.endDate) - new Date()) / (1000 * 60 * 60 * 24))} days remaining
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-1">
+                {currentTopic.name}
+              </h3>
+              {currentTopic.description && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {currentTopic.description}
+                </p>
+              )}
+            </div>
             <button
-              onClick={goToToday}
-              className="text-sm text-primary-500 hover:text-primary-600 px-2 py-1"
+              onClick={() => {
+                setEditingTopic(currentTopic);
+                setShowTopicModal(true);
+              }}
+              className="btn-secondary text-sm"
             >
-              Today
+              Edit
             </button>
-            <button
-              onClick={() => navigateMonth(-1)}
-              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-              </svg>
-            </button>
-            <button
-              onClick={() => navigateMonth(1)}
-              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-              </svg>
-            </button>
+          </div>
+          {currentTopic.goals && currentTopic.goals.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {currentTopic.goals.map((goal, idx) => (
+                <span key={idx} className="text-xs px-2 py-1 bg-white/50 dark:bg-black/20 rounded-full">
+                  {goal}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Calendar Card */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {/* Calendar Header */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setEditingTopic(null);
+                  setShowTopicModal(true);
+                }}
+                className="text-sm text-primary-500 hover:text-primary-600 px-2 py-1 flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                  <path d="M8.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" />
+                </svg>
+                Add Topic
+              </button>
+              <button
+                onClick={goToToday}
+                className="text-sm text-primary-500 hover:text-primary-600 px-2 py-1"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => navigateMonth(-1)}
+                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <button
+                onClick={() => navigateMonth(1)}
+                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
-        {dayNames.map(day => (
-          <div
-            key={day}
-            className="py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400"
-          >
-            {day}
+        {/* Topic Timeline */}
+        {trainingTopics.length > 0 && (
+          <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-850">
+            <div className="flex flex-wrap gap-2">
+              {trainingTopics.map(topic => {
+                const colors = categoryColors[topic.category] || categoryColors.custom;
+                return (
+                  <button
+                    key={topic._id}
+                    onClick={() => {
+                      setEditingTopic(topic);
+                      setShowTopicModal(true);
+                    }}
+                    className={`text-xs px-2 py-1 rounded-full border ${colors.bg} ${colors.border} ${colors.text} hover:opacity-80 transition-opacity`}
+                  >
+                    {topic.name}
+                    <span className="ml-1 opacity-60">
+                      ({new Date(topic.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(topic.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7">
-        {calendarData.map((day, idx) => {
-          const daySessions = getSessionsForDate(day.date);
-          const hasScheduled = daySessions.some(s => s.type === 'scheduled');
-          const hasCompleted = daySessions.some(s => s.type === 'completed');
-
-          return (
-            <button
-              key={idx}
-              onClick={() => handleDayClick(day)}
-              className={`
-                min-h-[60px] sm:min-h-[80px] p-1 border-b border-r border-gray-100 dark:border-gray-700
-                hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left
-                ${!day.isCurrentMonth ? 'bg-gray-50 dark:bg-gray-850' : ''}
-                ${isToday(day.date) ? 'bg-primary-50 dark:bg-primary-900/20' : ''}
-              `}
+        {/* Day headers */}
+        <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+          {dayNames.map(day => (
+            <div
+              key={day}
+              className="py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400"
             >
-              <div className="flex flex-col h-full">
-                <span className={`
-                  text-xs sm:text-sm font-medium mb-1
-                  ${!day.isCurrentMonth ? 'text-gray-400 dark:text-gray-600' : ''}
-                  ${isToday(day.date) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}
-                  ${isPast(day.date) && !isToday(day.date) ? 'text-gray-400 dark:text-gray-500' : ''}
-                `}>
-                  {day.date.getDate()}
-                </span>
+              {day}
+            </div>
+          ))}
+        </div>
 
-                {/* Session indicators */}
-                <div className="flex-1 space-y-0.5 overflow-hidden">
-                  {daySessions.slice(0, 2).map((session, sidx) => (
-                    <div
-                      key={sidx}
-                      className={`
-                        text-xs px-1 py-0.5 rounded truncate
-                        ${session.type === 'completed'
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                          : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'}
-                      `}
-                    >
-                      <span className="hidden sm:inline">{session.name}</span>
-                      <span className="sm:hidden">
-                        {session.type === 'completed' ? '✓' : '•'}
-                      </span>
-                    </div>
-                  ))}
-                  {daySessions.length > 2 && (
-                    <div className="text-xs text-gray-400 px-1">
-                      +{daySessions.length - 2}
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7">
+          {calendarData.map((day, idx) => {
+            const daySessions = getSessionsForDate(day.date);
+            const dayTopic = getTopicForDate(day.date);
+            const hasScheduled = daySessions.some(s => s.type === 'scheduled');
+            const hasCompleted = daySessions.some(s => s.type === 'completed');
+            const topicColors = dayTopic ? categoryColors[dayTopic.category] || categoryColors.custom : null;
+
+            return (
+              <button
+                key={idx}
+                onClick={() => handleDayClick(day)}
+                className={`
+                  min-h-[60px] sm:min-h-[80px] p-1 border-b border-r border-gray-100 dark:border-gray-700
+                  hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left relative
+                  ${!day.isCurrentMonth ? 'bg-gray-50 dark:bg-gray-850' : ''}
+                  ${isToday(day.date) ? 'bg-primary-50 dark:bg-primary-900/20' : ''}
+                  ${dayTopic && day.isCurrentMonth ? topicColors.bg : ''}
+                `}
+              >
+                {/* Topic indicator bar */}
+                {dayTopic && day.isCurrentMonth && (
+                  <div
+                    className={`absolute top-0 left-0 right-0 h-1 ${
+                      dayTopic.category === 'offensive' ? 'bg-red-500' :
+                      dayTopic.category === 'defensive' ? 'bg-blue-500' :
+                      dayTopic.category === 'control' ? 'bg-purple-500' :
+                      dayTopic.category === 'transition' ? 'bg-green-500' :
+                      dayTopic.category === 'competition' ? 'bg-orange-500' :
+                      dayTopic.category === 'fundamentals' ? 'bg-teal-500' :
+                      'bg-gray-500'
+                    }`}
+                    style={{ backgroundColor: dayTopic.color }}
+                  />
+                )}
+
+                <div className="flex flex-col h-full pt-1">
+                  <span className={`
+                    text-xs sm:text-sm font-medium mb-1
+                    ${!day.isCurrentMonth ? 'text-gray-400 dark:text-gray-600' : ''}
+                    ${isToday(day.date) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}
+                    ${isPast(day.date) && !isToday(day.date) ? 'text-gray-400 dark:text-gray-500' : ''}
+                  `}>
+                    {day.date.getDate()}
+                  </span>
+
+                  {/* Session indicators */}
+                  <div className="flex-1 space-y-0.5 overflow-hidden">
+                    {daySessions.slice(0, 2).map((session, sidx) => (
+                      <div
+                        key={sidx}
+                        className={`
+                          text-xs px-1 py-0.5 rounded truncate
+                          ${session.type === 'completed'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                            : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'}
+                        `}
+                      >
+                        <span className="hidden sm:inline">{session.name}</span>
+                        <span className="sm:hidden">
+                          {session.type === 'completed' ? '✓' : '•'}
+                        </span>
+                      </div>
+                    ))}
+                    {daySessions.length > 2 && (
+                      <div className="text-xs text-gray-400 px-1">
+                        +{daySessions.length - 2}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dot indicators for mobile */}
+                  {daySessions.length > 0 && (
+                    <div className="flex gap-0.5 mt-auto sm:hidden">
+                      {hasScheduled && <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
+                      {hasCompleted && <span className="w-1.5 h-1.5 rounded-full bg-green-500" />}
                     </div>
                   )}
                 </div>
-
-                {/* Dot indicators for mobile */}
-                {daySessions.length > 0 && (
-                  <div className="flex gap-0.5 mt-auto sm:hidden">
-                    {hasScheduled && <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
-                    {hasCompleted && <span className="w-1.5 h-1.5 rounded-full bg-green-500" />}
-                  </div>
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Legend */}
-      <div className="p-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-        <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-primary-500" />
-          <span>Scheduled</span>
+              </button>
+            );
+          })}
         </div>
-        <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span>Completed</span>
+
+        {/* Legend */}
+        <div className="p-3 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-primary-500" />
+            <span>Scheduled</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+            <span>Completed</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-4 h-1 rounded bg-purple-500" />
+            <span>Topic Period</span>
+          </div>
         </div>
       </div>
 
@@ -250,6 +436,7 @@ export default function SessionCalendar({
         <DayDetailModal
           date={selectedDate}
           sessions={getSessionsForDate(selectedDate)}
+          topic={getTopicForDate(selectedDate)}
           allSessions={sessions}
           onClose={() => {
             setShowDayModal(false);
@@ -263,11 +450,26 @@ export default function SessionCalendar({
           onEdit={onEditSession}
         />
       )}
+
+      {/* Topic Modal */}
+      {showTopicModal && (
+        <TopicModal
+          topic={editingTopic}
+          onClose={() => {
+            setShowTopicModal(false);
+            setEditingTopic(null);
+          }}
+          onSave={handleCreateTopic}
+          onDelete={editingTopic ? () => handleDeleteTopic(editingTopic._id) : null}
+          recentTopics={trainingTopics}
+          recentGames={sessions.flatMap(s => s.games || [])}
+        />
+      )}
     </div>
   );
 }
 
-function DayDetailModal({ date, sessions, allSessions, onClose, onSchedule, onStart, onEdit }) {
+function DayDetailModal({ date, sessions, topic, allSessions, onClose, onSchedule, onStart, onEdit }) {
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
   const isToday = date.toDateString() === new Date().toDateString();
@@ -281,10 +483,11 @@ function DayDetailModal({ date, sessions, allSessions, onClose, onSchedule, onSt
     });
   };
 
-  // Sessions not scheduled for this date (for scheduling picker)
   const unscheduledSessions = allSessions.filter(s =>
     !s.scheduledDate || new Date(s.scheduledDate).toDateString() !== date.toDateString()
   );
+
+  const topicColors = topic ? categoryColors[topic.category] || categoryColors.custom : null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -309,6 +512,25 @@ function DayDetailModal({ date, sessions, allSessions, onClose, onSchedule, onSt
               </svg>
             </button>
           </div>
+
+          {/* Topic for this day */}
+          {topic && (
+            <div className={`p-3 rounded-lg mb-4 border ${topicColors.bg} ${topicColors.border}`}>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-medium uppercase ${topicColors.text}`}>
+                  Training Focus
+                </span>
+              </div>
+              <h4 className="font-medium text-gray-900 dark:text-white">
+                {topic.name}
+              </h4>
+              {topic.description && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {topic.description}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Sessions for this day */}
           {sessions.length > 0 ? (
@@ -341,29 +563,6 @@ function DayDetailModal({ date, sessions, allSessions, onClose, onSchedule, onSt
                           </span>
                         )}
                       </div>
-
-                      {/* Game preview */}
-                      {session.games && session.games.length > 0 && (
-                        <div className="flex gap-1 mt-2">
-                          {session.games.slice(0, 5).map((g, idx) => (
-                            <span
-                              key={idx}
-                              className={`w-2 h-2 rounded-full ${
-                                g.game?.topic ? {
-                                  offensive: 'bg-red-500',
-                                  defensive: 'bg-blue-500',
-                                  control: 'bg-purple-500',
-                                  transition: 'bg-green-500'
-                                }[g.game.topic] : 'bg-gray-400'
-                              }`}
-                              title={g.game?.name}
-                            />
-                          ))}
-                          {session.games.length > 5 && (
-                            <span className="text-xs text-gray-400">+{session.games.length - 5}</span>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -470,6 +669,350 @@ function DayDetailModal({ date, sessions, allSessions, onClose, onSchedule, onSt
               )}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TopicModal({ topic, onClose, onSave, onDelete, recentTopics = [], recentGames = [] }) {
+  const [name, setName] = useState(topic?.name || '');
+  const [description, setDescription] = useState(topic?.description || '');
+  const [category, setCategory] = useState(topic?.category || 'custom');
+  const [startDate, setStartDate] = useState(
+    topic?.startDate
+      ? new Date(topic.startDate).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0]
+  );
+  const [endDate, setEndDate] = useState(
+    topic?.endDate
+      ? new Date(topic.endDate).toISOString().split('T')[0]
+      : new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 3 weeks default
+  );
+  const [goals, setGoals] = useState(topic?.goals?.join(', ') || '');
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const fetchSuggestions = async () => {
+    setLoadingSuggestions(true);
+    setShowSuggestions(true);
+    try {
+      const response = await api.post('/ai/suggest-topic', {
+        recentTopics: recentTopics.map(t => ({
+          name: t.name,
+          category: t.category,
+          startDate: t.startDate,
+          endDate: t.endDate
+        })),
+        recentGames: recentGames.slice(0, 20).map(g => ({
+          name: g.name,
+          constraints: g.constraints
+        })),
+        preferences: {
+          preferredDuration: '3 weeks',
+          trainingStyle: 'constraint-led'
+        }
+      });
+      setSuggestions(response.data.suggestions || []);
+    } catch (err) {
+      console.error('Failed to get suggestions:', err);
+      setSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const applySuggestion = (suggestion) => {
+    setName(suggestion.name);
+    setDescription(suggestion.description);
+    setCategory(suggestion.category);
+    if (suggestion.goals) {
+      setGoals(suggestion.goals.join(', '));
+    }
+    setShowSuggestions(false);
+  };
+
+  const categories = [
+    { value: 'offensive', label: 'Offensive / Submissions', color: 'bg-red-500' },
+    { value: 'defensive', label: 'Defensive / Escapes', color: 'bg-blue-500' },
+    { value: 'control', label: 'Control / Passing', color: 'bg-purple-500' },
+    { value: 'transition', label: 'Transitions / Scrambles', color: 'bg-green-500' },
+    { value: 'competition', label: 'Competition Prep', color: 'bg-orange-500' },
+    { value: 'fundamentals', label: 'Fundamentals', color: 'bg-teal-500' },
+    { value: 'custom', label: 'Custom', color: 'bg-gray-500' }
+  ];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({
+      name,
+      description,
+      category,
+      startDate,
+      endDate,
+      goals: goals.split(',').map(g => g.trim()).filter(Boolean)
+    });
+  };
+
+  const setDuration = (weeks) => {
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + (weeks * 7) - 1);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {topic ? 'Edit Training Topic' : 'New Training Topic'}
+            </h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="label">Topic Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Guard Retention Focus"
+                className="input"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="label">Category</label>
+              <div className="grid grid-cols-2 gap-2">
+                {categories.map(cat => (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => setCategory(cat.value)}
+                    className={`flex items-center gap-2 p-2 rounded-lg border text-sm text-left transition-colors ${
+                      category === cat.value
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <span className={`w-3 h-3 rounded-full ${cat.color}`} />
+                    <span className="truncate">{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="label">Description (optional)</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What's the focus for this period?"
+                rows={2}
+                className="input resize-none"
+              />
+            </div>
+
+            {/* AI Suggestions Section */}
+            {!topic && (
+              <div className="border border-primary-200 dark:border-primary-800 rounded-lg p-3 bg-primary-50/50 dark:bg-primary-900/10">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-primary-500">
+                      <path d="M10 1a6 6 0 00-3.815 10.631C7.237 12.5 8 13.443 8 14.456v.644a.75.75 0 00.572.729 6.016 6.016 0 002.856 0A.75.75 0 0012 15.1v-.644c0-1.013.762-1.957 1.815-2.825A6 6 0 0010 1zM8.863 17.414a.75.75 0 00-.226 1.483 9.066 9.066 0 002.726 0 .75.75 0 00-.226-1.483 7.553 7.553 0 01-2.274 0z" />
+                    </svg>
+                    <span className="text-sm font-medium text-primary-700 dark:text-primary-400">
+                      Need ideas?
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fetchSuggestions}
+                    disabled={loadingSuggestions}
+                    className="text-xs px-2 py-1 bg-primary-500 text-white rounded hover:bg-primary-600 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {loadingSuggestions ? (
+                      <>
+                        <svg className="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Thinking...
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                          <path fillRule="evenodd" d="M5 4a.75.75 0 01.738.616l.252 1.388A1.25 1.25 0 007.996 7.01l1.388.252a.75.75 0 010 1.476l-1.388.252A1.25 1.25 0 006.99 9.996l-.252 1.388a.75.75 0 01-1.476 0L5.01 9.996A1.25 1.25 0 004.004 8.99l-1.388-.252a.75.75 0 010-1.476l1.388-.252A1.25 1.25 0 005.01 6.004l.252-1.388A.75.75 0 015 4z" clipRule="evenodd" />
+                          <path fillRule="evenodd" d="M12 2a.75.75 0 01.721.544l.184.736c.052.208.2.356.408.408l.736.184a.75.75 0 010 1.456l-.736.184a.75.75 0 00-.408.408l-.184.736a.75.75 0 01-1.456 0l-.184-.736a.75.75 0 00-.408-.408l-.736-.184a.75.75 0 010-1.456l.736-.184a.75.75 0 00.408-.408l.184-.736A.75.75 0 0112 2z" clipRule="evenodd" />
+                        </svg>
+                        Get AI Suggestions
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {showSuggestions && (
+                  <div className="mt-3 space-y-2">
+                    {loadingSuggestions ? (
+                      <div className="text-center py-4 text-sm text-gray-500">
+                        Analyzing your training history...
+                      </div>
+                    ) : suggestions.length > 0 ? (
+                      <>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          Based on your training history, here are some suggestions:
+                        </p>
+                        {suggestions.map((suggestion, idx) => {
+                          const sugColors = categoryColors[suggestion.category] || categoryColors.custom;
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => applySuggestion(suggestion)}
+                              className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-md ${sugColors.bg} ${sugColors.border}`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                                  suggestion.category === 'offensive' ? 'bg-red-500' :
+                                  suggestion.category === 'defensive' ? 'bg-blue-500' :
+                                  suggestion.category === 'control' ? 'bg-purple-500' :
+                                  suggestion.category === 'transition' ? 'bg-green-500' :
+                                  suggestion.category === 'competition' ? 'bg-orange-500' :
+                                  suggestion.category === 'fundamentals' ? 'bg-teal-500' :
+                                  'bg-gray-500'
+                                }`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm text-gray-900 dark:text-white">
+                                    {suggestion.name}
+                                  </div>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                                    {suggestion.description}
+                                  </p>
+                                  {suggestion.reasoning && (
+                                    <p className="text-xs text-primary-600 dark:text-primary-400 mt-1 italic">
+                                      {suggestion.reasoning}
+                                    </p>
+                                  )}
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400 flex-shrink-0">
+                                  <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <div className="text-center py-3 text-sm text-gray-500">
+                        No suggestions available. Try adding more training history.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Start Date</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="input"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">End Date</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="input"
+                  min={startDate}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDuration(2)}
+                className="chip text-xs"
+              >
+                2 weeks
+              </button>
+              <button
+                type="button"
+                onClick={() => setDuration(3)}
+                className="chip text-xs"
+              >
+                3 weeks
+              </button>
+              <button
+                type="button"
+                onClick={() => setDuration(4)}
+                className="chip text-xs"
+              >
+                4 weeks
+              </button>
+            </div>
+
+            <div>
+              <label className="label">Goals (comma-separated, optional)</label>
+              <input
+                type="text"
+                value={goals}
+                onChange={(e) => setGoals(e.target.value)}
+                placeholder="e.g., Improve hip escapes, Work on frames"
+                className="input"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('Delete this topic?')) {
+                      onDelete();
+                      onClose();
+                    }
+                  }}
+                  className="btn-danger text-sm"
+                >
+                  Delete
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-primary flex-1"
+              >
+                {topic ? 'Save' : 'Create Topic'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

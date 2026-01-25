@@ -289,9 +289,145 @@ router.get('/status', async (req, res) => {
     features: {
       gameGeneration: true,
       webSearch: hasApiKey,
-      problemSolver: hasApiKey
+      problemSolver: hasApiKey,
+      topicSuggestion: hasApiKey
     }
   });
+});
+
+// @route   POST /api/ai/suggest-topic
+// @desc    Suggest next training topic based on history
+// @access  Private
+router.post('/suggest-topic', protect, async (req, res) => {
+  try {
+    const { recentTopics, recentGames, preferences } = req.body;
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    // Fallback suggestions if no API key
+    const fallbackSuggestions = [
+      {
+        name: 'Guard Retention Focus',
+        category: 'defensive',
+        description: 'Work on maintaining and recovering guard against pressure passers',
+        reasoning: 'Guard retention is a fundamental defensive skill that benefits all practitioners',
+        goals: ['Improve hip movement', 'Work on frames', 'Develop guard recovery']
+      },
+      {
+        name: 'Submission Chains',
+        category: 'offensive',
+        description: 'Focus on connecting submissions and transitioning between attacks',
+        reasoning: 'Building submission chains increases finishing rate and keeps opponents guessing',
+        goals: ['Link arm attacks', 'Combine chokes with joint locks', 'Improve transition speed']
+      },
+      {
+        name: 'Pressure Passing',
+        category: 'control',
+        description: 'Develop heavy pressure passing techniques and combinations',
+        reasoning: 'Pressure passing is effective against many guard styles and builds top game',
+        goals: ['Improve weight distribution', 'Master knee slice', 'Develop passing chains']
+      },
+      {
+        name: 'Wrestling Integration',
+        category: 'transition',
+        description: 'Work on takedowns and wrestling ties for no-gi grappling',
+        reasoning: 'Strong wrestling provides control of where the fight takes place',
+        goals: ['Improve shot technique', 'Work on clinch entries', 'Develop takedown defense']
+      }
+    ];
+
+    if (!apiKey) {
+      // Return fallback suggestions
+      return res.json({
+        suggestions: fallbackSuggestions.slice(0, 3),
+        source: 'template'
+      });
+    }
+
+    // Build context for Claude
+    const topicHistory = recentTopics?.map(t => `- ${t.name} (${t.category}): ${t.startDate} to ${t.endDate}`).join('\n') || 'No recent topics';
+    const gameHistory = recentGames?.map(g => `- ${g.name} (${g.topic})`).join('\n') || 'No recent games';
+    const userPrefs = preferences || 'No specific preferences';
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        system: `You are an expert BJJ/NoGi coach helping plan training periodization. Analyze the practitioner's training history and suggest the next training focus.
+
+Consider:
+1. What areas haven't been covered recently
+2. Natural progressions from recent work
+3. Balancing offensive and defensive skills
+4. Building on strengths while addressing weaknesses
+5. Competition preparation if relevant
+
+Return a JSON array of 3 suggestions:
+[
+  {
+    "name": "Topic name",
+    "category": "offensive|defensive|control|transition|competition|fundamentals",
+    "description": "Brief description of the focus",
+    "reasoning": "Why this topic is recommended now",
+    "goals": ["Goal 1", "Goal 2", "Goal 3"],
+    "suggestedDuration": 3
+  }
+]
+
+Return ONLY the JSON array.`,
+        messages: [
+          {
+            role: 'user',
+            content: `Based on my training history, suggest what I should focus on next.
+
+Recent Training Topics:
+${topicHistory}
+
+Recent Games Practiced:
+${gameHistory}
+
+My Preferences/Notes:
+${userPrefs}
+
+Suggest 3 different training topics I could focus on for the next 2-4 weeks.`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      return res.json({
+        suggestions: fallbackSuggestions.slice(0, 3),
+        source: 'template'
+      });
+    }
+
+    const data = await response.json();
+    const textContent = data.content?.find(c => c.type === 'text')?.text;
+
+    let suggestions;
+    try {
+      const jsonMatch = textContent.match(/\[[\s\S]*\]/);
+      suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(textContent);
+    } catch {
+      suggestions = fallbackSuggestions.slice(0, 3);
+      return res.json({ suggestions, source: 'template' });
+    }
+
+    res.json({
+      suggestions,
+      source: 'claude'
+    });
+  } catch (error) {
+    console.error('Topic suggestion error:', error);
+    res.status(500).json({ message: 'Failed to generate suggestions', error: error.message });
+  }
 });
 
 // System prompt for problem solving / web search
