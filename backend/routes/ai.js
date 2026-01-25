@@ -145,134 +145,357 @@ router.post('/generate', protect, async (req, res) => {
   }
 });
 
+// Comprehensive game library for template-based generation
+const GAME_LIBRARY = {
+  // OFFENSIVE GAMES - Submissions and attacks
+  offensive: [
+    {
+      name: 'RNC Hunting from Back',
+      startPosition: 'Back control with seatbelt grip, both hooks in',
+      topPlayer: 'Hunt for the rear naked choke. Use hand fighting to clear the chin defense. Win by submitting or maintaining back control for 2 minutes.',
+      bottomPlayer: 'Defend the choke using chin tuck and hand fighting. Win by escaping to turtle or guard 3 times.',
+      coaching: 'Focus on chest-to-back connection. Top player: "squeeze and shift" to create openings. Bottom: protect neck, fight hands systematically.',
+      constraints: ['Attacker cannot release seatbelt', 'Defender escapes reset to start', 'No leg attacks allowed'],
+      progressions: ['Basic: Both hooks, moderate defense', 'Add body triangle option', 'Start from one hook with hand fight'],
+      skills: ['back control', 'RNC', 'hand fighting', 'back escapes'],
+      keywords: ['back', 'rnc', 'choke', 'rear naked', 'strangle']
+    },
+    {
+      name: 'Guillotine Game',
+      startPosition: 'Standing clinch with head position battle',
+      topPlayer: 'Secure front headlock and work to guillotine finish. Win by submission or achieving 3 clean front headlock entries.',
+      bottomPlayer: 'Defend the guillotine and complete takedowns. Win by 3 successful takedowns without getting submitted.',
+      coaching: 'Attackers: chin strap grip, arm in vs arm out options. Defenders: posture up, circle away from choking arm.',
+      constraints: ['Reset after each submission attempt or takedown', '30 second time limit per exchange', 'No pulling guard'],
+      progressions: ['Standing only', 'Allow guard pull after headlock', 'Full transition to ground'],
+      skills: ['guillotine', 'front headlock', 'takedown defense', 'head position'],
+      keywords: ['guillotine', 'front headlock', 'choke', 'standing']
+    },
+    {
+      name: 'Armbar Chain Drill',
+      startPosition: 'Closed guard with overhook/wrist control',
+      topPlayer: 'Defend armbar attempts and work to pass guard. Win by passing to side control.',
+      bottomPlayer: 'Attack with armbar, transition to triangle if defended, then omoplata. Win by submission or 5 clean armbar attempts.',
+      coaching: 'Guard player: hip angle is everything, cut the angle before attacking. Top: keep elbows tight, posture when possible.',
+      constraints: ['Guard player attacks only (no sweeps)', 'Reset if guard is passed', 'Top player defends only'],
+      progressions: ['Armbar only', 'Add triangle option', 'Full chain: armbar-triangle-omoplata'],
+      skills: ['armbar', 'triangle', 'omoplata', 'submission chains'],
+      keywords: ['armbar', 'arm bar', 'arm attack', 'triangle', 'omoplata', 'chain']
+    },
+    {
+      name: 'Leg Lock Entry Game',
+      startPosition: 'Open guard with shin-to-shin contact',
+      topPlayer: 'Pass the guard without getting caught in leg entanglements. Win by passing to side control.',
+      bottomPlayer: 'Enter ashi garami positions (outside ashi, 50/50, inside sankaku). Win by achieving 3 clean entries with control.',
+      coaching: 'Guard player: off-balance first, then enter. Top: keep knees together, avoid extended legs.',
+      constraints: ['No heel hooks (control entries only)', 'Reset after each entry or pass', 'Standing allowed'],
+      progressions: ['Single entry type', 'Multiple entry options', 'Add finishing (toe holds only for safety)'],
+      skills: ['leg locks', 'ashi garami', 'leg entanglement', 'guard passing'],
+      keywords: ['leg lock', 'heel hook', 'ashi', '50/50', 'leg entanglement', 'sankaku']
+    },
+    {
+      name: 'Kimura Trap System',
+      startPosition: 'Half guard bottom with kimura grip secured',
+      topPlayer: 'Free your arm from the kimura grip and work to pass. Win by freeing arm and passing or maintaining top for 90 seconds.',
+      bottomPlayer: 'Use kimura grip to sweep, take back, or submit. Win by sweep, back take, or submission.',
+      coaching: 'Bottom: the grip is control, use it to off-balance before attacking. Top: elbow tight, posture to reduce leverage.',
+      constraints: ['Bottom must maintain kimura grip', 'Top cannot disengage to standing', 'Reset if grip is lost'],
+      progressions: ['Sweep focus only', 'Add back take option', 'Full system with submissions'],
+      skills: ['kimura', 'half guard', 'sweeps', 'back takes'],
+      keywords: ['kimura', 'half guard', 'sweep', 'americana']
+    }
+  ],
+
+  // DEFENSIVE GAMES - Escapes and survival
+  defensive: [
+    {
+      name: 'Side Control Escape Drill',
+      startPosition: 'Bottom of side control, opponent with crossface and underhook',
+      topPlayer: 'Maintain side control using pressure and transitions. Win by holding position for 90 seconds or submitting.',
+      bottomPlayer: 'Escape to guard, turtle, or standing. Win by escaping 3 times.',
+      coaching: 'Bottom: frames before movement, timing with opponent transitions. Top: heavy hips, control the near arm.',
+      constraints: ['No submissions for first 30 seconds', 'Reset after each escape', 'Top cannot mount'],
+      progressions: ['Moderate pressure', 'Heavy pressure with transitions', 'Add mount threat'],
+      skills: ['escapes', 'framing', 'hip movement', 'side control'],
+      keywords: ['escape', 'side control', 'frames', 'shrimp', 'hip escape']
+    },
+    {
+      name: 'Mount Survival and Escape',
+      startPosition: 'Bottom of mount, opponent in low mount with grapevines',
+      topPlayer: 'Maintain mount and hunt for submissions. Win by submitting or holding mount for 2 minutes.',
+      bottomPlayer: 'Escape mount using trap and roll, elbow-knee, or other methods. Win by escaping 3 times.',
+      coaching: 'Bottom: elbows tight, bridge to create space, time your escapes. Top: heavy hips, hands on mat for base.',
+      constraints: ['Bottom player defensive only', 'Reset after each escape', 'Top must stay in mount (no S-mount)'],
+      progressions: ['Low mount only', 'Add high mount', 'Include submission threats'],
+      skills: ['mount escapes', 'bridging', 'trap and roll', 'mount retention'],
+      keywords: ['mount', 'escape', 'bridge', 'trap and roll', 'upa']
+    },
+    {
+      name: 'Guard Retention Battle',
+      startPosition: 'Open guard vs standing passer',
+      topPlayer: 'Pass the guard using any method. Win by achieving side control.',
+      bottomPlayer: 'Retain guard using frames, hip movement, and re-guarding. Win by retaining guard for 2 minutes or sweeping.',
+      coaching: 'Bottom: always face opponent, use feet and hands as frames. Top: control the legs, pressure forward.',
+      constraints: ['Bottom cannot stand up', 'Top must attempt to pass (no stalling)', 'Reset if guard is fully passed'],
+      progressions: ['Slow passing only', 'Normal speed', 'Explosive passing allowed'],
+      skills: ['guard retention', 'hip movement', 'framing', 'guard passing'],
+      keywords: ['guard retention', 'retain', 'reguard', 'hip movement']
+    },
+    {
+      name: 'Back Defense Shell',
+      startPosition: 'Opponent has back with seatbelt, you are in defensive shell (chin tucked, hands protecting neck)',
+      topPlayer: 'Break through the defensive shell and submit. Win by RNC or arm attack.',
+      bottomPlayer: 'Escape the back using hand fighting and hip movement. Win by escaping to guard or top position.',
+      coaching: 'Bottom: fight the hands, not the choke. Clear one hook, turn toward remaining hook. Top: patience, trap an arm.',
+      constraints: ['Bottom stays defensive first 30 sec', 'Top cannot switch to body triangle', 'Reset after escape'],
+      progressions: ['Both hooks only', 'Add body triangle option', 'Start with one arm trapped'],
+      skills: ['back defense', 'hand fighting', 'back escapes', 'back attacks'],
+      keywords: ['back escape', 'back defense', 'shell', 'hand fighting', 'defend back']
+    },
+    {
+      name: 'Turtle Recovery Game',
+      startPosition: 'Turtle position with opponent controlling from side',
+      topPlayer: 'Take the back, flatten, or submit from turtle. Win by back take or submission.',
+      bottomPlayer: 'Recover to guard, sit out to top, or stand up. Win by 3 successful recoveries.',
+      coaching: 'Bottom: protect neck, keep elbows tight, timing is key. Top: break down posture, heavy chest pressure.',
+      constraints: ['Bottom must recover (no stalling in turtle)', 'Top cannot cross-face flatten', 'Reset after each recovery or back take'],
+      progressions: ['Recovery only', 'Add sit-out counters', 'Include Granby rolls'],
+      skills: ['turtle', 'guard recovery', 'sit out', 'back takes'],
+      keywords: ['turtle', 'recovery', 'sit out', 'granby', 'guard pull']
+    }
+  ],
+
+  // CONTROL GAMES - Passing and top position
+  control: [
+    {
+      name: 'Pressure Passing Fundamentals',
+      startPosition: 'Standing vs seated guard',
+      topPlayer: 'Pass using knee cut, over-under, or body lock. Win by passing to side control and holding 3 seconds.',
+      bottomPlayer: 'Retain guard, sweep, or stand up. Win by sweeping or standing 3 times.',
+      coaching: 'Top: posture, grips, then pressure. Connect chest to opponent. Bottom: never let them settle, always be moving.',
+      constraints: ['No jumping passes', 'Top must maintain contact', 'Reset after pass or sweep'],
+      progressions: ['Single pass type', 'Chain 2 passes', 'Full passing game'],
+      skills: ['guard passing', 'knee cut', 'pressure passing', 'guard retention'],
+      keywords: ['pass', 'passing', 'knee cut', 'pressure', 'over under']
+    },
+    {
+      name: 'Body Lock Passing',
+      startPosition: 'Half guard with passer having body lock',
+      topPlayer: 'Complete the pass using body lock pressure. Win by achieving side control.',
+      bottomPlayer: 'Escape the body lock and recover full guard. Win by recovering guard or sweeping.',
+      coaching: 'Top: squeeze tight, walk hips around, be patient. Bottom: create frames, fight for underhook.',
+      constraints: ['Top must maintain body lock', 'Bottom cannot stand', 'Reset if body lock is broken'],
+      progressions: ['Basic pass', 'Add mount transition', 'Include back take option'],
+      skills: ['body lock', 'half guard passing', 'half guard defense', 'pressure'],
+      keywords: ['body lock', 'half guard', 'pass', 'squeeze']
+    },
+    {
+      name: 'Pin Transitions Drill',
+      startPosition: 'Side control with crossface',
+      topPlayer: 'Transition between side control, north-south, mount, and knee-on-belly. Win by visiting all 4 positions.',
+      bottomPlayer: 'Escape during transitions. Win by escaping to guard or standing.',
+      coaching: 'Top: smooth transitions, never give space. Bottom: attack during the transition, not the settled position.',
+      constraints: ['Top must attempt all positions', 'No submissions allowed', 'Reset after escape or completing circuit'],
+      progressions: ['2 positions', '3 positions', 'All 4 with timing pressure'],
+      skills: ['transitions', 'side control', 'mount', 'north south', 'knee on belly'],
+      keywords: ['pin', 'transition', 'side control', 'mount', 'north south', 'knee on belly']
+    },
+    {
+      name: 'Headquarters Passing Game',
+      startPosition: 'Passer in headquarters position (one leg trapped between knees)',
+      topPlayer: 'Pass from headquarters using knee cut, leg drag, or long step. Win by passing.',
+      bottomPlayer: 'Recover guard or sweep from headquarters. Win by recovery or sweep.',
+      coaching: 'Top: control the far leg, stay heavy on trapped leg. Bottom: free trapped leg, create angles.',
+      constraints: ['Top must stay in headquarters start', 'Bottom cannot fully disengage', 'Reset after pass or recovery'],
+      progressions: ['Knee cut only', 'Add leg drag', 'Full headquarters game'],
+      skills: ['headquarters', 'knee cut', 'leg drag', 'guard recovery'],
+      keywords: ['headquarters', 'knee cut', 'leg drag', 'long step', 'half guard pass']
+    },
+    {
+      name: 'Leg Drag Control',
+      startPosition: 'Passer has leg drag grip (controlling one leg across body)',
+      topPlayer: 'Complete the leg drag pass and secure side control. Win by passing and holding 3 seconds.',
+      bottomPlayer: 'Clear the leg drag and recover guard. Win by recovering guard 3 times.',
+      coaching: 'Top: heavy on the hip, head low, work around. Bottom: pummel the leg free, face the opponent.',
+      constraints: ['Top maintains leg drag control', 'Bottom focuses on recovery', 'Reset after pass or recovery'],
+      progressions: ['Basic leg drag', 'Add backstep option', 'Include mount transition'],
+      skills: ['leg drag', 'guard passing', 'guard recovery', 'hip movement'],
+      keywords: ['leg drag', 'pass', 'torreando', 'guard pass']
+    }
+  ],
+
+  // TRANSITION GAMES - Wrestling, sweeps, scrambles
+  transition: [
+    {
+      name: 'Takedown Battle',
+      startPosition: 'Standing, collar tie clinch',
+      topPlayer: 'Score takedown using wrestling or judo techniques. Win by 3 takedowns.',
+      bottomPlayer: 'Same goal - compete for takedowns. First to 3 wins.',
+      coaching: 'Level change for shots, off-balance for throws. Sprawl immediately on defense.',
+      constraints: ['No guard pulling', '30 second time limit per exchange', 'Reset after each takedown'],
+      progressions: ['Singles and doubles only', 'Add trips', 'Full standup arsenal'],
+      skills: ['takedowns', 'wrestling', 'sprawl', 'clinch'],
+      keywords: ['takedown', 'wrestling', 'shot', 'double leg', 'single leg', 'standup']
+    },
+    {
+      name: 'Sweep or Pass',
+      startPosition: 'Closed guard',
+      topPlayer: 'Pass the guard. Win by passing to side control.',
+      bottomPlayer: 'Sweep to top position. Win by achieving mount or side control.',
+      coaching: 'Top: posture and patience. Bottom: break posture, attack immediately.',
+      constraints: ['No submissions', 'Guard player must attempt sweeps', 'Reset if guard opened without pass'],
+      progressions: ['Basic sweeps only', 'Add hip bump and scissor', 'Technical standup allowed'],
+      skills: ['sweeps', 'guard passing', 'closed guard', 'posture'],
+      keywords: ['sweep', 'closed guard', 'scissor', 'hip bump', 'flower']
+    },
+    {
+      name: 'Scramble Rounds',
+      startPosition: 'Both players on knees facing each other',
+      topPlayer: 'Achieve dominant position (back, mount, or side control). Same goal for both.',
+      bottomPlayer: 'Same objective - first to achieve and hold dominant position for 3 seconds.',
+      coaching: 'Stay heavy, fight for underhooks, never stop moving. The one who keeps going wins scrambles.',
+      constraints: ['Start on knees', 'No pulling guard', 'Must achieve positional control'],
+      progressions: ['Knees only', 'One can stand', 'Both can stand'],
+      skills: ['scrambles', 'wrestling', 'transitions', 'underhooks'],
+      keywords: ['scramble', 'battle', 'transition', 'underhook', 'position']
+    },
+    {
+      name: 'Get Up Game',
+      startPosition: 'Bottom of side control',
+      topPlayer: 'Maintain control and prevent standup. Win by holding for 90 seconds.',
+      bottomPlayer: 'Get to your feet. Win by standing up 3 times.',
+      coaching: 'Bottom: frames, hip movement, technical standup. Top: heavy pressure, control the hips.',
+      constraints: ['Bottom goal is standing only', 'Guard recovery does not count', 'Top cannot submit'],
+      progressions: ['Side control only', 'Add mount start option', 'Include back control'],
+      skills: ['technical standup', 'wrestling up', 'top pressure', 'escapes'],
+      keywords: ['stand up', 'get up', 'wrestling', 'technical standup', 'base']
+    },
+    {
+      name: 'Butterfly Sweep Wars',
+      startPosition: 'Butterfly guard vs kneeling opponent',
+      topPlayer: 'Smash or pass the butterfly guard. Win by flattening or passing.',
+      bottomPlayer: 'Sweep using butterfly hooks. Win by sweeping to top 3 times.',
+      coaching: 'Bottom: underhook and head position, elevate and turn. Top: heavy hips, deny the underhook.',
+      constraints: ['Bottom must use butterfly hooks', 'Top cannot stand fully', 'Reset after sweep or pass'],
+      progressions: ['Basic hook sweep', 'Add arm drag', 'Include single leg X entries'],
+      skills: ['butterfly guard', 'sweeps', 'guard passing', 'hooks'],
+      keywords: ['butterfly', 'sweep', 'hook', 'arm drag', 'elevate']
+    }
+  ]
+};
+
 // Template-based generation as fallback
 function generateTemplateGame(prompt) {
   const promptLower = prompt.toLowerCase();
 
+  // Determine topic from prompt
   let topic = 'transition';
   let gameType = 'main';
   let difficulty = 'intermediate';
 
-  // Determine topic from prompt
-  if (promptLower.includes('submit') || promptLower.includes('finish') || promptLower.includes('attack') || promptLower.includes('choke') || promptLower.includes('armbar')) {
-    topic = 'offensive';
-  } else if (promptLower.includes('escape') || promptLower.includes('defend') || promptLower.includes('survival') || promptLower.includes('recover')) {
-    topic = 'defensive';
-  } else if (promptLower.includes('pass') || promptLower.includes('control') || promptLower.includes('pressure') || promptLower.includes('pin')) {
-    topic = 'control';
+  // Check keywords to determine best topic
+  const topicScores = { offensive: 0, defensive: 0, control: 0, transition: 0 };
+
+  // Score each topic based on keyword matches
+  for (const [topicName, games] of Object.entries(GAME_LIBRARY)) {
+    for (const game of games) {
+      for (const keyword of game.keywords) {
+        if (promptLower.includes(keyword)) {
+          topicScores[topicName] += 2;
+        }
+      }
+      // Also check game name
+      if (promptLower.includes(game.name.toLowerCase().split(' ')[0])) {
+        topicScores[topicName] += 1;
+      }
+    }
+  }
+
+  // Find highest scoring topic
+  let maxScore = 0;
+  for (const [topicName, score] of Object.entries(topicScores)) {
+    if (score > maxScore) {
+      maxScore = score;
+      topic = topicName;
+    }
+  }
+
+  // Fallback keyword detection if no matches
+  if (maxScore === 0) {
+    if (promptLower.includes('submit') || promptLower.includes('finish') || promptLower.includes('attack') || promptLower.includes('choke') || promptLower.includes('armbar') || promptLower.includes('leg lock')) {
+      topic = 'offensive';
+    } else if (promptLower.includes('escape') || promptLower.includes('defend') || promptLower.includes('survival') || promptLower.includes('recover')) {
+      topic = 'defensive';
+    } else if (promptLower.includes('pass') || promptLower.includes('control') || promptLower.includes('pressure') || promptLower.includes('pin') || promptLower.includes('top')) {
+      topic = 'control';
+    }
+  }
+
+  // Find the best matching game from the library
+  let bestGame = null;
+  let bestMatchScore = 0;
+
+  for (const game of GAME_LIBRARY[topic]) {
+    let matchScore = 0;
+    for (const keyword of game.keywords) {
+      if (promptLower.includes(keyword)) {
+        matchScore += 1;
+      }
+    }
+    if (matchScore > bestMatchScore) {
+      bestMatchScore = matchScore;
+      bestGame = game;
+    }
+  }
+
+  // If no good match, pick random from topic
+  if (!bestGame || bestMatchScore === 0) {
+    const games = GAME_LIBRARY[topic];
+    bestGame = games[Math.floor(Math.random() * games.length)];
   }
 
   // Determine game type
-  if (promptLower.includes('warmup') || promptLower.includes('warm up') || promptLower.includes('flow')) {
+  if (promptLower.includes('warmup') || promptLower.includes('warm up') || promptLower.includes('flow') || promptLower.includes('light')) {
     gameType = 'warmup';
-  } else if (promptLower.includes('cooldown') || promptLower.includes('cool down') || promptLower.includes('light')) {
+  } else if (promptLower.includes('cooldown') || promptLower.includes('cool down')) {
     gameType = 'cooldown';
   }
 
   // Determine difficulty
-  if (promptLower.includes('beginner') || promptLower.includes('basic') || promptLower.includes('fundamental')) {
+  if (promptLower.includes('beginner') || promptLower.includes('basic') || promptLower.includes('fundamental') || promptLower.includes('white belt')) {
     difficulty = 'beginner';
-  } else if (promptLower.includes('advanced') || promptLower.includes('competition') || promptLower.includes('expert')) {
+  } else if (promptLower.includes('advanced') || promptLower.includes('competition') || promptLower.includes('expert') || promptLower.includes('black belt')) {
     difficulty = 'advanced';
   }
 
-  const templates = {
-    offensive: {
-      startPosition: 'Back control with seatbelt grip',
-      constraints: [
-        'Attacker cannot re-hook legs once lost',
-        'Defender can only escape to turtle (no full escape)',
-        'Time limit: 2 minutes per round'
-      ],
-      winTop: 'Achieve submission or maintain back control for full round',
-      winBottom: 'Escape to turtle position 3 times',
-      coaching: 'Focus on chest-to-back connection. Use the "squeeze and shift" principle for choke setups.',
-      progressions: [
-        'Start: Back with both hooks, rear naked choke hunting',
-        'Intermediate: Add arm triangle and bow & arrow options',
-        'Advanced: Start from body triangle with hand fighting'
-      ],
-      pedagogical: 'This game develops submission awareness under defensive pressure, building perception-action coupling for finishing sequences.',
-      skills: ['back control', 'submissions', 'finishing', 'pressure']
-    },
-    defensive: {
-      startPosition: 'Bottom side control, opponent in standard cross-face',
-      constraints: [
-        'Bottom player must create space before bridging',
-        'Top player cannot mount or take back',
-        'Reset if bottom player achieves guard'
-      ],
-      winTop: 'Maintain side control for 90 seconds',
-      winBottom: 'Escape to guard or stand up',
-      coaching: 'Emphasize frame creation before movement. "Breathe, frame, bridge, turn" sequence.',
-      progressions: [
-        'Start: Side control with moderate pressure',
-        'Intermediate: Add north-south transitions for top player',
-        'Advanced: Top player can switch sides freely'
-      ],
-      pedagogical: 'Builds defensive problem-solving through constrained exploration, developing robust escape patterns.',
-      skills: ['escapes', 'framing', 'hip movement', 'defense']
-    },
-    control: {
-      startPosition: 'Top player in closed guard',
-      constraints: [
-        'No submissions allowed for either player',
-        'Passer must maintain contact with guard player',
-        'Guard player cannot stand up'
-      ],
-      winTop: 'Pass to side control and hold for 3 seconds',
-      winBottom: 'Sweep to top position',
-      coaching: 'Work posture and grip fighting. "Control the hips, control the fight."',
-      progressions: [
-        'Start: Closed guard passing with posture focus',
-        'Intermediate: Add leg locks to make guard player defend',
-        'Advanced: Start in open guard with grip advantages'
-      ],
-      pedagogical: 'Develops systematic passing approach while maintaining adaptability to guard player adjustments.',
-      skills: ['guard passing', 'pressure', 'posture', 'control']
-    },
-    transition: {
-      startPosition: 'Both players standing in clinch',
-      constraints: [
-        'Must achieve takedown within 30 seconds or reset',
-        'No pulling guard allowed',
-        'Points only awarded for clean takedowns'
-      ],
-      winTop: 'Achieve 3 takedowns first',
-      winBottom: 'Same objective - first to 3 takedowns',
-      coaching: 'Focus on level changes and timing. "Set up, break posture, execute."',
-      progressions: [
-        'Start: Wrestling clinch, single/double leg focus',
-        'Intermediate: Add trips and throws',
-        'Advanced: Start from grip fighting at distance'
-      ],
-      pedagogical: 'Creates high-rep takedown scenarios that develop timing and pattern recognition in scramble situations.',
-      skills: ['takedowns', 'scrambles', 'wrestling', 'timing']
+  // Generate a custom name based on prompt if it's specific enough
+  let gameName = bestGame.name;
+  if (prompt.length > 10 && prompt.length < 50 && maxScore > 0) {
+    gameName = prompt.charAt(0).toUpperCase() + prompt.slice(1);
+    if (!gameName.toLowerCase().includes('game') && !gameName.toLowerCase().includes('drill')) {
+      gameName += ' Game';
     }
-  };
-
-  const template = templates[topic];
-  const name = prompt.length > 60 ? prompt.substring(0, 60) + '...' : prompt;
+  }
 
   return {
-    name: name.charAt(0).toUpperCase() + name.slice(1),
+    name: gameName,
     topic,
-    topPlayer: `Win condition: ${template.winTop}\n\nKey focus: Apply consistent pressure while hunting for the win condition.`,
-    bottomPlayer: `Win condition: ${template.winBottom}\n\nKey focus: Stay calm, create space, and work systematically toward your goal.`,
-    coaching: template.coaching,
-    skills: template.skills,
+    topPlayer: bestGame.topPlayer,
+    bottomPlayer: bestGame.bottomPlayer,
+    coaching: bestGame.coaching,
+    skills: bestGame.skills,
     gameType,
     difficulty,
     aiGenerated: true,
     aiMetadata: {
-      startPosition: template.startPosition,
-      constraints: template.constraints,
+      startPosition: bestGame.startPosition,
+      constraints: bestGame.constraints,
       winConditions: {
-        top: template.winTop,
-        bottom: template.winBottom
+        top: bestGame.topPlayer.split('.')[0],
+        bottom: bestGame.bottomPlayer.split('.')[0]
       },
-      progressions: template.progressions,
-      pedagogicalNote: template.pedagogical
+      progressions: bestGame.progressions,
+      pedagogicalNote: `This game focuses on ${bestGame.skills.join(', ')}. ${bestGame.coaching}`
     }
   };
 }
@@ -304,50 +527,217 @@ router.post('/suggest-topic', protect, async (req, res) => {
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
-    // Fallback suggestions if no API key
-    const fallbackSuggestions = [
+    // Comprehensive fallback suggestions for NoGi grappling
+    const allFallbackSuggestions = [
+      // Defensive topics
       {
-        name: 'Guard Retention Focus',
+        name: 'Guard Retention & Recovery',
         category: 'defensive',
-        description: 'Work on maintaining and recovering guard against pressure passers',
-        reasoning: 'Guard retention is a fundamental defensive skill that benefits all practitioners',
-        goals: ['Improve hip movement', 'Work on frames', 'Develop guard recovery']
+        description: 'Develop strong guard retention against aggressive passers using frames, hip movement, and re-guarding techniques',
+        reasoning: 'Guard retention is the foundation of defensive grappling - without it, you spend all your time escaping bad positions',
+        goals: ['Master the pummel and re-pummeling', 'Develop strong knee-elbow connection', 'Work on granby rolls and inversions for recovery']
       },
       {
-        name: 'Submission Chains',
-        category: 'offensive',
-        description: 'Focus on connecting submissions and transitioning between attacks',
-        reasoning: 'Building submission chains increases finishing rate and keeps opponents guessing',
-        goals: ['Link arm attacks', 'Combine chokes with joint locks', 'Improve transition speed']
+        name: 'Escapes from Bottom',
+        category: 'defensive',
+        description: 'Focus on escaping side control, mount, and back control with efficient movements',
+        reasoning: 'Solid escapes give you confidence to take risks in other areas knowing you can recover',
+        goals: ['Hip escapes from side control', 'Trap and roll from mount', 'Hand fighting and shell position from back']
       },
+      {
+        name: 'Defensive Body Lock Defense',
+        category: 'defensive',
+        description: 'Learn to defend and escape body locks, bear hugs, and tight waist control',
+        reasoning: 'Body locks are increasingly common in modern NoGi - defending them is essential',
+        goals: ['Peel grips systematically', 'Create space with frames', 'Counter with leg attacks']
+      },
+      // Offensive topics
+      {
+        name: 'Submission Chains from Guard',
+        category: 'offensive',
+        description: 'Build connected attack sequences from closed guard, butterfly, and half guard',
+        reasoning: 'Single attacks are easy to defend - chains create dilemmas for your opponent',
+        goals: ['Triangle to armbar to omoplata chain', 'Guillotine to darce to anaconda', 'Kimura trap sequences']
+      },
+      {
+        name: 'Back Attack System',
+        category: 'offensive',
+        description: 'Develop a complete back attack game including entries, control, and finishes',
+        reasoning: 'The back is the highest percentage finishing position in grappling',
+        goals: ['Rear naked choke mechanics', 'Arm trap systems', 'Staying on the back when they defend']
+      },
+      {
+        name: 'Leg Lock Entries',
+        category: 'offensive',
+        description: 'Learn safe entries into ashi garami positions for heel hooks and kneebars',
+        reasoning: 'Leg locks are essential for modern NoGi and create threats from many positions',
+        goals: ['Outside ashi entries', 'Inside sankaku control', 'Backside 50/50 attacks']
+      },
+      // Control topics
       {
         name: 'Pressure Passing',
         category: 'control',
-        description: 'Develop heavy pressure passing techniques and combinations',
-        reasoning: 'Pressure passing is effective against many guard styles and builds top game',
-        goals: ['Improve weight distribution', 'Master knee slice', 'Develop passing chains']
+        description: 'Develop heavy pressure passing using body weight, head position, and systematic progressions',
+        reasoning: 'Pressure passing is effective against flexible guard players and builds top control',
+        goals: ['Headquarters position mastery', 'Knee cut to mount transitions', 'Shoulder pressure concepts']
       },
       {
-        name: 'Wrestling Integration',
+        name: 'Pin Escapes Prevention',
+        category: 'control',
+        description: 'Learn to maintain top positions and shut down common escape attempts',
+        reasoning: 'Holding position allows you to rest, accumulate damage, and set up submissions',
+        goals: ['Cross-face and hip control', 'Transition between pins', 'Reading and countering escape attempts']
+      },
+      {
+        name: 'Guard Passing Combinations',
+        category: 'control',
+        description: 'Chain multiple passes together to beat stubborn guard players',
+        reasoning: 'Modern guards require multi-step passing strategies rather than single techniques',
+        goals: ['Torreando to knee cut', 'Long step to leg drag', 'Body lock passing sequences']
+      },
+      // Transition topics
+      {
+        name: 'Wrestling for BJJ',
         category: 'transition',
-        description: 'Work on takedowns and wrestling ties for no-gi grappling',
-        reasoning: 'Strong wrestling provides control of where the fight takes place',
-        goals: ['Improve shot technique', 'Work on clinch entries', 'Develop takedown defense']
+        description: 'Develop takedowns, clinch work, and wrestling ties specifically for NoGi grappling',
+        reasoning: 'Strong wrestling lets you choose where the fight happens and scores points',
+        goals: ['Single and double leg shots', 'Snap downs and front headlock', 'Underhook battles']
+      },
+      {
+        name: 'Scramble Situations',
+        category: 'transition',
+        description: 'Train common scramble positions and learn to come out on top',
+        reasoning: 'Scrambles determine who wins many grappling exchanges - train them specifically',
+        goals: ['Turtle attacks and defenses', 'Standing up from bottom', 'Re-shot and chase wrestling']
+      },
+      {
+        name: 'Guard Pull to Sweep',
+        category: 'transition',
+        description: 'Connect guard pulls directly to sweep attempts for immediate offense',
+        reasoning: 'Passive guard pulls give up 2 points - active pulls create immediate opportunities',
+        goals: ['Collar drag to single leg', 'Snap down to front headlock', 'Ankle pick entries']
+      },
+      // Competition topics
+      {
+        name: 'Competition Game Planning',
+        category: 'competition',
+        description: 'Develop A-game sequences and backup plans for tournament performance',
+        reasoning: 'Competition requires focused preparation on highest percentage techniques',
+        goals: ['Define your A-game path', 'Train specific time scenarios', 'Develop backup positions']
+      },
+      // Fundamentals topics
+      {
+        name: 'Movement & Mobility',
+        category: 'fundamentals',
+        description: 'Build fundamental movement patterns like shrimping, bridging, and technical standup',
+        reasoning: 'Better movement makes everything else easier and prevents injuries',
+        goals: ['Solo drills routine', 'Partner flow drilling', 'Position-specific mobility']
+      },
+      {
+        name: 'Grip Fighting Fundamentals',
+        category: 'fundamentals',
+        description: 'Master hand fighting, wrist control, and establishing dominant grips',
+        reasoning: 'Grip fighting is often where matches are won or lost before techniques even begin',
+        goals: ['2-on-1 control', 'Wrist riding', 'Breaking grips systematically']
       }
     ];
 
+    // Select 3 suggestions that balance different categories
+    const getBalancedSuggestions = () => {
+      const categories = ['offensive', 'defensive', 'control', 'transition'];
+      const selected = [];
+      const shuffled = [...allFallbackSuggestions].sort(() => Math.random() - 0.5);
+
+      // Try to get one from each major category
+      for (const cat of categories) {
+        if (selected.length >= 3) break;
+        const fromCat = shuffled.find(s => s.category === cat && !selected.includes(s));
+        if (fromCat) selected.push(fromCat);
+      }
+
+      // Fill remaining with any other suggestions
+      while (selected.length < 3) {
+        const remaining = shuffled.find(s => !selected.includes(s));
+        if (remaining) selected.push(remaining);
+        else break;
+      }
+
+      return selected;
+    };
+
+    // Smart fallback: avoid recently covered categories
+    const getSmartSuggestions = () => {
+      const recentCategories = (recentTopics || []).map(t => t.category).filter(Boolean);
+      const recentNames = (recentTopics || []).map(t => t.name?.toLowerCase()).filter(Boolean);
+
+      // Score each suggestion based on how different it is from recent training
+      const scored = allFallbackSuggestions.map(suggestion => {
+        let score = 10; // Base score
+
+        // Penalize if same category was done recently
+        if (recentCategories.includes(suggestion.category)) {
+          score -= 3;
+        }
+
+        // Penalize if similar name
+        if (recentNames.some(name =>
+          name.includes(suggestion.name.toLowerCase().split(' ')[0]) ||
+          suggestion.name.toLowerCase().includes(name.split(' ')[0])
+        )) {
+          score -= 5;
+        }
+
+        // Bonus for balancing: if recent was offensive, suggest defensive
+        if (recentCategories.length > 0) {
+          const lastCategory = recentCategories[0];
+          if (lastCategory === 'offensive' && suggestion.category === 'defensive') score += 2;
+          if (lastCategory === 'defensive' && suggestion.category === 'offensive') score += 2;
+          if (lastCategory === 'control' && suggestion.category === 'transition') score += 2;
+          if (lastCategory === 'transition' && suggestion.category === 'control') score += 2;
+        }
+
+        // Add small random factor for variety
+        score += Math.random() * 2;
+
+        return { ...suggestion, score };
+      });
+
+      // Sort by score and return top 3 from different categories
+      scored.sort((a, b) => b.score - a.score);
+
+      const selected = [];
+      const usedCategories = new Set();
+
+      for (const s of scored) {
+        if (selected.length >= 3) break;
+
+        // Prefer variety in categories
+        if (selected.length < 2 && usedCategories.has(s.category)) continue;
+
+        selected.push(s);
+        usedCategories.add(s.category);
+      }
+
+      // Remove score from output
+      return selected.map(({ score, ...rest }) => rest);
+    };
+
     if (!apiKey) {
-      // Return fallback suggestions
+      // Return smart fallback suggestions
       return res.json({
-        suggestions: fallbackSuggestions.slice(0, 3),
+        suggestions: getSmartSuggestions(),
         source: 'template'
       });
     }
 
     // Build context for Claude
-    const topicHistory = recentTopics?.map(t => `- ${t.name} (${t.category}): ${t.startDate} to ${t.endDate}`).join('\n') || 'No recent topics';
-    const gameHistory = recentGames?.map(g => `- ${g.name} (${g.topic})`).join('\n') || 'No recent games';
-    const userPrefs = preferences || 'No specific preferences';
+    const topicHistory = recentTopics?.length > 0
+      ? recentTopics.map(t => `- ${t.name} (${t.category}): ${new Date(t.startDate).toLocaleDateString()} to ${new Date(t.endDate).toLocaleDateString()}`).join('\n')
+      : 'No recent topics recorded';
+
+    const gameHistory = recentGames?.length > 0
+      ? recentGames.slice(0, 15).map(g => `- ${g.name}${g.constraints ? ` (Focus: ${g.constraints.slice(0, 50)})` : ''}`).join('\n')
+      : 'No recent games recorded';
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -359,51 +749,55 @@ router.post('/suggest-topic', protect, async (req, res) => {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2048,
-        system: `You are an expert BJJ/NoGi coach helping plan training periodization. Analyze the practitioner's training history and suggest the next training focus.
+        system: `You are an expert NoGi BJJ/submission grappling coach specializing in training periodization and curriculum design. You help practitioners plan their training focus for 2-4 week blocks.
 
-Consider:
-1. What areas haven't been covered recently
-2. Natural progressions from recent work
-3. Balancing offensive and defensive skills
-4. Building on strengths while addressing weaknesses
-5. Competition preparation if relevant
+Your suggestions should be:
+1. SPECIFIC to NoGi grappling (no gi grips like collar/sleeve)
+2. ACTIONABLE with clear techniques and positions to work on
+3. BALANCED - consider what they've done recently and suggest complementary areas
+4. PROGRESSIVE - build on foundations toward advanced applications
 
-Return a JSON array of 3 suggestions:
+Categories:
+- offensive: Submissions, attacks, finishing sequences (RNC, guillotines, leg locks, arm attacks)
+- defensive: Escapes, survival, guard retention, defending submissions
+- control: Passing guard, maintaining pins, pressure, top position dominance
+- transition: Takedowns, wrestling, scrambles, sweeps, getting up from bottom
+- competition: Tournament prep, timing, strategy, specific rulesets
+- fundamentals: Movement, grips, frames, basic positions, building blocks
+
+Return EXACTLY this JSON format (no markdown, no extra text):
 [
   {
-    "name": "Topic name",
+    "name": "Specific Topic Name",
     "category": "offensive|defensive|control|transition|competition|fundamentals",
-    "description": "Brief description of the focus",
-    "reasoning": "Why this topic is recommended now",
-    "goals": ["Goal 1", "Goal 2", "Goal 3"],
-    "suggestedDuration": 3
+    "description": "2-3 sentences explaining the focus area and what will be trained",
+    "reasoning": "1-2 sentences explaining why this is good to train now based on their history",
+    "goals": ["Specific goal 1", "Specific goal 2", "Specific goal 3"]
   }
 ]
 
-Return ONLY the JSON array.`,
+Return ONLY the JSON array with exactly 3 suggestions.`,
         messages: [
           {
             role: 'user',
-            content: `Based on my training history, suggest what I should focus on next.
+            content: `Based on my training history, suggest 3 different training topics for my next 2-4 week training block.
 
-Recent Training Topics:
+My Recent Training Topics:
 ${topicHistory}
 
-Recent Games Practiced:
+Games/Drills I've Been Practicing:
 ${gameHistory}
 
-My Preferences/Notes:
-${userPrefs}
-
-Suggest 3 different training topics I could focus on for the next 2-4 weeks.`
+Please suggest 3 different training topics that would complement my recent training. Make sure they cover different areas (don't suggest 3 offensive topics, for example).`
           }
         ]
       })
     });
 
     if (!response.ok) {
+      console.error('Claude API error:', response.status);
       return res.json({
-        suggestions: fallbackSuggestions.slice(0, 3),
+        suggestions: getSmartSuggestions(),
         source: 'template'
       });
     }
@@ -411,13 +805,36 @@ Suggest 3 different training topics I could focus on for the next 2-4 weeks.`
     const data = await response.json();
     const textContent = data.content?.find(c => c.type === 'text')?.text;
 
+    if (!textContent) {
+      return res.json({
+        suggestions: getSmartSuggestions(),
+        source: 'template'
+      });
+    }
+
     let suggestions;
     try {
       const jsonMatch = textContent.match(/\[[\s\S]*\]/);
       suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(textContent);
-    } catch {
-      suggestions = fallbackSuggestions.slice(0, 3);
-      return res.json({ suggestions, source: 'template' });
+
+      // Validate the suggestions have required fields
+      if (!Array.isArray(suggestions) || suggestions.length === 0) {
+        throw new Error('Invalid suggestions format');
+      }
+
+      suggestions = suggestions.map(s => ({
+        name: s.name || 'Training Focus',
+        category: ['offensive', 'defensive', 'control', 'transition', 'competition', 'fundamentals'].includes(s.category) ? s.category : 'custom',
+        description: s.description || 'Focus on this training area',
+        reasoning: s.reasoning || 'This complements your recent training',
+        goals: Array.isArray(s.goals) ? s.goals.slice(0, 4) : ['Train consistently', 'Focus on technique', 'Drill with partners']
+      }));
+    } catch (parseError) {
+      console.error('Failed to parse Claude response:', parseError);
+      return res.json({
+        suggestions: getSmartSuggestions(),
+        source: 'template'
+      });
     }
 
     res.json({
@@ -426,7 +843,34 @@ Suggest 3 different training topics I could focus on for the next 2-4 weeks.`
     });
   } catch (error) {
     console.error('Topic suggestion error:', error);
-    res.status(500).json({ message: 'Failed to generate suggestions', error: error.message });
+    // Always return suggestions, never fail completely
+    const emergencyFallback = [
+      {
+        name: 'Guard Passing Development',
+        category: 'control',
+        description: 'Focus on systematic guard passing using pressure and movement',
+        reasoning: 'Passing is fundamental to establishing top position',
+        goals: ['Knee cut mastery', 'Torreando basics', 'Leg drag entries']
+      },
+      {
+        name: 'Submission Defense',
+        category: 'defensive',
+        description: 'Train defending common submissions and escaping bad positions',
+        reasoning: 'Strong defense creates confidence to attack',
+        goals: ['Arm defense posture', 'Choke escape timing', 'Leg lock defense']
+      },
+      {
+        name: 'Wrestling Basics',
+        category: 'transition',
+        description: 'Develop takedowns and clinch work for NoGi',
+        reasoning: 'Standing skills open up your entire game',
+        goals: ['Double leg technique', 'Underhook battles', 'Sprawl defense']
+      }
+    ];
+    res.json({
+      suggestions: emergencyFallback,
+      source: 'template'
+    });
   }
 });
 
@@ -459,6 +903,97 @@ Format your response as a JSON object:
 
 Return ONLY the JSON object.`;
 
+// Generate fallback search results based on common BJJ topics
+function generateFallbackSearchResult(query) {
+  const queryLower = query.toLowerCase();
+
+  // Common problem areas and their solutions
+  const knowledgeBase = {
+    'guard pass': {
+      summary: 'Guard passing requires combining pressure, timing, and systematic approaches',
+      analysis: 'Focus on establishing grips, controlling the hips, and using your body weight. Common passes include knee cut, torreando, and leg drag.',
+      techniques: ['Knee cut pass', 'Torreando', 'Leg drag', 'Body lock pass', 'Over-under pass'],
+      drills: [
+        { name: 'Passing Flow Drill', description: 'Chain 3 passes together without stopping', focus: 'Passing combinations' },
+        { name: 'Hip Control Drill', description: 'Maintain hip control for 30 seconds against active guard', focus: 'Pressure and control' }
+      ],
+      commonMistakes: ['Reaching too far forward', 'Not controlling the hips', 'Passing too high'],
+      progressions: ['Light resistance drilling', 'Positional sparring from guard', 'Full rounds starting in guard']
+    },
+    'escape': {
+      summary: 'Escapes require proper timing, frames, and systematic movement',
+      analysis: 'Create space with frames before attempting to move. Time your escapes with your opponent\'s transitions.',
+      techniques: ['Hip escape (shrimp)', 'Bridge and roll', 'Elbow-knee escape', 'Granby roll'],
+      drills: [
+        { name: 'Escape Chains', description: 'Link multiple escape attempts together', focus: 'Persistence and combinations' },
+        { name: 'Frame Drilling', description: 'Establish and maintain frames under pressure', focus: 'Creating space' }
+      ],
+      commonMistakes: ['Moving without frames', 'Flat on back', 'Giving up too early'],
+      progressions: ['Solo drilling', 'Partner drilling with light pressure', 'Positional sparring']
+    },
+    'submission': {
+      summary: 'Submissions require proper positioning, control, and finishing mechanics',
+      analysis: 'Focus on control before submission. Chain attacks together to create dilemmas.',
+      techniques: ['Rear naked choke', 'Guillotine', 'Armbar', 'Triangle', 'Kimura'],
+      drills: [
+        { name: 'Submission Chains', description: 'Practice linking submissions (armbar to triangle to omoplata)', focus: 'Attack flow' },
+        { name: 'Finishing Mechanics', description: 'Drill the final squeeze/extension with perfect technique', focus: 'Finishing details' }
+      ],
+      commonMistakes: ['Chasing submissions without control', 'Poor grip placement', 'Not adjusting to defense'],
+      progressions: ['Drilling from static position', 'Submission-only rounds', 'Full sparring']
+    },
+    'takedown': {
+      summary: 'Takedowns combine setup, timing, and finishing mechanics',
+      analysis: 'Use grip fighting and movement to create openings. Commit fully to your shots.',
+      techniques: ['Double leg', 'Single leg', 'Snap down', 'Arm drag', 'Body lock takedown'],
+      drills: [
+        { name: 'Shot Drill', description: 'Practice level change and penetration step', focus: 'Takedown entry' },
+        { name: 'Chain Wrestling', description: 'Link failed takedowns to new attacks', focus: 'Wrestling combinations' }
+      ],
+      commonMistakes: ['Head down during shot', 'Not changing levels', 'Stopping after failed attempt'],
+      progressions: ['Shadow wrestling', 'Partner drilling', 'Takedown sparring']
+    },
+    'default': {
+      summary: 'Focus on fundamentals and position-specific training',
+      analysis: 'Break down the problem into specific positions and scenarios. Train with progressive resistance.',
+      techniques: ['Position-specific techniques', 'Movement patterns', 'Grip fighting'],
+      drills: [
+        { name: 'Positional Sparring', description: 'Start from the specific position you want to improve', focus: 'Position-specific development' },
+        { name: 'Flow Rolling', description: 'Light technical rolling focusing on movement and transitions', focus: 'General skill development' }
+      ],
+      commonMistakes: ['Training too hard to learn', 'Not enough repetition', 'Skipping fundamentals'],
+      progressions: ['Drilling', 'Positional sparring', 'Full sparring']
+    }
+  };
+
+  // Find best matching topic
+  let bestMatch = 'default';
+  for (const key of Object.keys(knowledgeBase)) {
+    if (key !== 'default' && queryLower.includes(key)) {
+      bestMatch = key;
+      break;
+    }
+  }
+
+  // Check for more specific matches
+  if (queryLower.includes('guard') && queryLower.includes('pass')) bestMatch = 'guard pass';
+  if (queryLower.includes('escape') || queryLower.includes('defend')) bestMatch = 'escape';
+  if (queryLower.includes('submit') || queryLower.includes('finish') || queryLower.includes('choke') || queryLower.includes('armbar')) bestMatch = 'submission';
+  if (queryLower.includes('takedown') || queryLower.includes('wrestling') || queryLower.includes('shot')) bestMatch = 'takedown';
+
+  const template = knowledgeBase[bestMatch];
+
+  return {
+    summary: template.summary,
+    analysis: template.analysis + `\n\nFor your specific question about "${query}", apply these principles to your training.`,
+    techniques: template.techniques,
+    drills: template.drills,
+    commonMistakes: template.commonMistakes,
+    progressions: template.progressions,
+    relatedTopics: ['Positional awareness', 'Timing', 'Grip fighting', 'Movement patterns']
+  };
+}
+
 // @route   POST /api/ai/search
 // @desc    Search for BJJ solutions and advice using Claude
 // @access  Private
@@ -473,9 +1008,13 @@ router.post('/search', protect, async (req, res) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {
-      return res.status(400).json({
-        message: 'AI search requires Claude API key',
-        source: 'unavailable'
+      // Return fallback result instead of error
+      const fallbackResult = generateFallbackSearchResult(query);
+      return res.json({
+        result: fallbackResult,
+        source: 'template',
+        query,
+        message: 'Using template response. Add ANTHROPIC_API_KEY for AI-powered search.'
       });
     }
 
@@ -503,14 +1042,26 @@ router.post('/search', protect, async (req, res) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('Claude API error:', response.status, errorData);
-      return res.status(500).json({ message: 'AI search failed', error: errorData });
+      // Return fallback instead of error
+      const fallbackResult = generateFallbackSearchResult(query);
+      return res.json({
+        result: fallbackResult,
+        source: 'template',
+        query,
+        apiError: true
+      });
     }
 
     const data = await response.json();
     const textContent = data.content?.find(c => c.type === 'text')?.text;
 
     if (!textContent) {
-      throw new Error('No text content in response');
+      const fallbackResult = generateFallbackSearchResult(query);
+      return res.json({
+        result: fallbackResult,
+        source: 'template',
+        query
+      });
     }
 
     // Parse JSON from response
@@ -522,6 +1073,17 @@ router.post('/search', protect, async (req, res) => {
       } else {
         result = JSON.parse(textContent);
       }
+
+      // Ensure all expected fields exist
+      result = {
+        summary: result.summary || 'See analysis for details',
+        analysis: result.analysis || textContent,
+        techniques: result.techniques || [],
+        drills: result.drills || [],
+        commonMistakes: result.commonMistakes || [],
+        progressions: result.progressions || [],
+        relatedTopics: result.relatedTopics || []
+      };
     } catch (parseError) {
       // If parsing fails, return raw text as summary
       result = {
@@ -542,7 +1104,14 @@ router.post('/search', protect, async (req, res) => {
     });
   } catch (error) {
     console.error('AI search error:', error);
-    res.status(500).json({ message: 'Search failed', error: error.message });
+    // Return fallback instead of error
+    const fallbackResult = generateFallbackSearchResult(req.body?.query || 'general training');
+    res.json({
+      result: fallbackResult,
+      source: 'template',
+      query: req.body?.query,
+      error: error.message
+    });
   }
 });
 
