@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import api from '../utils/api';
 
 const examplePrompts = [
   "Create a game to improve guard retention against pressure passers",
   "Design a constraint game for developing hip escapes from bottom side control",
   "Make a game focusing on arm drag setups from seated guard",
-  "Create a positional sparring game for back control with submission threats"
+  "Create a positional sparring game for back control with submission threats",
+  "Design a warmup game for grip fighting and pummeling",
+  "Create an advanced leg lock defense game starting from 50/50"
 ];
 
 const topics = [
@@ -15,6 +18,18 @@ const topics = [
   { value: 'transition', label: 'Transition / Scrambles', color: 'bg-green-500' }
 ];
 
+const gameTypes = [
+  { value: 'warmup', label: 'Warmup', icon: '🔥' },
+  { value: 'main', label: 'Main', icon: '🎯' },
+  { value: 'cooldown', label: 'Cooldown', icon: '🧘' }
+];
+
+const difficulties = [
+  { value: 'beginner', label: 'Beginner', color: 'bg-green-500' },
+  { value: 'intermediate', label: 'Intermediate', color: 'bg-yellow-500' },
+  { value: 'advanced', label: 'Advanced', color: 'bg-red-500' }
+];
+
 export default function AIDesigner() {
   const { createGame, showToast } = useApp();
 
@@ -22,9 +37,24 @@ export default function AIDesigner() {
   const [loading, setLoading] = useState(false);
   const [generatedGame, setGeneratedGame] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [aiStatus, setAiStatus] = useState(null);
+  const [generationSource, setGenerationSource] = useState(null);
 
-  // Generate a constraint-led game based on the prompt
-  // This is a simulated AI generation - in production, this would call an AI API
+  // Check AI status on mount
+  useEffect(() => {
+    checkAiStatus();
+  }, []);
+
+  const checkAiStatus = async () => {
+    try {
+      const response = await api.get('/ai/status');
+      setAiStatus(response.data);
+    } catch (err) {
+      setAiStatus({ available: true, provider: 'template' });
+    }
+  };
+
+  // Generate a constraint-led game using the API
   const generateGame = async () => {
     if (!prompt.trim()) {
       showToast('Please enter a problem or focus area', 'warning');
@@ -32,132 +62,27 @@ export default function AIDesigner() {
     }
 
     setLoading(true);
+    setGenerationSource(null);
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const response = await api.post('/ai/generate', { prompt });
+      const { game, source } = response.data;
 
-    // Simulated AI-generated game based on ecological dynamics principles
-    const game = generateConstraintLedGame(prompt);
-    setGeneratedGame(game);
-    setLoading(false);
-    setEditMode(false);
-  };
+      setGeneratedGame(game);
+      setGenerationSource(source);
+      setEditMode(false);
 
-  const generateConstraintLedGame = (userPrompt) => {
-    // Parse prompt for keywords to determine topic and constraints
-    const promptLower = userPrompt.toLowerCase();
-
-    let topic = 'transition';
-    if (promptLower.includes('submit') || promptLower.includes('finish') || promptLower.includes('attack')) {
-      topic = 'offensive';
-    } else if (promptLower.includes('escape') || promptLower.includes('defend') || promptLower.includes('survival')) {
-      topic = 'defensive';
-    } else if (promptLower.includes('pass') || promptLower.includes('control') || promptLower.includes('pressure')) {
-      topic = 'control';
+      if (source === 'claude') {
+        showToast('Game generated with Claude AI', 'success');
+      } else {
+        showToast('Game generated using templates', 'info');
+      }
+    } catch (error) {
+      console.error('Generation error:', error);
+      showToast('Failed to generate game. Please try again.', 'error');
+    } finally {
+      setLoading(false);
     }
-
-    // Generate game structure based on constraint-led approach
-    const templates = {
-      offensive: {
-        startPosition: 'Back control with seatbelt grip',
-        constraints: [
-          'Attacker cannot re-hook legs once lost',
-          'Defender can only escape to turtle (no full escape)',
-          'Time limit: 2 minutes per round'
-        ],
-        winTop: 'Achieve submission or maintain position for full round',
-        winBottom: 'Escape to turtle position 3 times',
-        coaching: 'Focus on chest-to-back connection. Use the "squeeze and shift" principle for choke setups.',
-        progressions: [
-          'Start: Back with both hooks, rear naked choke hunting',
-          'Intermediate: Add arm triangle and bow & arrow options',
-          'Advanced: Start from body triangle with hand fighting'
-        ],
-        pedagogical: 'This game develops submission awareness under defensive pressure, aligned with ecological dynamics principles of perception-action coupling.',
-        skills: ['back control', 'submissions', 'finishing', 'pressure']
-      },
-      defensive: {
-        startPosition: 'Bottom side control, opponent in standard cross-face',
-        constraints: [
-          'Bottom player must create space before bridging',
-          'Top player cannot mount or take back',
-          'Reset if bottom player achieves guard'
-        ],
-        winTop: 'Maintain side control for 90 seconds',
-        winBottom: 'Escape to guard or stand up',
-        coaching: 'Emphasize frame creation before movement. "Breathe, frame, bridge, turn" sequence.',
-        progressions: [
-          'Start: Side control with moderate pressure',
-          'Intermediate: Add north-south transitions for top player',
-          'Advanced: Top player can switch sides freely'
-        ],
-        pedagogical: 'Builds defensive problem-solving through constrained exploration, developing robust escape patterns.',
-        skills: ['escapes', 'framing', 'hip movement', 'defense']
-      },
-      control: {
-        startPosition: 'Top player in closed guard',
-        constraints: [
-          'No submissions allowed for either player',
-          'Passer must maintain contact with guard player',
-          'Guard player cannot stand up'
-        ],
-        winTop: 'Pass to side control and hold for 3 seconds',
-        winBottom: 'Sweep to top position or submit (sweep only)',
-        coaching: 'Work posture and grip fighting. "Control the hips, control the fight."',
-        progressions: [
-          'Start: Closed guard passing with posture focus',
-          'Intermediate: Add leg locks to make guard player defend',
-          'Advanced: Start in open guard with grip advantages'
-        ],
-        pedagogical: 'Develops systematic passing approach while maintaining adaptability to guard player adjustments.',
-        skills: ['guard passing', 'pressure', 'posture', 'control']
-      },
-      transition: {
-        startPosition: 'Both players standing in clinch',
-        constraints: [
-          'Must achieve takedown within 30 seconds or reset',
-          'No pulling guard allowed',
-          'Points only awarded for clean takedowns'
-        ],
-        winTop: 'Achieve 3 takedowns first',
-        winBottom: 'Same objective - first to 3 takedowns',
-        coaching: 'Focus on level changes and timing. "Set up, break posture, execute."',
-        progressions: [
-          'Start: Wrestling clinch, single/double leg focus',
-          'Intermediate: Add trips and throws',
-          'Advanced: Start from grip fighting at distance'
-        ],
-        pedagogical: 'Creates high-rep takedown scenarios that develop timing and pattern recognition in scramble situations.',
-        skills: ['takedowns', 'scrambles', 'wrestling', 'timing']
-      }
-    };
-
-    const template = templates[topic];
-
-    // Create game name from prompt
-    const name = userPrompt.length > 50
-      ? userPrompt.substring(0, 50) + '...'
-      : userPrompt;
-
-    return {
-      name: `${name.charAt(0).toUpperCase() + name.slice(1)}`,
-      topic,
-      topPlayer: `Win condition: ${template.winTop}\n\nKey focus: Apply consistent pressure while hunting for the win condition.`,
-      bottomPlayer: `Win condition: ${template.winBottom}\n\nKey focus: Stay calm, create space, and work systematically toward your goal.`,
-      coaching: template.coaching,
-      skills: template.skills,
-      aiGenerated: true,
-      aiMetadata: {
-        startPosition: template.startPosition,
-        constraints: template.constraints,
-        winConditions: {
-          top: template.winTop,
-          bottom: template.winBottom
-        },
-        progressions: template.progressions,
-        pedagogicalNote: template.pedagogical
-      }
-    };
   };
 
   const handleFieldChange = (field, value) => {
@@ -176,8 +101,13 @@ export default function AIDesigner() {
     if (result.success) {
       setGeneratedGame(null);
       setPrompt('');
+      setGenerationSource(null);
       showToast('Game added to your library!', 'success');
     }
+  };
+
+  const regenerateGame = () => {
+    generateGame();
   };
 
   return (
@@ -191,9 +121,16 @@ export default function AIDesigner() {
           </svg>
           AI Game Designer
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Generate constraint-led training games using ecological dynamics principles
-        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Generate constraint-led training games using ecological dynamics principles
+          </p>
+          {aiStatus && (
+            <span className={`badge text-xs ${aiStatus.provider === 'claude' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+              {aiStatus.provider === 'claude' ? 'Claude AI' : 'Templates'}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Input Section */}
@@ -231,7 +168,7 @@ export default function AIDesigner() {
           {loading ? (
             <>
               <span className="spinner mr-2" />
-              Generating...
+              {aiStatus?.provider === 'claude' ? 'Generating with Claude...' : 'Generating...'}
             </>
           ) : (
             <>
@@ -249,10 +186,27 @@ export default function AIDesigner() {
       {generatedGame && (
         <div className="card p-6 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Generated Game
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Generated Game
+              </h2>
+              {generationSource && (
+                <span className={`badge text-xs ${generationSource === 'claude' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                  {generationSource === 'claude' ? 'Claude AI' : 'Template'}
+                </span>
+              )}
+            </div>
             <div className="flex gap-2">
+              <button
+                onClick={regenerateGame}
+                disabled={loading}
+                className="btn-secondary text-sm"
+                title="Generate a new variation"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+                </svg>
+              </button>
               <button
                 onClick={() => setEditMode(!editMode)}
                 className="btn-secondary text-sm"
@@ -260,7 +214,10 @@ export default function AIDesigner() {
                 {editMode ? 'Preview' : 'Edit'}
               </button>
               <button
-                onClick={() => setGeneratedGame(null)}
+                onClick={() => {
+                  setGeneratedGame(null);
+                  setGenerationSource(null);
+                }}
                 className="btn-ghost text-sm text-gray-500"
               >
                 Discard
@@ -281,19 +238,52 @@ export default function AIDesigner() {
                 />
               </div>
 
-              <div>
-                <label className="label">Topic</label>
-                <div className="flex flex-wrap gap-2">
-                  {topics.map(topic => (
-                    <button
-                      key={topic.value}
-                      onClick={() => handleFieldChange('topic', topic.value)}
-                      className={`chip ${generatedGame.topic === topic.value ? 'chip-active' : ''}`}
-                    >
-                      <span className={`w-2 h-2 rounded-full ${topic.color}`} />
-                      {topic.label}
-                    </button>
-                  ))}
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <label className="label">Topic</label>
+                  <div className="flex flex-wrap gap-2">
+                    {topics.map(topic => (
+                      <button
+                        key={topic.value}
+                        onClick={() => handleFieldChange('topic', topic.value)}
+                        className={`chip text-xs ${generatedGame.topic === topic.value ? 'chip-active' : ''}`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${topic.color}`} />
+                        {topic.label.split(' / ')[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">Game Type</label>
+                  <div className="flex flex-wrap gap-2">
+                    {gameTypes.map(type => (
+                      <button
+                        key={type.value}
+                        onClick={() => handleFieldChange('gameType', type.value)}
+                        className={`chip text-xs ${generatedGame.gameType === type.value ? 'chip-active' : ''}`}
+                      >
+                        {type.icon} {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">Difficulty</label>
+                  <div className="flex flex-wrap gap-2">
+                    {difficulties.map(diff => (
+                      <button
+                        key={diff.value}
+                        onClick={() => handleFieldChange('difficulty', diff.value)}
+                        className={`chip text-xs ${generatedGame.difficulty === diff.value ? 'chip-active' : ''}`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${diff.color}`} />
+                        {diff.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -301,7 +291,7 @@ export default function AIDesigner() {
                 <label className="label">Start Position</label>
                 <input
                   type="text"
-                  value={generatedGame.aiMetadata.startPosition}
+                  value={generatedGame.aiMetadata?.startPosition || ''}
                   onChange={(e) => handleMetadataChange('startPosition', e.target.value)}
                   className="input"
                 />
@@ -336,27 +326,50 @@ export default function AIDesigner() {
                   className="input resize-none"
                 />
               </div>
+
+              <div>
+                <label className="label">Skills (comma-separated)</label>
+                <input
+                  type="text"
+                  value={generatedGame.skills?.join(', ') || ''}
+                  onChange={(e) => handleFieldChange('skills', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                  className="input"
+                  placeholder="e.g., guard retention, hip movement, framing"
+                />
+              </div>
             </div>
           ) : (
             // Preview mode
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                   {generatedGame.name}
                 </h3>
                 <span className={`badge badge-${generatedGame.topic}`}>
                   {topics.find(t => t.value === generatedGame.topic)?.label}
                 </span>
+                {generatedGame.gameType && generatedGame.gameType !== 'main' && (
+                  <span className="badge bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    {gameTypes.find(t => t.value === generatedGame.gameType)?.icon} {gameTypes.find(t => t.value === generatedGame.gameType)?.label}
+                  </span>
+                )}
+                {generatedGame.difficulty && generatedGame.difficulty !== 'intermediate' && (
+                  <span className={`badge text-white ${difficulties.find(d => d.value === generatedGame.difficulty)?.color}`}>
+                    {generatedGame.difficulty}
+                  </span>
+                )}
               </div>
 
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Start Position
-                </h4>
-                <p className="text-gray-900 dark:text-white">
-                  {generatedGame.aiMetadata.startPosition}
-                </p>
-              </div>
+              {generatedGame.aiMetadata?.startPosition && (
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Start Position
+                  </h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {generatedGame.aiMetadata.startPosition}
+                  </p>
+                </div>
+              )}
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -378,53 +391,63 @@ export default function AIDesigner() {
                 </div>
               </div>
 
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Constraints
-                </h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                  {generatedGame.aiMetadata.constraints.map((c, i) => (
-                    <li key={i}>{c}</li>
+              {generatedGame.aiMetadata?.constraints && generatedGame.aiMetadata.constraints.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Constraints
+                  </h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                    {generatedGame.aiMetadata.constraints.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {generatedGame.aiMetadata?.progressions && generatedGame.aiMetadata.progressions.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Progressions
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                    {generatedGame.aiMetadata.progressions.map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {generatedGame.coaching && (
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <h4 className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                    Coaching Notes
+                  </h4>
+                  <p className="text-sm text-green-900 dark:text-green-100">
+                    {generatedGame.coaching}
+                  </p>
+                </div>
+              )}
+
+              {generatedGame.aiMetadata?.pedagogicalNote && (
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                  <h4 className="text-sm font-medium text-yellow-700 dark:text-yellow-300 mb-2">
+                    Pedagogical Note
+                  </h4>
+                  <p className="text-sm text-yellow-900 dark:text-yellow-100">
+                    {generatedGame.aiMetadata.pedagogicalNote}
+                  </p>
+                </div>
+              )}
+
+              {generatedGame.skills && generatedGame.skills.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {generatedGame.skills.map((skill, idx) => (
+                    <span key={idx} className="chip">
+                      #{skill}
+                    </span>
                   ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Progressions
-                </h4>
-                <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                  {generatedGame.aiMetadata.progressions.map((p, i) => (
-                    <li key={i}>{p}</li>
-                  ))}
-                </ol>
-              </div>
-
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <h4 className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                  Coaching Notes
-                </h4>
-                <p className="text-sm text-green-900 dark:text-green-100">
-                  {generatedGame.coaching}
-                </p>
-              </div>
-
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <h4 className="text-sm font-medium text-yellow-700 dark:text-yellow-300 mb-2">
-                  Pedagogical Note
-                </h4>
-                <p className="text-sm text-yellow-900 dark:text-yellow-100">
-                  {generatedGame.aiMetadata.pedagogicalNote}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {generatedGame.skills.map((skill, idx) => (
-                  <span key={idx} className="chip">
-                    #{skill}
-                  </span>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -477,6 +500,28 @@ export default function AIDesigner() {
               Progress systematically from simple to complex
             </li>
           </ul>
+
+          {aiStatus && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 text-sm">
+                {aiStatus.provider === 'claude' ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Powered by Claude AI for intelligent game generation
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Using template-based generation. Add ANTHROPIC_API_KEY for AI-powered games.
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
