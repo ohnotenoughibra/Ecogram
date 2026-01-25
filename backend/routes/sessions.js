@@ -82,7 +82,7 @@ router.post('/', protect, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, gameIds, scheduledDate } = req.body;
+    const { name, gameIds, scheduledDate, duration, focusPosition } = req.body;
 
     // Verify all games belong to user
     if (gameIds && gameIds.length > 0) {
@@ -106,7 +106,9 @@ router.post('/', protect, [
       user: req.user._id,
       name,
       games,
-      scheduledDate: scheduledDate || null
+      scheduledDate: scheduledDate || null,
+      duration: duration || 0,
+      focusPosition: focusPosition || ''
     });
 
     const populatedSession = await Session.findById(session._id)

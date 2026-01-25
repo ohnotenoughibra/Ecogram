@@ -229,13 +229,10 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
         ...preview.cooldown
       ];
 
+      // Backend expects gameIds (array of IDs), not games (array of objects)
       const sessionData = {
         name: `${getPositionLabel(selectedPosition)} Training - ${new Date().toLocaleDateString()}`,
-        games: allGames.map((g, i) => ({
-          game: g._id,
-          order: i,
-          completed: false
-        })),
+        gameIds: allGames.map(g => g._id),
         duration,
         focusPosition: selectedPosition,
         scheduledDate: new Date()
