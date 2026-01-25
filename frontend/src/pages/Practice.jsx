@@ -49,7 +49,7 @@ const gameTypeInfo = {
 };
 
 export default function Practice() {
-  const { games, markGameUsed, showToast } = useApp();
+  const { games, markGameUsed, showToast, createSession } = useApp();
   const [currentGame, setCurrentGame] = useState(null);
   const [filterTopic, setFilterTopic] = useState('');
   const [filterGameType, setFilterGameType] = useState('');
@@ -65,26 +65,81 @@ export default function Practice() {
   const audioRef = useRef(null);
   const intervalRef = useRef(null);
 
-  // Get filtered games
+  // Session history - track games played this practice session
+  const [sessionHistory, setSessionHistory] = useState([]);
+  const [skippedGames, setSkippedGames] = useState(new Set());
+
+  // Get filtered games (excluding skipped ones)
   const filteredGames = games.filter(game => {
     if (filterTopic && game.topic !== filterTopic) return false;
     if (filterGameType && game.gameType !== filterGameType) return false;
     if (favoritesOnly && !game.favorite) return false;
+    if (skippedGames.has(game._id)) return false;
     return true;
   });
 
   // Pick random game
-  const pickRandomGame = useCallback(() => {
+  const pickRandomGame = useCallback((addToHistory = false) => {
     if (filteredGames.length === 0) {
       setCurrentGame(null);
-      return;
+      return null;
     }
     const randomIndex = Math.floor(Math.random() * filteredGames.length);
     const game = filteredGames[randomIndex];
     setCurrentGame(game);
     setShowDetails(false);
-    markGameUsed(game._id);
+    if (addToHistory) {
+      setSessionHistory(prev => [...prev, game]);
+      markGameUsed(game._id);
+    }
+    return game;
   }, [filteredGames, markGameUsed]);
+
+  // Skip current game and get a new one
+  const skipGame = useCallback(() => {
+    if (currentGame) {
+      setSkippedGames(prev => new Set([...prev, currentGame._id]));
+      showToast('Game skipped', 'info');
+    }
+    // Pick a new game (filteredGames will be updated on next render)
+    const availableGames = filteredGames.filter(g => g._id !== currentGame?._id);
+    if (availableGames.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableGames.length);
+      const game = availableGames[randomIndex];
+      setCurrentGame(game);
+      setShowDetails(false);
+    } else {
+      setCurrentGame(null);
+      showToast('No more games available', 'info');
+    }
+  }, [currentGame, filteredGames, showToast]);
+
+  // Clear skipped games
+  const clearSkipped = useCallback(() => {
+    setSkippedGames(new Set());
+    showToast('Skipped games cleared', 'success');
+  }, [showToast]);
+
+  // Save current session history as a session
+  const saveAsSession = useCallback(async () => {
+    if (sessionHistory.length === 0) {
+      showToast('No games to save', 'error');
+      return;
+    }
+
+    const name = prompt('Session name:', `Practice ${new Date().toLocaleDateString()}`);
+    if (!name) return;
+
+    try {
+      const gameIds = sessionHistory.map(g => g._id);
+      const result = await createSession({ name, gameIds });
+      if (result.success) {
+        showToast(`Session "${name}" saved with ${sessionHistory.length} games`, 'success');
+      }
+    } catch (error) {
+      showToast('Failed to save session', 'error');
+    }
+  }, [sessionHistory, createSession, showToast]);
 
   // Timer functions
   const startTimer = useCallback(() => {
@@ -101,7 +156,7 @@ export default function Practice() {
   }, [timerDuration]);
 
   const startNewRound = useCallback(() => {
-    pickRandomGame();
+    pickRandomGame(true); // Add to history
     setTimeRemaining(timerDuration);
     setIsRunning(true);
     setRounds(prev => prev + 1);
@@ -349,22 +404,33 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
           <h2 className="font-semibold text-gray-900 dark:text-white">Current Game</h2>
           <div className="flex gap-2">
             {currentGame && (
-              <button
-                onClick={copyGameToClipboard}
-                className="btn-secondary px-3"
-                title="Copy game details"
-              >
-                {copied ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-500">
-                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                  </svg>
-                ) : (
+              <>
+                <button
+                  onClick={copyGameToClipboard}
+                  className="btn-secondary px-3"
+                  title="Copy game details"
+                >
+                  {copied ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-500">
+                      <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                      <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                    </svg>
+                  )}
+                </button>
+                <button
+                  onClick={skipGame}
+                  className="btn-secondary px-3"
+                  title="Skip this game"
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                    <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
-                    <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                    <path d="M15.28 9.47a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L13.19 10 9.97 6.78a.75.75 0 011.06-1.06l4.25 4.25zM6.03 5.22l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L8.19 10 4.97 6.78a.75.75 0 011.06-1.06z" />
                   </svg>
-                )}
-              </button>
+                </button>
+              </>
             )}
             <button
               onClick={startNewRound}
@@ -517,15 +583,26 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
             {filteredGames.length === 0 ? (
               <div>
                 <p className="mb-2">No games match your filters</p>
-                <button
-                  onClick={() => {
-                    setFilterTopic('');
-                    setFavoritesOnly(false);
-                  }}
-                  className="text-primary-600 dark:text-primary-400 hover:underline"
-                >
-                  Clear filters
-                </button>
+                <div className="flex flex-col gap-2 items-center">
+                  <button
+                    onClick={() => {
+                      setFilterTopic('');
+                      setFilterGameType('');
+                      setFavoritesOnly(false);
+                    }}
+                    className="text-primary-600 dark:text-primary-400 hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                  {skippedGames.size > 0 && (
+                    <button
+                      onClick={clearSkipped}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Clear {skippedGames.size} skipped games
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <div>
@@ -541,12 +618,50 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
         )}
       </div>
 
-      {/* Stats */}
-      {rounds > 0 && (
-        <div className="card p-4 text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Session: <span className="font-bold text-gray-900 dark:text-white">{rounds}</span> rounds completed
-          </p>
+      {/* Session History & Actions */}
+      {(sessionHistory.length > 0 || skippedGames.size > 0) && (
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white">
+              Session: {sessionHistory.length} games
+            </h3>
+            <div className="flex gap-2">
+              {skippedGames.size > 0 && (
+                <button
+                  onClick={clearSkipped}
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  Clear {skippedGames.size} skipped
+                </button>
+              )}
+              <button
+                onClick={saveAsSession}
+                disabled={sessionHistory.length === 0}
+                className="btn-secondary text-sm py-1.5 disabled:opacity-50"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
+                  <path fillRule="evenodd" d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h12.5c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0016.25 5h-4.836a.25.25 0 01-.177-.073L9.823 3.513A1.75 1.75 0 008.586 3H3.75zM3.75 9A1.75 1.75 0 002 10.75v4.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0018 15.25v-4.5A1.75 1.75 0 0016.25 9H3.75z" clipRule="evenodd" />
+                </svg>
+                Save Session
+              </button>
+            </div>
+          </div>
+
+          {/* Games list */}
+          {sessionHistory.length > 0 && (
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {sessionHistory.map((game, idx) => (
+                <div
+                  key={`${game._id}-${idx}`}
+                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 py-1"
+                >
+                  <span className="text-xs text-gray-400 w-5">{idx + 1}.</span>
+                  <span className={`w-2 h-2 rounded-full ${topicColors[game.topic]}`} />
+                  <span className="truncate">{game.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
