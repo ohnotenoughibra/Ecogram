@@ -39,6 +39,11 @@ const gameSchema = new mongoose.Schema({
     default: '',
     maxlength: [3000, 'Coaching notes cannot exceed 3000 characters']
   },
+  personalNotes: {
+    type: String,
+    default: '',
+    maxlength: [2000, 'Personal notes cannot exceed 2000 characters']
+  },
   skills: [{
     type: String,
     trim: true

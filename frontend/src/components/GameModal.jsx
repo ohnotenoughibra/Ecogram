@@ -28,6 +28,7 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
     topPlayer: '',
     bottomPlayer: '',
     coaching: '',
+    personalNotes: '',
     skills: []
   });
   const [skillInput, setSkillInput] = useState('');
@@ -44,6 +45,7 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
         topPlayer: game.topPlayer || '',
         bottomPlayer: game.bottomPlayer || '',
         coaching: game.coaching || '',
+        personalNotes: game.personalNotes || '',
         skills: game.skills || []
       });
       // Show advanced if non-default values
@@ -59,6 +61,7 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
         topPlayer: '',
         bottomPlayer: '',
         coaching: '',
+        personalNotes: '',
         skills: []
       });
       setShowAdvanced(false);
@@ -281,6 +284,22 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
                 onChange={handleChange}
                 rows={3}
                 placeholder="Key coaching points, cues, and observations..."
+                className="input resize-none"
+              />
+            </div>
+
+            {/* Personal Notes */}
+            <div>
+              <label className="label">
+                Personal Notes
+                <span className="text-xs text-gray-400 ml-2">(private)</span>
+              </label>
+              <textarea
+                name="personalNotes"
+                value={formData.personalNotes}
+                onChange={handleChange}
+                rows={2}
+                placeholder="Your personal observations, what worked, what to improve..."
                 className="input resize-none"
               />
             </div>

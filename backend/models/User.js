@@ -36,6 +36,14 @@ const userSchema = new mongoose.Schema({
     darkMode: { type: Boolean, default: false },
     timerSound: { type: Boolean, default: true },
     defaultTimerDuration: { type: Number, default: 300 }
+  },
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

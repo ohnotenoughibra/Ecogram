@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import Timer from '../components/Timer';
+import SessionTimer from '../components/SessionTimer';
 import Loading from '../components/Loading';
 import api from '../utils/api';
 import {
@@ -327,6 +328,15 @@ export default function SessionView() {
             style={{ width: `${(completedCount / session.games.length) * 100}%` }}
           />
         </div>
+      </div>
+
+      {/* Inline Session Timer */}
+      <div className="mb-6">
+        <SessionTimer
+          onTimerEnd={() => {
+            showToast('Time is up!', 'info');
+          }}
+        />
       </div>
 
       {/* Current Game Display */}

@@ -14,6 +14,9 @@ import KeyboardShortcuts from './components/KeyboardShortcuts';
 // Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Profile from './pages/Profile';
 import Games from './pages/Games';
 import Favorites from './pages/Favorites';
 import Recent from './pages/Recent';
@@ -163,6 +166,22 @@ export default function App() {
           </PublicRoute>
         }
       />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/reset-password/:token"
+        element={
+          <PublicRoute>
+            <ResetPassword />
+          </PublicRoute>
+        }
+      />
 
       {/* Protected routes */}
       <Route
@@ -251,6 +270,16 @@ export default function App() {
           <ProtectedRoute>
             <MainLayout>
               <Practice />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Profile />
             </MainLayout>
           </ProtectedRoute>
         }

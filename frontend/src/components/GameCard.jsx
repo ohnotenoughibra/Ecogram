@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import api from '../utils/api';
 
 const topicLabels = {
   offensive: 'Offensive / Submissions',
@@ -16,9 +17,13 @@ const topicColors = {
 };
 
 export default function GameCard({ game, onEdit, onDelete, selectable = true }) {
-  const { selectedGames, toggleGameSelection, updateGame, markGameUsed, showToast } = useApp();
+  const { selectedGames, toggleGameSelection, updateGame, markGameUsed, duplicateGame, showToast } = useApp();
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showSessionMenu, setShowSessionMenu] = useState(false);
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const sessionMenuRef = useRef(null);
 
   const isSelected = selectedGames.has(game._id);
 
@@ -29,7 +34,8 @@ Topic: ${topicLabels[game.topic]}
 ${game.skills?.length ? `Skills: ${game.skills.map(s => '#' + s).join(' ')}` : ''}
 ${game.topPlayer ? `\nTop Player:\n${game.topPlayer}` : ''}
 ${game.bottomPlayer ? `\nBottom Player:\n${game.bottomPlayer}` : ''}
-${game.coaching ? `\nCoaching Notes:\n${game.coaching}` : ''}`;
+${game.coaching ? `\nCoaching Notes:\n${game.coaching}` : ''}
+${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
 
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
@@ -53,6 +59,52 @@ ${game.coaching ? `\nCoaching Notes:\n${game.coaching}` : ''}`;
     e.stopPropagation();
     await markGameUsed(game._id);
   };
+
+  const handleDuplicate = async (e) => {
+    e.stopPropagation();
+    await duplicateGame(game);
+  };
+
+  // Load recent sessions when menu opens
+  const handleOpenSessionMenu = async (e) => {
+    e.stopPropagation();
+    setShowSessionMenu(true);
+    if (recentSessions.length === 0) {
+      setLoadingSessions(true);
+      try {
+        const response = await api.get('/sessions', { params: { limit: 5 } });
+        setRecentSessions(response.data.sessions || []);
+      } catch (err) {
+        showToast('Failed to load sessions', 'error');
+      } finally {
+        setLoadingSessions(false);
+      }
+    }
+  };
+
+  const handleAddToSession = async (e, sessionId) => {
+    e.stopPropagation();
+    try {
+      await api.put(`/sessions/${sessionId}/games`, { action: 'add', gameId: game._id });
+      showToast('Game added to session', 'success');
+      setShowSessionMenu(false);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to add game', 'error');
+    }
+  };
+
+  // Close menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (sessionMenuRef.current && !sessionMenuRef.current.contains(e.target)) {
+        setShowSessionMenu(false);
+      }
+    };
+    if (showSessionMenu) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showSessionMenu]);
 
   const StarRating = ({ rating, onChange }) => (
     <div className="flex gap-0.5">
@@ -171,6 +223,20 @@ ${game.coaching ? `\nCoaching Notes:\n${game.coaching}` : ''}`;
                 </div>
               )}
 
+              {game.personalNotes && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-yellow-700 dark:text-yellow-300 mb-1 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path d="M10 1a6 6 0 00-3.815 10.631C7.237 12.5 8 13.443 8 14.456v.644a.75.75 0 00.572.729 6.016 6.016 0 002.856 0A.75.75 0 0012 15.1v-.644c0-1.013.762-1.957 1.815-2.825A6 6 0 0010 1zM8.863 17.414a.75.75 0 00-.226 1.483 9.066 9.066 0 002.726 0 .75.75 0 00-.226-1.483 7.553 7.553 0 01-2.274 0z" />
+                    </svg>
+                    Personal Notes
+                  </h4>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 whitespace-pre-wrap">
+                    {game.personalNotes}
+                  </p>
+                </div>
+              )}
+
               {/* AI Generated metadata */}
               {game.aiGenerated && game.aiMetadata && (
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -229,7 +295,7 @@ ${game.coaching ? `\nCoaching Notes:\n${game.coaching}` : ''}`;
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -245,6 +311,56 @@ ${game.coaching ? `\nCoaching Notes:\n${game.coaching}` : ''}`;
                 >
                   Mark Used
                 </button>
+                <button
+                  onClick={handleDuplicate}
+                  className="btn-secondary text-sm px-3"
+                  title="Duplicate game"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                    <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                  </svg>
+                </button>
+                {/* Quick Add to Session */}
+                <div className="relative" ref={sessionMenuRef}>
+                  <button
+                    onClick={handleOpenSessionMenu}
+                    className="btn-secondary text-sm px-3"
+                    title="Add to session"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                  </button>
+                  {showSessionMenu && (
+                    <div className="absolute bottom-full right-0 mb-1 w-48 bg-white dark:bg-surface-dark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-fade-in">
+                      <div className="p-2">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 py-1">
+                          Add to Session
+                        </p>
+                        {loadingSessions ? (
+                          <div className="px-2 py-3 text-center">
+                            <span className="spinner" />
+                          </div>
+                        ) : recentSessions.length === 0 ? (
+                          <p className="px-2 py-2 text-sm text-gray-500 dark:text-gray-400">
+                            No sessions yet
+                          </p>
+                        ) : (
+                          recentSessions.map(session => (
+                            <button
+                              key={session._id}
+                              onClick={(e) => handleAddToSession(e, session._id)}
+                              className="w-full text-left px-2 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded truncate"
+                            >
+                              {session.name}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={copyToClipboard}
                   className="btn-secondary text-sm px-3"

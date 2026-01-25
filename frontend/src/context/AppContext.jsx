@@ -159,6 +159,31 @@ export function AppProvider({ children }) {
     }
   }, []);
 
+  const duplicateGame = useCallback(async (game) => {
+    try {
+      // Create a copy of the game data, excluding certain fields
+      const duplicatedData = {
+        name: `${game.name} (Copy)`,
+        topic: game.topic,
+        gameType: game.gameType,
+        difficulty: game.difficulty,
+        topPlayer: game.topPlayer,
+        bottomPlayer: game.bottomPlayer,
+        coaching: game.coaching,
+        personalNotes: game.personalNotes,
+        skills: [...(game.skills || [])]
+      };
+
+      const response = await api.post('/games', duplicatedData);
+      setGames(prev => [response.data, ...prev]);
+      showToast('Game duplicated successfully', 'success');
+      return { success: true, game: response.data };
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to duplicate game', 'error');
+      return { success: false };
+    }
+  }, [showToast]);
+
   const bulkGameAction = useCallback(async (action) => {
     if (selectedGames.size === 0) return;
 
@@ -330,6 +355,7 @@ export function AppProvider({ children }) {
     updateGame,
     deleteGame,
     markGameUsed,
+    duplicateGame,
     bulkGameAction,
 
     // Sessions
