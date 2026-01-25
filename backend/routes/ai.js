@@ -285,8 +285,220 @@ router.get('/status', async (req, res) => {
   res.json({
     available: true,
     provider: hasApiKey ? 'claude' : 'template',
-    message: hasApiKey ? 'Claude AI is configured' : 'Using template-based generation (add ANTHROPIC_API_KEY for AI)'
+    message: hasApiKey ? 'Claude AI is configured' : 'Using template-based generation (add ANTHROPIC_API_KEY for AI)',
+    features: {
+      gameGeneration: true,
+      webSearch: hasApiKey,
+      problemSolver: hasApiKey
+    }
   });
+});
+
+// System prompt for problem solving / web search
+const SEARCH_SYSTEM_PROMPT = `You are an expert BJJ/NoGi grappling coach with extensive knowledge of techniques, positions, and training methodologies. You help practitioners solve training problems and find solutions.
+
+When asked about BJJ/grappling problems or techniques:
+1. Provide clear, actionable advice
+2. Suggest specific drills or games that address the issue
+3. Reference common positions and situations
+4. Consider both gi and no-gi applications
+5. Include safety considerations where appropriate
+
+Format your response as a JSON object:
+{
+  "summary": "Brief overview of the solution (1-2 sentences)",
+  "analysis": "Detailed analysis of the problem and why this solution works",
+  "techniques": ["List of specific techniques or concepts to focus on"],
+  "drills": [
+    {
+      "name": "Drill or game name",
+      "description": "How to perform it",
+      "focus": "What it develops"
+    }
+  ],
+  "commonMistakes": ["List of common mistakes to avoid"],
+  "progressions": ["Beginner approach", "Intermediate variation", "Advanced application"],
+  "relatedTopics": ["Related areas to explore"]
+}
+
+Return ONLY the JSON object.`;
+
+// @route   POST /api/ai/search
+// @desc    Search for BJJ solutions and advice using Claude
+// @access  Private
+router.post('/search', protect, async (req, res) => {
+  try {
+    const { query } = req.body;
+
+    if (!query || query.trim().length === 0) {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      return res.status(400).json({
+        message: 'AI search requires Claude API key',
+        source: 'unavailable'
+      });
+    }
+
+    // Call Claude API for search/problem solving
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        system: SEARCH_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: `Help me with this BJJ/grappling problem or question:\n\n${query}\n\nProvide detailed advice and suggest specific drills or training games. Return only the JSON object.`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Claude API error:', response.status, errorData);
+      return res.status(500).json({ message: 'AI search failed', error: errorData });
+    }
+
+    const data = await response.json();
+    const textContent = data.content?.find(c => c.type === 'text')?.text;
+
+    if (!textContent) {
+      throw new Error('No text content in response');
+    }
+
+    // Parse JSON from response
+    let result;
+    try {
+      const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0]);
+      } else {
+        result = JSON.parse(textContent);
+      }
+    } catch (parseError) {
+      // If parsing fails, return raw text as summary
+      result = {
+        summary: textContent.substring(0, 200),
+        analysis: textContent,
+        techniques: [],
+        drills: [],
+        commonMistakes: [],
+        progressions: [],
+        relatedTopics: []
+      };
+    }
+
+    res.json({
+      result,
+      source: 'claude',
+      query
+    });
+  } catch (error) {
+    console.error('AI search error:', error);
+    res.status(500).json({ message: 'Search failed', error: error.message });
+  }
+});
+
+// @route   POST /api/ai/suggest-game
+// @desc    Convert a search result drill into a full game
+// @access  Private
+router.post('/suggest-game', protect, async (req, res) => {
+  try {
+    const { drill, context } = req.body;
+
+    if (!drill) {
+      return res.status(400).json({ message: 'Drill information is required' });
+    }
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      // Create a basic game from the drill
+      const game = {
+        name: drill.name || 'Training Drill',
+        topic: 'transition',
+        topPlayer: `Focus: ${drill.focus || 'General skill development'}\n\nWork on the techniques described, applying pressure appropriately.`,
+        bottomPlayer: `Focus: ${drill.focus || 'General skill development'}\n\nWork on defense and counters as appropriate.`,
+        coaching: drill.description || 'Guide students through the drill progressively.',
+        skills: [drill.focus || 'general'],
+        gameType: 'main',
+        difficulty: 'intermediate',
+        aiGenerated: true,
+        aiMetadata: {
+          startPosition: 'As described in the drill',
+          constraints: ['Follow the drill guidelines'],
+          winConditions: { top: 'Execute the technique', bottom: 'Defend successfully' },
+          progressions: ['Basic', 'With resistance', 'Full speed'],
+          pedagogicalNote: `Based on: ${drill.description}`
+        }
+      };
+      return res.json({ game, source: 'template' });
+    }
+
+    // Use Claude to create a full game
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: `Convert this drill into a full constraint-led training game:\n\nDrill Name: ${drill.name}\nDescription: ${drill.description}\nFocus: ${drill.focus}\n${context ? `Additional context: ${context}` : ''}\n\nReturn only the JSON object.`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('API request failed');
+    }
+
+    const data = await response.json();
+    const textContent = data.content?.find(c => c.type === 'text')?.text;
+
+    let game;
+    try {
+      const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+      game = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(textContent);
+    } catch {
+      // Fallback
+      game = {
+        name: drill.name,
+        topic: 'transition',
+        topPlayer: drill.description,
+        bottomPlayer: 'Work on appropriate responses',
+        coaching: `Focus on: ${drill.focus}`,
+        skills: [drill.focus],
+        gameType: 'main',
+        difficulty: 'intermediate',
+        aiGenerated: true
+      };
+    }
+
+    game.aiGenerated = true;
+    res.json({ game, source: 'claude' });
+  } catch (error) {
+    console.error('Suggest game error:', error);
+    res.status(500).json({ message: 'Failed to create game', error: error.message });
+  }
 });
 
 module.exports = router;

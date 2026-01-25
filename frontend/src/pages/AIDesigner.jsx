@@ -11,6 +11,14 @@ const examplePrompts = [
   "Create an advanced leg lock defense game starting from 50/50"
 ];
 
+const exampleSearches = [
+  "How to escape mount against a heavier opponent",
+  "Best way to finish rear naked choke when they defend",
+  "Guard retention when opponent is fast at passing",
+  "Counters to knee slice pass",
+  "Setting up triangles from closed guard"
+];
+
 const topics = [
   { value: 'offensive', label: 'Offensive / Submissions', color: 'bg-red-500' },
   { value: 'defensive', label: 'Defensive / Escapes', color: 'bg-blue-500' },
@@ -33,9 +41,11 @@ const difficulties = [
 export default function AIDesigner() {
   const { createGame, showToast } = useApp();
 
+  const [mode, setMode] = useState('generate'); // 'generate' | 'search'
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedGame, setGeneratedGame] = useState(null);
+  const [searchResult, setSearchResult] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);
   const [generationSource, setGenerationSource] = useState(null);
@@ -50,7 +60,7 @@ export default function AIDesigner() {
       const response = await api.get('/ai/status');
       setAiStatus(response.data);
     } catch (err) {
-      setAiStatus({ available: true, provider: 'template' });
+      setAiStatus({ available: true, provider: 'template', features: { gameGeneration: true } });
     }
   };
 
@@ -63,6 +73,7 @@ export default function AIDesigner() {
 
     setLoading(true);
     setGenerationSource(null);
+    setSearchResult(null);
 
     try {
       const response = await api.post('/ai/generate', { prompt });
@@ -73,13 +84,60 @@ export default function AIDesigner() {
       setEditMode(false);
 
       if (source === 'claude') {
-        showToast('Game generated with Claude AI', 'success');
+        showToast('Game generated with Claude AI (Anthropic)', 'success');
       } else {
         showToast('Game generated using templates', 'info');
       }
     } catch (error) {
       console.error('Generation error:', error);
       showToast('Failed to generate game. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Search for BJJ solutions
+  const searchSolutions = async () => {
+    if (!prompt.trim()) {
+      showToast('Please enter a question or problem', 'warning');
+      return;
+    }
+
+    setLoading(true);
+    setGeneratedGame(null);
+    setGenerationSource(null);
+
+    try {
+      const response = await api.post('/ai/search', { query: prompt });
+      setSearchResult(response.data);
+      showToast('Search completed with Claude AI', 'success');
+    } catch (error) {
+      console.error('Search error:', error);
+      if (error.response?.status === 400) {
+        showToast('AI search requires Anthropic API key', 'warning');
+      } else {
+        showToast('Search failed. Please try again.', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convert a drill from search results to a full game
+  const convertDrillToGame = async (drill) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/ai/suggest-game', { drill, context: prompt });
+      const { game, source } = response.data;
+
+      setGeneratedGame(game);
+      setGenerationSource(source);
+      setSearchResult(null);
+      setMode('generate');
+
+      showToast('Drill converted to training game!', 'success');
+    } catch (error) {
+      showToast('Failed to convert drill', 'error');
     } finally {
       setLoading(false);
     }
@@ -107,7 +165,40 @@ export default function AIDesigner() {
   };
 
   const regenerateGame = () => {
-    generateGame();
+    if (mode === 'generate') {
+      generateGame();
+    } else {
+      searchSolutions();
+    }
+  };
+
+  const handleSubmit = () => {
+    if (mode === 'generate') {
+      generateGame();
+    } else {
+      searchSolutions();
+    }
+  };
+
+  const getSourceBadge = (source) => {
+    if (source === 'claude') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93s3.06-7.44 7-7.93v15.86zm2 0V4.07c3.94.49 7 3.85 7 7.93s-3.06 7.44-7 7.93z"/>
+          </svg>
+          Anthropic Claude
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+          <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5z" clipRule="evenodd" />
+        </svg>
+        Template
+      </span>
+    );
   };
 
   return (
@@ -123,23 +214,66 @@ export default function AIDesigner() {
         </h1>
         <div className="flex items-center gap-2 mt-1">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Generate constraint-led training games using ecological dynamics principles
+            Generate games or search for BJJ solutions
           </p>
-          {aiStatus && (
-            <span className={`badge text-xs ${aiStatus.provider === 'claude' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
-              {aiStatus.provider === 'claude' ? 'Claude AI' : 'Templates'}
-            </span>
-          )}
+          {aiStatus && getSourceBadge(aiStatus.provider)}
         </div>
+      </div>
+
+      {/* Mode Toggle */}
+      <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-6">
+        <button
+          onClick={() => {
+            setMode('generate');
+            setSearchResult(null);
+          }}
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            mode === 'generate'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1z" />
+            <path fillRule="evenodd" d="M10 5a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd" />
+          </svg>
+          Generate Game
+        </button>
+        <button
+          onClick={() => {
+            setMode('search');
+            setGeneratedGame(null);
+          }}
+          disabled={aiStatus?.provider !== 'claude'}
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            mode === 'search'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400'
+          } ${aiStatus?.provider !== 'claude' ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+          </svg>
+          Search Solutions
+          {aiStatus?.provider !== 'claude' && (
+            <span className="text-xs opacity-75">(API key required)</span>
+          )}
+        </button>
       </div>
 
       {/* Input Section */}
       <div className="card p-6 mb-6">
-        <label className="label">What problem or skill do you want to develop?</label>
+        <label className="label">
+          {mode === 'generate'
+            ? 'What problem or skill do you want to develop?'
+            : 'What BJJ question or problem do you need help with?'}
+        </label>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe the problem you want to solve or skill you want to develop..."
+          placeholder={mode === 'generate'
+            ? 'Describe the problem you want to solve or skill you want to develop...'
+            : 'Ask about techniques, positions, escapes, submissions, or training problems...'}
           rows={3}
           className="input resize-none mb-4"
         />
@@ -148,7 +282,7 @@ export default function AIDesigner() {
         <div className="mb-4">
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Try an example:</p>
           <div className="flex flex-wrap gap-2">
-            {examplePrompts.map((example, idx) => (
+            {(mode === 'generate' ? examplePrompts : exampleSearches).map((example, idx) => (
               <button
                 key={idx}
                 onClick={() => setPrompt(example)}
@@ -161,26 +295,179 @@ export default function AIDesigner() {
         </div>
 
         <button
-          onClick={generateGame}
+          onClick={handleSubmit}
           disabled={loading || !prompt.trim()}
           className="btn-primary w-full"
         >
           {loading ? (
             <>
               <span className="spinner mr-2" />
-              {aiStatus?.provider === 'claude' ? 'Generating with Claude...' : 'Generating...'}
+              {mode === 'generate'
+                ? (aiStatus?.provider === 'claude' ? 'Generating with Claude...' : 'Generating...')
+                : 'Searching with Claude...'}
             </>
           ) : (
             <>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
-                <path d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1z" />
-                <path fillRule="evenodd" d="M10 5a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd" />
-              </svg>
-              Generate Game
+              {mode === 'generate' ? (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
+                    <path d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1z" />
+                    <path fillRule="evenodd" d="M10 5a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd" />
+                  </svg>
+                  Generate Game
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
+                    <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+                  </svg>
+                  Search
+                </>
+              )}
             </>
           )}
         </button>
       </div>
+
+      {/* Search Results */}
+      {searchResult && (
+        <div className="card p-6 mb-6 animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Search Results
+              </h2>
+              {getSourceBadge('claude')}
+            </div>
+            <button
+              onClick={() => setSearchResult(null)}
+              className="btn-ghost text-sm text-gray-500"
+            >
+              Clear
+            </button>
+          </div>
+
+          {/* Summary */}
+          <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg mb-4">
+            <h3 className="font-medium text-primary-700 dark:text-primary-300 mb-1">Summary</h3>
+            <p className="text-sm text-primary-900 dark:text-primary-100">
+              {searchResult.result.summary}
+            </p>
+          </div>
+
+          {/* Analysis */}
+          {searchResult.result.analysis && (
+            <div className="mb-4">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-2">Analysis</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {searchResult.result.analysis}
+              </p>
+            </div>
+          )}
+
+          {/* Techniques */}
+          {searchResult.result.techniques?.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-2">Key Techniques</h3>
+              <div className="flex flex-wrap gap-2">
+                {searchResult.result.techniques.map((tech, idx) => (
+                  <span key={idx} className="chip">
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Drills - can convert to games */}
+          {searchResult.result.drills?.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                Suggested Drills & Games
+              </h3>
+              <div className="space-y-3">
+                {searchResult.result.drills.map((drill, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 dark:text-white">
+                          {drill.name}
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          {drill.description}
+                        </p>
+                        {drill.focus && (
+                          <p className="text-xs text-primary-600 dark:text-primary-400 mt-1">
+                            Focus: {drill.focus}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => convertDrillToGame(drill)}
+                        disabled={loading}
+                        className="btn-secondary text-xs whitespace-nowrap"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 mr-1">
+                          <path d="M8.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" />
+                        </svg>
+                        Create Game
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Common Mistakes */}
+          {searchResult.result.commonMistakes?.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-2">Common Mistakes to Avoid</h3>
+              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                {searchResult.result.commonMistakes.map((mistake, idx) => (
+                  <li key={idx}>{mistake}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Progressions */}
+          {searchResult.result.progressions?.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-2">Progressions</h3>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                {searchResult.result.progressions.map((prog, idx) => (
+                  <li key={idx}>{prog}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* Related Topics */}
+          {searchResult.result.relatedTopics?.length > 0 && (
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-white mb-2">Related Topics</h3>
+              <div className="flex flex-wrap gap-2">
+                {searchResult.result.relatedTopics.map((topic, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setPrompt(topic);
+                      searchSolutions();
+                    }}
+                    className="chip text-xs hover:bg-primary-100 dark:hover:bg-primary-900/30"
+                  >
+                    {topic}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Generated Game Preview */}
       {generatedGame && (
@@ -190,11 +477,7 @@ export default function AIDesigner() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Generated Game
               </h2>
-              {generationSource && (
-                <span className={`badge text-xs ${generationSource === 'claude' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
-                  {generationSource === 'claude' ? 'Claude AI' : 'Template'}
-                </span>
-              )}
+              {generationSource && getSourceBadge(generationSource)}
             </div>
             <div className="flex gap-2">
               <button
@@ -466,40 +749,77 @@ export default function AIDesigner() {
       )}
 
       {/* Info section */}
-      {!generatedGame && (
+      {!generatedGame && !searchResult && (
         <div className="card p-6 bg-gray-50 dark:bg-gray-800/50">
           <h3 className="font-medium text-gray-900 dark:text-white mb-3">
-            About Constraint-Led Training
+            {mode === 'generate' ? 'About Constraint-Led Training' : 'About AI Search'}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            This designer uses ecological dynamics principles to create training games that:
-          </p>
-          <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-            <li className="flex items-start gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5">
-                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-              </svg>
-              Create specific constraints that guide skill development
-            </li>
-            <li className="flex items-start gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5">
-                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-              </svg>
-              Encourage problem-solving and adaptability
-            </li>
-            <li className="flex items-start gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5">
-                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-              </svg>
-              Build perception-action coupling through repetition
-            </li>
-            <li className="flex items-start gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5">
-                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-              </svg>
-              Progress systematically from simple to complex
-            </li>
-          </ul>
+
+          {mode === 'generate' ? (
+            <>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                This designer uses ecological dynamics principles to create training games that:
+              </p>
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <li className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Create specific constraints that guide skill development
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Encourage problem-solving and adaptability
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Build perception-action coupling through repetition
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Progress systematically from simple to complex
+                </li>
+              </ul>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Claude AI can help you with:
+              </p>
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <li className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Finding solutions to specific grappling problems
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Learning new techniques and their applications
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Discovering drills to improve specific skills
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Converting advice into structured training games
+                </li>
+              </ul>
+            </>
+          )}
 
           {aiStatus && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -508,14 +828,14 @@ export default function AIDesigner() {
                   <>
                     <span className="w-2 h-2 rounded-full bg-green-500"></span>
                     <span className="text-gray-600 dark:text-gray-400">
-                      Powered by Claude AI for intelligent game generation
+                      Powered by Anthropic Claude AI for intelligent generation & search
                     </span>
                   </>
                 ) : (
                   <>
                     <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
                     <span className="text-gray-600 dark:text-gray-400">
-                      Using template-based generation. Add ANTHROPIC_API_KEY for AI-powered games.
+                      Using template-based generation. Add ANTHROPIC_API_KEY for AI-powered features.
                     </span>
                   </>
                 )}
