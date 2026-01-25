@@ -279,8 +279,8 @@ function generateTemplateGame(prompt) {
 
 // @route   GET /api/ai/status
 // @desc    Check if AI generation is available
-// @access  Private
-router.get('/status', protect, async (req, res) => {
+// @access  Public
+router.get('/status', async (req, res) => {
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
   res.json({
     available: true,
