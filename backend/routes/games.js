@@ -163,24 +163,50 @@ router.post('/import', protect, async (req, res) => {
       return res.status(400).json({ message: 'Games array required' });
     }
 
-    // Topic mapping for different formats
+    // Topic mapping for different formats (comprehensive)
     const topicMap = {
-      'takedowns': 'transition',
-      'takedown': 'transition',
-      'wrestling': 'transition',
-      'guard': 'defensive',
-      'guard passing': 'control',
-      'passing': 'control',
-      'submissions': 'offensive',
-      'submission': 'offensive',
-      'escapes': 'defensive',
-      'escape': 'defensive',
-      'sweeps': 'transition',
-      'sweep': 'transition',
+      // Direct mappings
       'offensive': 'offensive',
       'defensive': 'defensive',
       'control': 'control',
-      'transition': 'transition'
+      'transition': 'transition',
+      // Submissions & Attacks -> Offensive
+      'submissions': 'offensive',
+      'submission': 'offensive',
+      'armbar finishing': 'offensive',
+      'leg attacks': 'offensive',
+      'leg locks': 'offensive',
+      // Guard & Escapes -> Defensive
+      'guard': 'defensive',
+      'guard retention': 'defensive',
+      'escapes': 'defensive',
+      'escape': 'defensive',
+      'half guard': 'defensive',
+      'octopus guard': 'defensive',
+      // Passing & Pinning -> Control
+      'guard passing': 'control',
+      'passing': 'control',
+      'pinning': 'control',
+      'mount': 'control',
+      'back control': 'control',
+      'top control': 'control',
+      'front headlock': 'control',
+      // Wrestling & Movement -> Transition
+      'standup/wrestling': 'transition',
+      'standup': 'transition',
+      'wrestling': 'transition',
+      'takedowns': 'transition',
+      'takedown': 'transition',
+      'sweeps': 'transition',
+      'sweep': 'transition',
+      'sweeping': 'transition',
+      'sumi gaeshi': 'transition',
+      'transitions': 'transition',
+      'transitions (sambo)': 'transition',
+      'hand fighting': 'transition',
+      'turtle': 'defensive',
+      'general': 'transition',
+      'pinning (folkstyle)': 'control'
     };
 
     const importedGames = [];
