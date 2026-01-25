@@ -42,10 +42,17 @@ const topicColors = {
   transition: 'bg-green-500'
 };
 
+const gameTypeInfo = {
+  warmup: { label: 'Warmup', icon: '🔥', color: 'bg-orange-500' },
+  main: { label: 'Main', icon: '🎯', color: 'bg-blue-500' },
+  cooldown: { label: 'Cooldown', icon: '🧘', color: 'bg-teal-500' }
+};
+
 export default function Practice() {
   const { games, markGameUsed, showToast } = useApp();
   const [currentGame, setCurrentGame] = useState(null);
   const [filterTopic, setFilterTopic] = useState('');
+  const [filterGameType, setFilterGameType] = useState('');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -61,6 +68,7 @@ export default function Practice() {
   // Get filtered games
   const filteredGames = games.filter(game => {
     if (filterTopic && game.topic !== filterTopic) return false;
+    if (filterGameType && game.gameType !== filterGameType) return false;
     if (favoritesOnly && !game.favorite) return false;
     return true;
   });
@@ -187,13 +195,13 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
 
       {/* Filters */}
       <div className="card p-4">
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 mb-3">
           <select
             value={filterTopic}
             onChange={(e) => setFilterTopic(e.target.value)}
-            className="input py-2 flex-1 min-w-[150px]"
+            className="input py-2 flex-1 min-w-[130px]"
           >
-            <option value="">All Topics ({games.length})</option>
+            <option value="">All Topics</option>
             <option value="offensive">Offensive ({games.filter(g => g.topic === 'offensive').length})</option>
             <option value="defensive">Defensive ({games.filter(g => g.topic === 'defensive').length})</option>
             <option value="control">Control ({games.filter(g => g.topic === 'control').length})</option>
@@ -209,10 +217,33 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
             </svg>
             Favorites
           </button>
+        </div>
 
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            {filteredGames.length} games available
-          </div>
+        {/* Game Type Filter */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setFilterGameType('')}
+            className={`chip text-sm ${filterGameType === '' ? 'chip-active' : ''}`}
+          >
+            All Types
+          </button>
+          {Object.entries(gameTypeInfo).map(([value, info]) => (
+            <button
+              key={value}
+              onClick={() => setFilterGameType(value)}
+              className={`chip text-sm ${filterGameType === value ? 'chip-active' : ''}`}
+            >
+              <span>{info.icon}</span>
+              <span>{info.label}</span>
+              <span className="text-xs text-gray-400">
+                ({games.filter(g => (g.gameType || 'main') === value).length})
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 text-sm text-gray-500 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          {filteredGames.length} games available
         </div>
       </div>
 
@@ -353,6 +384,20 @@ ${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
             {/* Game header */}
             <div className="flex items-start justify-between">
               <div>
+                <div className="flex items-center gap-2 mb-1">
+                  {currentGame.gameType && currentGame.gameType !== 'main' && (
+                    <span className="text-sm px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
+                      {gameTypeInfo[currentGame.gameType]?.icon} {gameTypeInfo[currentGame.gameType]?.label}
+                    </span>
+                  )}
+                  {currentGame.difficulty && currentGame.difficulty !== 'intermediate' && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full text-white ${
+                      currentGame.difficulty === 'beginner' ? 'bg-green-500' : 'bg-red-500'
+                    }`}>
+                      {currentGame.difficulty}
+                    </span>
+                  )}
+                </div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                   {currentGame.name}
                 </h3>

@@ -7,10 +7,24 @@ const topics = [
   { value: 'transition', label: 'Transition / Scrambles', color: 'bg-green-500' }
 ];
 
+const gameTypes = [
+  { value: 'warmup', label: 'Warmup', icon: '🔥', description: 'Light movement, flow-based' },
+  { value: 'main', label: 'Main', icon: '🎯', description: 'Core training games' },
+  { value: 'cooldown', label: 'Cooldown', icon: '🧘', description: 'Recovery, low intensity' }
+];
+
+const difficulties = [
+  { value: 'beginner', label: 'Beginner', color: 'bg-green-500' },
+  { value: 'intermediate', label: 'Intermediate', color: 'bg-yellow-500' },
+  { value: 'advanced', label: 'Advanced', color: 'bg-red-500' }
+];
+
 export default function GameModal({ isOpen, onClose, onSave, game = null }) {
   const [formData, setFormData] = useState({
     name: '',
     topic: 'transition',
+    gameType: 'main',
+    difficulty: 'intermediate',
     topPlayer: '',
     bottomPlayer: '',
     coaching: '',
@@ -18,26 +32,36 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
   });
   const [skillInput, setSkillInput] = useState('');
   const [errors, setErrors] = useState({});
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     if (game) {
       setFormData({
         name: game.name || '',
         topic: game.topic || 'transition',
+        gameType: game.gameType || 'main',
+        difficulty: game.difficulty || 'intermediate',
         topPlayer: game.topPlayer || '',
         bottomPlayer: game.bottomPlayer || '',
         coaching: game.coaching || '',
         skills: game.skills || []
       });
+      // Show advanced if non-default values
+      if (game.gameType !== 'main' || game.difficulty !== 'intermediate') {
+        setShowAdvanced(true);
+      }
     } else {
       setFormData({
         name: '',
         topic: 'transition',
+        gameType: 'main',
+        difficulty: 'intermediate',
         topPlayer: '',
         bottomPlayer: '',
         coaching: '',
         skills: []
       });
+      setShowAdvanced(false);
     }
     setErrors({});
     setSkillInput('');
@@ -150,6 +174,76 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Game Type & Difficulty Toggle */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+                >
+                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                </svg>
+                Game Type & Difficulty
+                {(formData.gameType !== 'main' || formData.difficulty !== 'intermediate') && (
+                  <span className="text-xs text-primary-600 dark:text-primary-400">(customized)</span>
+                )}
+              </button>
+
+              {showAdvanced && (
+                <div className="mt-3 space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg animate-fade-in">
+                  {/* Game Type */}
+                  <div>
+                    <label className="label text-sm">Game Type</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {gameTypes.map(type => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, gameType: type.value }))}
+                          className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                            formData.gameType === type.value
+                              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                        >
+                          <span className="text-xl mb-1">{type.icon}</span>
+                          <span className="text-sm font-medium">{type.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Difficulty */}
+                  <div>
+                    <label className="label text-sm">Difficulty</label>
+                    <div className="flex gap-2">
+                      {difficulties.map(diff => (
+                        <button
+                          key={diff.value}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, difficulty: diff.value }))}
+                          className={`flex items-center gap-2 flex-1 p-2 rounded-lg border-2 transition-all ${
+                            formData.difficulty === diff.value
+                              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${diff.color}`}></span>
+                          <span className="text-sm">{diff.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Top Player */}

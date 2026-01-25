@@ -265,6 +265,39 @@ router.put('/:id/games/:gameId/complete', protect, async (req, res) => {
   }
 });
 
+// @route   PUT /api/sessions/:id/games/:gameId/notes
+// @desc    Update notes for a game in session
+// @access  Private
+router.put('/:id/games/:gameId/notes', protect, async (req, res) => {
+  try {
+    const session = await Session.findOne({
+      _id: req.params.id,
+      $or: [
+        { user: req.user._id },
+        { 'collaborators.user': req.user._id }
+      ]
+    });
+
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    const gameEntry = session.games.find(g => g.game.toString() === req.params.gameId);
+    if (!gameEntry) {
+      return res.status(404).json({ message: 'Game not found in session' });
+    }
+
+    gameEntry.notes = req.body.notes || '';
+
+    await session.save();
+
+    res.json(session);
+  } catch (error) {
+    console.error('Update game notes error:', error);
+    res.status(500).json({ message: 'Server error updating game notes' });
+  }
+});
+
 // @route   PUT /api/sessions/:id/use
 // @desc    Mark session as used
 // @access  Private

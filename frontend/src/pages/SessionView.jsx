@@ -39,6 +39,11 @@ export default function SessionView() {
   const [showTimer, setShowTimer] = useState(false);
   const [timerState, setTimerState] = useState(null);
   const [participants, setParticipants] = useState(1);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [showAddGame, setShowAddGame] = useState(false);
+  const [availableGames, setAvailableGames] = useState([]);
 
   useEffect(() => {
     loadSession();
@@ -88,6 +93,111 @@ export default function SessionView() {
       onUserLeft(({ participants: count }) => {
         setParticipants(count);
       });
+    }
+  };
+
+  const loadAvailableGames = async () => {
+    try {
+      const response = await api.get('/games?limit=100');
+      // Filter out games already in session
+      const sessionGameIds = session.games.map(g => g.game._id);
+      const available = response.data.games.filter(g => !sessionGameIds.includes(g._id));
+      setAvailableGames(available);
+      setShowAddGame(true);
+    } catch (error) {
+      showToast('Failed to load games', 'error');
+    }
+  };
+
+  const handleRemoveGame = async (gameId) => {
+    if (!confirm('Remove this game from the session?')) return;
+
+    try {
+      await api.put(`/sessions/${id}/games`, {
+        action: 'remove',
+        gameId
+      });
+
+      // Update local state
+      setSession(prev => ({
+        ...prev,
+        games: prev.games.filter(g => g.game._id !== gameId)
+      }));
+
+      // Adjust current index if needed
+      if (currentGameIndex >= session.games.length - 1) {
+        setCurrentGameIndex(Math.max(0, session.games.length - 2));
+      }
+
+      showToast('Game removed from session', 'success');
+    } catch (error) {
+      showToast('Failed to remove game', 'error');
+    }
+  };
+
+  const handleAddGame = async (gameId) => {
+    try {
+      await api.put(`/sessions/${id}/games`, {
+        action: 'add',
+        gameId
+      });
+
+      // Reload session to get updated games
+      await loadSession();
+      setShowAddGame(false);
+      showToast('Game added to session', 'success');
+    } catch (error) {
+      showToast('Failed to add game', 'error');
+    }
+  };
+
+  const handleMoveGame = async (fromIndex, direction) => {
+    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= session.games.length) return;
+
+    const newGames = [...session.games];
+    [newGames[fromIndex], newGames[toIndex]] = [newGames[toIndex], newGames[fromIndex]];
+    const gameIds = newGames.map(g => g.game._id);
+
+    try {
+      await api.put(`/sessions/${id}/games`, {
+        action: 'reorder',
+        gameIds
+      });
+
+      // Update local state
+      setSession(prev => ({
+        ...prev,
+        games: newGames
+      }));
+
+      // Update current index to follow the game
+      if (currentGameIndex === fromIndex) {
+        setCurrentGameIndex(toIndex);
+      } else if (currentGameIndex === toIndex) {
+        setCurrentGameIndex(fromIndex);
+      }
+    } catch (error) {
+      showToast('Failed to reorder games', 'error');
+    }
+  };
+
+  const handleSaveNotes = async (gameId, notes) => {
+    try {
+      await api.put(`/sessions/${id}/games/${gameId}/notes`, { notes });
+
+      // Update local state
+      setSession(prev => ({
+        ...prev,
+        games: prev.games.map(g =>
+          g.game._id === gameId ? { ...g, notes } : g
+        )
+      }));
+
+      setEditingNotes(false);
+      showToast('Notes saved', 'success');
+    } catch (error) {
+      showToast('Failed to save notes', 'error');
     }
   };
 
@@ -187,6 +297,16 @@ export default function SessionView() {
               {participants} participants
             </span>
           )}
+          <button
+            onClick={() => setEditMode(!editMode)}
+            className={`btn-secondary ${editMode ? 'bg-primary-100 dark:bg-primary-900/30' : ''}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
+              <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
+              <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
+            </svg>
+            {editMode ? 'Done' : 'Edit'}
+          </button>
           <button
             onClick={() => setShowTimer(true)}
             className="btn-primary"
@@ -304,6 +424,65 @@ export default function SessionView() {
               'Mark as Completed'
             )}
           </button>
+
+          {/* Session Notes */}
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
+                  <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
+                </svg>
+                Session Notes
+              </h4>
+              {!editingNotes && (
+                <button
+                  onClick={() => {
+                    setNoteText(session.games[currentGameIndex].notes || '');
+                    setEditingNotes(true);
+                  }}
+                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                >
+                  {session.games[currentGameIndex].notes ? 'Edit' : 'Add notes'}
+                </button>
+              )}
+            </div>
+
+            {editingNotes ? (
+              <div className="space-y-2">
+                <textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="What worked well? What to focus on next time? Any observations..."
+                  rows={4}
+                  className="input resize-none text-sm"
+                  autoFocus
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setEditingNotes(false)}
+                    className="btn-secondary text-sm py-1.5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleSaveNotes(currentGame._id, noteText)}
+                    className="btn-primary text-sm py-1.5"
+                  >
+                    Save Notes
+                  </button>
+                </div>
+              </div>
+            ) : session.games[currentGameIndex].notes ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                {session.games[currentGameIndex].notes}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                No notes yet. Add notes to capture what worked and what to improve.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -351,33 +530,138 @@ export default function SessionView() {
 
       {/* Game list sidebar */}
       <div className="mt-8">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-          All Games
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            All Games ({session.games.length})
+          </h3>
+          {editMode && (
+            <button
+              onClick={loadAvailableGames}
+              className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+              </svg>
+              Add Game
+            </button>
+          )}
+        </div>
         <div className="space-y-2">
           {session.games.map((g, idx) => (
-            <button
+            <div
               key={idx}
-              onClick={() => setCurrentGameIndex(idx)}
-              className={`w-full text-left p-3 rounded-lg flex items-center gap-3 transition-colors ${
+              className={`p-3 rounded-lg flex items-center gap-3 transition-colors ${
                 idx === currentGameIndex
                   ? 'bg-primary-100 dark:bg-primary-900/30'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                  : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${topicColors[g.game?.topic] || 'bg-gray-400'}`} />
-              <span className={`flex-1 ${g.completed ? 'line-through text-gray-400' : ''}`}>
-                {g.game?.name || 'Unknown game'}
-              </span>
-              {g.completed && (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-green-500">
-                  <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
-                </svg>
+              {editMode && (
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => handleMoveGame(idx, 'up')}
+                    disabled={idx === 0}
+                    className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                      <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 01-1.06 0L8 7.06 5.28 9.78a.75.75 0 01-1.06-1.06l3.25-3.25a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleMoveGame(idx, 'down')}
+                    disabled={idx === session.games.length - 1}
+                    className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                      <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 011.06 0L8 8.94l2.72-2.72a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 7.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
               )}
-            </button>
+
+              <button
+                onClick={() => setCurrentGameIndex(idx)}
+                className="flex-1 flex items-center gap-3 text-left"
+              >
+                <span className={`w-2 h-2 rounded-full ${topicColors[g.game?.topic] || 'bg-gray-400'}`} />
+                <span className={`flex-1 ${g.completed ? 'line-through text-gray-400' : ''}`}>
+                  {g.game?.name || 'Unknown game'}
+                </span>
+                {g.completed && (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-green-500">
+                    <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {g.notes && (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-yellow-500">
+                    <path d="M3 4.75a1 1 0 011-1h8a1 1 0 011 1v6.5a1 1 0 01-1 1h-8a1 1 0 01-1-1v-6.5z" />
+                  </svg>
+                )}
+              </button>
+
+              {editMode && (
+                <button
+                  onClick={() => handleRemoveGame(g.game._id)}
+                  className="p-1 text-red-400 hover:text-red-600"
+                  title="Remove from session"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 000 1.5h.3l.815 8.15A1.5 1.5 0 005.357 15h5.286a1.5 1.5 0 001.492-1.35l.815-8.15h.3a.75.75 0 000-1.5H11v-.75A2.25 2.25 0 008.75 1h-1.5A2.25 2.25 0 005 3.25zm2.25-.75a.75.75 0 00-.75.75V4h3v-.75a.75.75 0 00-.75-.75h-1.5zM6.05 6a.75.75 0 01.787.713l.275 5.5a.75.75 0 01-1.498.075l-.275-5.5A.75.75 0 016.05 6zm3.9 0a.75.75 0 01.712.787l-.275 5.5a.75.75 0 01-1.498-.075l.275-5.5a.75.75 0 01.786-.711z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              )}
+            </div>
           ))}
         </div>
       </div>
+
+      {/* Add Game Modal */}
+      {showAddGame && (
+        <div className="modal-overlay" onClick={() => setShowAddGame(false)}>
+          <div className="modal-content max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Add Game to Session
+              </h3>
+              <button onClick={() => setShowAddGame(false)} className="btn-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {availableGames.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">
+                  No more games to add. All games are already in this session.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {availableGames.map(game => (
+                    <button
+                      key={game._id}
+                      onClick={() => handleAddGame(game._id)}
+                      className="w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${topicColors[game.topic]}`} />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-white">{game.name}</p>
+                        {game.skills?.length > 0 && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {game.skills.slice(0, 3).map(s => `#${s}`).join(' ')}
+                          </p>
+                        )}
+                      </div>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-gray-400">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Timer Modal */}
       <Timer

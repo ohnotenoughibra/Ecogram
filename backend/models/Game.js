@@ -19,6 +19,11 @@ const gameSchema = new mongoose.Schema({
     enum: ['offensive', 'defensive', 'control', 'transition'],
     default: 'transition'
   },
+  gameType: {
+    type: String,
+    enum: ['warmup', 'main', 'cooldown'],
+    default: 'main'
+  },
   topPlayer: {
     type: String,
     default: '',
@@ -81,6 +86,24 @@ const gameSchema = new mongoose.Schema({
     },
     progressions: [String],
     pedagogicalNote: String
+  },
+  // For game progressions - linked games in a sequence
+  linkedGames: {
+    previous: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Game',
+      default: null
+    },
+    next: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Game',
+      default: null
+    }
+  },
+  difficulty: {
+    type: String,
+    enum: ['beginner', 'intermediate', 'advanced'],
+    default: 'intermediate'
   }
 }, {
   timestamps: true
@@ -90,6 +113,7 @@ const gameSchema = new mongoose.Schema({
 gameSchema.index({ user: 1, favorite: 1 });
 gameSchema.index({ user: 1, lastUsed: -1 });
 gameSchema.index({ user: 1, topic: 1 });
+gameSchema.index({ user: 1, gameType: 1 });
 gameSchema.index({ shareId: 1 });
 
 // Generate share ID
