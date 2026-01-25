@@ -448,6 +448,15 @@ export default function SessionCalendar({
             onStartSession(session);
           }}
           onEdit={onEditSession}
+          onAddTopic={(date) => {
+            setShowDayModal(false);
+            setEditingTopic({
+              _isNew: true,
+              startDate: date.toISOString(),
+              endDate: new Date(date.getTime() + 21 * 24 * 60 * 60 * 1000).toISOString() // 3 weeks default
+            });
+            setShowTopicModal(true);
+          }}
         />
       )}
 
@@ -469,7 +478,7 @@ export default function SessionCalendar({
   );
 }
 
-function DayDetailModal({ date, sessions, topic, allSessions, onClose, onSchedule, onStart, onEdit }) {
+function DayDetailModal({ date, sessions, topic, allSessions, onClose, onSchedule, onStart, onEdit, onAddTopic }) {
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
   const isToday = date.toDateString() === new Date().toDateString();
@@ -514,7 +523,7 @@ function DayDetailModal({ date, sessions, topic, allSessions, onClose, onSchedul
           </div>
 
           {/* Topic for this day */}
-          {topic && (
+          {topic ? (
             <div className={`p-3 rounded-lg mb-4 border ${topicColors.bg} ${topicColors.border}`}>
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-medium uppercase ${topicColors.text}`}>
@@ -530,6 +539,16 @@ function DayDetailModal({ date, sessions, topic, allSessions, onClose, onSchedul
                 </p>
               )}
             </div>
+          ) : (
+            <button
+              onClick={() => onAddTopic(date)}
+              className="w-full p-3 mb-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm hover:border-primary-400 hover:text-primary-500 transition-colors flex items-center justify-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path d="M8.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" />
+              </svg>
+              Set training topic for this {isPast ? 'past ' : ''}date
+            </button>
           )}
 
           {/* Sessions for this day */}
@@ -676,9 +695,13 @@ function DayDetailModal({ date, sessions, topic, allSessions, onClose, onSchedul
 }
 
 function TopicModal({ topic, onClose, onSave, onDelete, recentTopics = [], recentGames = [] }) {
-  const [name, setName] = useState(topic?.name || '');
-  const [description, setDescription] = useState(topic?.description || '');
-  const [category, setCategory] = useState(topic?.category || 'custom');
+  // Check if this is a new topic with pre-filled dates (from clicking a date)
+  const isNewWithDates = topic?._isNew;
+  const isEditing = topic && !isNewWithDates;
+
+  const [name, setName] = useState(isEditing ? topic.name : '');
+  const [description, setDescription] = useState(isEditing ? topic.description || '' : '');
+  const [category, setCategory] = useState(isEditing ? topic.category : 'custom');
   const [startDate, setStartDate] = useState(
     topic?.startDate
       ? new Date(topic.startDate).toISOString().split('T')[0]
@@ -689,7 +712,7 @@ function TopicModal({ topic, onClose, onSave, onDelete, recentTopics = [], recen
       ? new Date(topic.endDate).toISOString().split('T')[0]
       : new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 3 weeks default
   );
-  const [goals, setGoals] = useState(topic?.goals?.join(', ') || '');
+  const [goals, setGoals] = useState(isEditing && topic.goals ? topic.goals.join(', ') : '');
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -768,7 +791,7 @@ function TopicModal({ topic, onClose, onSave, onDelete, recentTopics = [], recen
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {topic ? 'Edit Training Topic' : 'New Training Topic'}
+              {isEditing ? 'Edit Training Topic' : 'New Training Topic'}
             </h3>
             <button
               onClick={onClose}
@@ -826,7 +849,7 @@ function TopicModal({ topic, onClose, onSave, onDelete, recentTopics = [], recen
             </div>
 
             {/* AI Suggestions Section */}
-            {!topic && (
+            {!isEditing && (
               <div className="border border-primary-200 dark:border-primary-800 rounded-lg p-3 bg-primary-50/50 dark:bg-primary-900/10">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -1009,7 +1032,7 @@ function TopicModal({ topic, onClose, onSave, onDelete, recentTopics = [], recen
                 type="submit"
                 className="btn-primary flex-1"
               >
-                {topic ? 'Save' : 'Create Topic'}
+                {isEditing ? 'Save' : 'Create Topic'}
               </button>
             </div>
           </form>
