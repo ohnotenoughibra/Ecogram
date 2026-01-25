@@ -110,6 +110,22 @@ export default function Stats() {
   };
   const trainingStreak = calculateStreak();
 
+  // Session stats
+  const totalSessions = sessions.length;
+  const completedSessions = sessions.filter(s =>
+    s.games.length > 0 && s.games.every(g => g.completed)
+  ).length;
+
+  // Calculate topic balance warnings
+  const totalTopics = topics.reduce((sum, t) => sum + (stats.topicDistribution[t] || 0), 0);
+  const getBalanceStatus = (count) => {
+    if (totalTopics === 0) return 'neutral';
+    const percentage = (count / totalTopics) * 100;
+    if (percentage < 10) return 'low';
+    if (percentage > 40) return 'high';
+    return 'balanced';
+  };
+
   // Training recommendations based on data
   const getRecommendations = () => {
     const recommendations = [];
@@ -161,22 +177,6 @@ export default function Stats() {
     return recommendations.slice(0, 4);
   };
   const recommendations = getRecommendations();
-
-  // Session stats
-  const totalSessions = sessions.length;
-  const completedSessions = sessions.filter(s =>
-    s.games.length > 0 && s.games.every(g => g.completed)
-  ).length;
-
-  // Calculate topic balance warnings
-  const totalTopics = topics.reduce((sum, t) => sum + (stats.topicDistribution[t] || 0), 0);
-  const getBalanceStatus = (count) => {
-    if (totalTopics === 0) return 'neutral';
-    const percentage = (count / totalTopics) * 100;
-    if (percentage < 10) return 'low';
-    if (percentage > 40) return 'high';
-    return 'balanced';
-  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
