@@ -31,11 +31,28 @@ export default function Sessions() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharingSession, setSharingSession] = useState(null);
   const [shareUrl, setShareUrl] = useState('');
-  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'upcoming' | 'recent' | 'favorites'
+  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'upcoming' | 'recent' | 'favorites' | 'templates'
+  const [templates, setTemplates] = useState([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [sessionToSaveAsTemplate, setSessionToSaveAsTemplate] = useState(null);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [showUseTemplateModal, setShowUseTemplateModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   useEffect(() => {
     fetchSessions();
+    fetchTemplates();
   }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await api.get('/sessions/templates/all');
+      setTemplates(response.data);
+    } catch (error) {
+      console.error('Failed to fetch templates:', error);
+    }
+  };
 
   // Smart session categorization
   const categorizedSessions = useMemo(() => {
@@ -69,17 +86,20 @@ export default function Sessions() {
     return { upcoming, recent, favorites, todaySessions };
   }, [sessions]);
 
-  // Filter sessions based on active tab
+  // Filter sessions based on active tab (exclude templates from regular sessions)
   const filteredSessions = useMemo(() => {
+    const nonTemplateSessions = sessions.filter(s => !s.isTemplate);
     switch (filterTab) {
       case 'upcoming':
-        return categorizedSessions.upcoming;
+        return categorizedSessions.upcoming.filter(s => !s.isTemplate);
       case 'recent':
-        return categorizedSessions.recent;
+        return categorizedSessions.recent.filter(s => !s.isTemplate);
       case 'favorites':
-        return categorizedSessions.favorites;
+        return categorizedSessions.favorites.filter(s => !s.isTemplate);
+      case 'templates':
+        return []; // Templates displayed separately
       default:
-        return sessions;
+        return nonTemplateSessions;
     }
   }, [sessions, filterTab, categorizedSessions]);
 
@@ -161,6 +181,68 @@ export default function Sessions() {
     navigate(`/session/${session._id}`);
   };
 
+  const handleSaveAsTemplate = (session) => {
+    setSessionToSaveAsTemplate(session);
+    setTemplateName(session.name);
+    setTemplateDescription('');
+    setShowTemplateModal(true);
+  };
+
+  const handleConfirmSaveTemplate = async () => {
+    if (!sessionToSaveAsTemplate) return;
+
+    try {
+      await api.post(`/sessions/${sessionToSaveAsTemplate._id}/save-as-template`, {
+        templateName: templateName || sessionToSaveAsTemplate.name,
+        templateDescription
+      });
+      showToast('Saved as template!', 'success');
+      fetchTemplates();
+      setShowTemplateModal(false);
+      setSessionToSaveAsTemplate(null);
+    } catch (error) {
+      showToast('Failed to save template', 'error');
+    }
+  };
+
+  const handleUseTemplate = (template) => {
+    setSelectedTemplate(template);
+    setSessionName(template.templateName || template.name);
+    setScheduledDate('');
+    setShowUseTemplateModal(true);
+  };
+
+  const handleCreateFromTemplate = async (e) => {
+    e.preventDefault();
+    if (!selectedTemplate) return;
+
+    try {
+      const response = await api.post(`/sessions/from-template/${selectedTemplate._id}`, {
+        name: sessionName,
+        scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
+      });
+      showToast('Session created from template!', 'success');
+      fetchSessions();
+      setShowUseTemplateModal(false);
+      setSelectedTemplate(null);
+      navigate(`/session/${response.data._id}`);
+    } catch (error) {
+      showToast('Failed to create session', 'error');
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId) => {
+    if (!confirm('Delete this template?')) return;
+
+    try {
+      await api.delete(`/sessions/templates/${templateId}`);
+      showToast('Template deleted', 'success');
+      fetchTemplates();
+    } catch (error) {
+      showToast('Failed to delete template', 'error');
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Header */}
@@ -231,10 +313,11 @@ export default function Sessions() {
         {/* Filter Tabs */}
         <div className="flex gap-1 overflow-x-auto no-scrollbar">
           {[
-            { key: 'all', label: 'All', count: sessions.length },
+            { key: 'all', label: 'All', count: sessions.filter(s => !s.isTemplate).length },
             { key: 'upcoming', label: 'Upcoming', count: categorizedSessions.upcoming.length },
             { key: 'recent', label: 'Recent', count: categorizedSessions.recent.length },
-            { key: 'favorites', label: 'Favorites', count: categorizedSessions.favorites.length }
+            { key: 'favorites', label: 'Favorites', count: categorizedSessions.favorites.length },
+            { key: 'templates', label: 'Templates', count: templates.length, icon: '📋' }
           ].map(tab => (
             <button
               key={tab.key}
@@ -350,7 +433,81 @@ export default function Sessions() {
           )}
 
           {/* Sessions List */}
-          {filteredSessions.length > 0 ? (
+          {filterTab === 'templates' ? (
+            /* Templates View */
+            <div>
+              {templates.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-3xl">📋</span>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Templates Yet</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
+                    Save your favorite sessions as templates to quickly create similar training plans.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {templates.map(template => (
+                    <div key={template._id} className="card p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">📋</span>
+                          <div>
+                            <h3 className="font-semibold text-gray-900 dark:text-white">
+                              {template.templateName || template.name}
+                            </h3>
+                            <p className="text-xs text-gray-500">
+                              {template.games?.length || 0} games
+                              {template.usageCount > 0 && ` • Used ${template.usageCount}x`}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteTemplate(template._id)}
+                          className="btn-icon text-gray-400 hover:text-red-500"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                            <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 000 1.5h.3l.815 8.15A1.5 1.5 0 005.357 15h5.285a1.5 1.5 0 001.493-1.35l.815-8.15h.3a.75.75 0 000-1.5H11v-.75A2.25 2.25 0 008.75 1h-1.5A2.25 2.25 0 005 3.25zm2.25-.75a.75.75 0 00-.75.75V4h3v-.75a.75.75 0 00-.75-.75h-1.5z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {template.templateDescription && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                          {template.templateDescription}
+                        </p>
+                      )}
+
+                      {/* Games preview */}
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {template.games?.slice(0, 4).map((g, idx) => (
+                          <span
+                            key={idx}
+                            className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded truncate max-w-[100px]"
+                          >
+                            {g.game?.name || 'Game'}
+                          </span>
+                        ))}
+                        {template.games?.length > 4 && (
+                          <span className="text-xs text-gray-400">
+                            +{template.games.length - 4} more
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handleUseTemplate(template)}
+                        className="btn-primary w-full text-sm"
+                      >
+                        Use This Template
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : filteredSessions.length > 0 ? (
             <div className="space-y-4">
               {filteredSessions.map(session => (
                 <SessionItem
@@ -360,6 +517,7 @@ export default function Sessions() {
                   onDelete={handleDeleteClick}
                   onShare={handleShare}
                   onSessionUpdate={handleSessionUpdate}
+                  onSaveAsTemplate={handleSaveAsTemplate}
                 />
               ))}
             </div>
@@ -501,6 +659,147 @@ export default function Sessions() {
         onClose={() => setShowSmartBuilder(false)}
         onSessionCreated={() => fetchSessions()}
       />
+
+      {/* Save as Template Modal */}
+      {showTemplateModal && (
+        <div className="modal-overlay" onClick={() => setShowTemplateModal(false)}>
+          <div className="modal-content max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                  <span className="text-xl">📋</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Save as Template
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Reuse this session structure
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Template Name</label>
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="e.g., Tuesday Guard Session"
+                    className="input"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="label">
+                    Description
+                    <span className="text-gray-400 font-normal ml-1">(optional)</span>
+                  </label>
+                  <textarea
+                    value={templateDescription}
+                    onChange={(e) => setTemplateDescription(e.target.value)}
+                    placeholder="What makes this session special?"
+                    rows={2}
+                    className="input resize-none"
+                  />
+                </div>
+
+                {sessionToSaveAsTemplate && (
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      This template will include {sessionToSaveAsTemplate.games?.length || 0} games
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowTemplateModal(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmSaveTemplate}
+                  className="btn-primary flex-1"
+                >
+                  Save Template
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Use Template Modal */}
+      {showUseTemplateModal && selectedTemplate && (
+        <div className="modal-overlay" onClick={() => setShowUseTemplateModal(false)}>
+          <div className="modal-content max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Create from Template
+              </h3>
+
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {selectedTemplate.templateName || selectedTemplate.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {selectedTemplate.games?.length || 0} games
+                </p>
+              </div>
+
+              <form onSubmit={handleCreateFromTemplate}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="label">Session Name</label>
+                    <input
+                      type="text"
+                      value={sessionName}
+                      onChange={(e) => setSessionName(e.target.value)}
+                      placeholder="Name your session"
+                      className="input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label">
+                      Schedule Date
+                      <span className="text-gray-400 font-normal ml-1">(optional)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="input"
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowUseTemplateModal(false)}
+                    className="btn-secondary flex-1"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary flex-1"
+                  >
+                    Create Session
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

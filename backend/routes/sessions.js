@@ -501,4 +501,132 @@ router.post('/:id/duplicate', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/sessions/templates
+// @desc    Get all templates for user
+// @access  Private
+router.get('/templates/all', protect, async (req, res) => {
+  try {
+    const templates = await Session.find({
+      user: req.user._id,
+      isTemplate: true
+    })
+      .populate('games.game', 'name topic skills gameType')
+      .sort({ usageCount: -1, createdAt: -1 });
+
+    res.json(templates);
+  } catch (error) {
+    console.error('Get templates error:', error);
+    res.status(500).json({ message: 'Server error fetching templates' });
+  }
+});
+
+// @route   POST /api/sessions/:id/save-as-template
+// @desc    Save an existing session as a template
+// @access  Private
+router.post('/:id/save-as-template', protect, async (req, res) => {
+  try {
+    const { templateName, templateDescription } = req.body;
+
+    const originalSession = await Session.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!originalSession) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    // Create a new session as a template
+    const template = await Session.create({
+      user: req.user._id,
+      name: originalSession.name,
+      templateName: templateName || originalSession.name,
+      templateDescription: templateDescription || '',
+      games: originalSession.games.map(g => ({
+        game: g.game,
+        order: g.order,
+        completed: false
+      })),
+      isTemplate: true,
+      favorite: false
+    });
+
+    const populatedTemplate = await Session.findById(template._id)
+      .populate('games.game', 'name topic skills gameType');
+
+    res.status(201).json(populatedTemplate);
+  } catch (error) {
+    console.error('Save as template error:', error);
+    res.status(500).json({ message: 'Server error saving template' });
+  }
+});
+
+// @route   POST /api/sessions/from-template/:templateId
+// @desc    Create a new session from a template
+// @access  Private
+router.post('/from-template/:templateId', protect, async (req, res) => {
+  try {
+    const { name, scheduledDate } = req.body;
+
+    const template = await Session.findOne({
+      _id: req.params.templateId,
+      user: req.user._id,
+      isTemplate: true
+    });
+
+    if (!template) {
+      return res.status(404).json({ message: 'Template not found' });
+    }
+
+    // Create a new session from the template
+    const session = await Session.create({
+      user: req.user._id,
+      name: name || template.templateName || template.name,
+      games: template.games.map(g => ({
+        game: g.game,
+        order: g.order,
+        completed: false
+      })),
+      scheduledDate: scheduledDate || null,
+      sourceTemplate: template._id,
+      isTemplate: false,
+      favorite: false
+    });
+
+    // Increment template usage count
+    template.usageCount = (template.usageCount || 0) + 1;
+    await template.save();
+
+    const populatedSession = await Session.findById(session._id)
+      .populate('games.game', 'name topic skills gameType');
+
+    res.status(201).json(populatedSession);
+  } catch (error) {
+    console.error('Create from template error:', error);
+    res.status(500).json({ message: 'Server error creating session from template' });
+  }
+});
+
+// @route   DELETE /api/sessions/templates/:id
+// @desc    Delete a template
+// @access  Private
+router.delete('/templates/:id', protect, async (req, res) => {
+  try {
+    const template = await Session.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user._id,
+      isTemplate: true
+    });
+
+    if (!template) {
+      return res.status(404).json({ message: 'Template not found' });
+    }
+
+    res.json({ message: 'Template deleted successfully' });
+  } catch (error) {
+    console.error('Delete template error:', error);
+    res.status(500).json({ message: 'Server error deleting template' });
+  }
+});
+
 module.exports = router;

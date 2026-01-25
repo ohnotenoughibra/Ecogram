@@ -10,7 +10,7 @@ const topicColors = {
   transition: 'bg-green-500'
 };
 
-export default function SessionItem({ session, onEdit, onDelete, onShare, onSessionUpdate }) {
+export default function SessionItem({ session, onEdit, onDelete, onShare, onSessionUpdate, onSaveAsTemplate }) {
   const navigate = useNavigate();
   const { updateSession, showToast } = useApp();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -344,7 +344,7 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-wrap gap-2 pt-2">
             <button
               onClick={handleStartSession}
               className="btn-primary text-sm flex-1"
@@ -363,6 +363,20 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
             >
               Rename
             </button>
+            {onSaveAsTemplate && session.games?.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSaveAsTemplate(session);
+                }}
+                className="btn-secondary text-sm"
+                title="Save as Template"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M5.127 3.502L5.25 3.5h9.5c.041 0 .082 0 .123.002A2.251 2.251 0 0012.75 2h-5.5a2.25 2.25 0 00-2.123 1.502zM1 10.25A2.25 2.25 0 013.25 8h13.5A2.25 2.25 0 0119 10.25v5.5A2.25 2.25 0 0116.75 18H3.25A2.25 2.25 0 011 15.75v-5.5zM3.25 6.5c-.04 0-.082 0-.123.002A2.25 2.25 0 015.25 5h9.5c.98 0 1.814.627 2.123 1.502a3.819 3.819 0 00-.123-.002H3.25z" />
+                </svg>
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();

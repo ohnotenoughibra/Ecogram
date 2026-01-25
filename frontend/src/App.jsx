@@ -26,6 +26,8 @@ import Stats from './pages/Stats';
 import AIDesigner from './pages/AIDesigner';
 import Import from './pages/Import';
 import Practice from './pages/Practice';
+import CompetitionPrep from './pages/CompetitionPrep';
+import Goals from './pages/Goals';
 
 // Protected route wrapper
 function ProtectedRoute({ children }) {
@@ -280,6 +282,26 @@ export default function App() {
           <ProtectedRoute>
             <MainLayout>
               <Profile />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/competition"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <CompetitionPrep />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/goals"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Goals />
             </MainLayout>
           </ProtectedRoute>
         }

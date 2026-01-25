@@ -68,7 +68,32 @@ const sessionSchema = new mongoose.Schema({
       enum: ['viewer', 'editor'],
       default: 'viewer'
     }
-  }]
+  }],
+  // Template support
+  isTemplate: {
+    type: Boolean,
+    default: false
+  },
+  templateName: {
+    type: String,
+    default: '',
+    maxlength: [100, 'Template name cannot exceed 100 characters']
+  },
+  templateDescription: {
+    type: String,
+    default: '',
+    maxlength: [500, 'Template description cannot exceed 500 characters']
+  },
+  // If created from a template, reference the original
+  sourceTemplate: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Session',
+    default: null
+  },
+  usageCount: {
+    type: Number,
+    default: 0
+  }
 }, {
   timestamps: true
 });
@@ -77,6 +102,7 @@ const sessionSchema = new mongoose.Schema({
 sessionSchema.index({ user: 1, favorite: 1 });
 sessionSchema.index({ user: 1, scheduledDate: 1 });
 sessionSchema.index({ shareId: 1 });
+sessionSchema.index({ user: 1, isTemplate: 1 });
 
 // Generate share ID
 sessionSchema.methods.generateShareId = function() {

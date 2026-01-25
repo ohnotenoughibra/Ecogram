@@ -12,6 +12,8 @@ const sessionsRoutes = require('./routes/sessions');
 const shareRoutes = require('./routes/share');
 const aiRoutes = require('./routes/ai');
 const topicsRoutes = require('./routes/topics');
+const competitionsRoutes = require('./routes/competitions');
+const goalsRoutes = require('./routes/goals');
 
 // Initialize express app
 const app = express();
@@ -49,6 +51,8 @@ app.use('/api/sessions', sessionsRoutes);
 app.use('/api/share', shareRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/topics', topicsRoutes);
+app.use('/api/competitions', competitionsRoutes);
+app.use('/api/goals', goalsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
