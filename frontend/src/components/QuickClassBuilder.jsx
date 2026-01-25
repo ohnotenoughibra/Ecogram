@@ -9,14 +9,30 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
   const [creating, setCreating] = useState(false);
   const [preview, setPreview] = useState(null);
 
-  // Get games for selected position
+  // Get games for selected position - search broadly
   const positionGames = useMemo(() => {
     if (!selectedPosition) return { warmup: [], main: [], cooldown: [] };
 
-    const filtered = games.filter(g =>
-      g.position === selectedPosition ||
-      g.aiMetadata?.startPosition?.toLowerCase().includes(selectedPosition.replace('-', ' '))
-    );
+    const positionLabel = getPositionLabel(selectedPosition).toLowerCase();
+    const positionWords = selectedPosition.split('-').filter(w => w.length > 2);
+
+    const filtered = games.filter(g => {
+      // Direct position match
+      if (g.position === selectedPosition) return true;
+
+      // Check aiMetadata.startPosition
+      if (g.aiMetadata?.startPosition?.toLowerCase().includes(selectedPosition.replace('-', ' '))) return true;
+      if (g.aiMetadata?.startPosition?.toLowerCase().includes(positionLabel)) return true;
+
+      // Search in game content for position keywords
+      const searchText = `${g.name} ${g.topPlayer || ''} ${g.bottomPlayer || ''} ${g.coaching || ''} ${(g.skills || []).join(' ')}`.toLowerCase();
+
+      // Check for position label or position words
+      if (searchText.includes(positionLabel)) return true;
+      if (positionWords.some(word => searchText.includes(word))) return true;
+
+      return false;
+    });
 
     return {
       warmup: filtered.filter(g => g.gameType === 'warmup'),
@@ -25,34 +41,35 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
     };
   }, [games, selectedPosition]);
 
-  // Get related games (same topic or techniques)
-  const relatedGames = useMemo(() => {
-    if (!selectedPosition) return { warmup: [], main: [], cooldown: [] };
-
-    // Get games that might be related even without exact position match
-    const positionWords = selectedPosition.split('-');
-    const related = games.filter(g => {
-      if (g.position === selectedPosition) return false; // Already in positionGames
-
-      // Check if name or content mentions the position
-      const searchText = `${g.name} ${g.topPlayer} ${g.bottomPlayer} ${g.aiMetadata?.startPosition || ''}`.toLowerCase();
-      return positionWords.some(word => word.length > 2 && searchText.includes(word));
-    });
-
+  // Get ALL games as fallback when position-specific games are limited
+  const allGamesByType = useMemo(() => {
     return {
-      warmup: related.filter(g => g.gameType === 'warmup'),
-      main: related.filter(g => g.gameType === 'main' || !g.gameType),
-      cooldown: related.filter(g => g.gameType === 'cooldown')
+      warmup: games.filter(g => g.gameType === 'warmup'),
+      main: games.filter(g => g.gameType === 'main' || !g.gameType),
+      cooldown: games.filter(g => g.gameType === 'cooldown')
     };
-  }, [games, selectedPosition]);
+  }, [games]);
 
   // Calculate suggested class structure
   const suggestedClass = useMemo(() => {
     if (!selectedPosition) return null;
 
-    const allWarmups = [...positionGames.warmup, ...relatedGames.warmup];
-    const allMains = [...positionGames.main, ...relatedGames.main];
-    const allCooldowns = [...positionGames.cooldown, ...relatedGames.cooldown];
+    // Use position-specific games, fallback to all games if not enough
+    const getPoolWithFallback = (positionPool, allPool) => {
+      if (positionPool.length >= 2) return positionPool;
+      // Add all games as fallback, but keep position-specific first
+      const combined = [...positionPool];
+      allPool.forEach(g => {
+        if (!combined.find(c => c._id === g._id)) {
+          combined.push(g);
+        }
+      });
+      return combined;
+    };
+
+    const allWarmups = getPoolWithFallback(positionGames.warmup, allGamesByType.warmup);
+    const allMains = getPoolWithFallback(positionGames.main, allGamesByType.main);
+    const allCooldowns = getPoolWithFallback(positionGames.cooldown, allGamesByType.cooldown);
 
     // Time allocation based on duration
     const warmupTime = Math.floor(duration * 0.15); // 15%
@@ -78,7 +95,7 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
       cooldownTime,
       totalGames: warmupCount + mainCount + cooldownCount
     };
-  }, [selectedPosition, duration, positionGames, relatedGames]);
+  }, [selectedPosition, duration, positionGames, allGamesByType]);
 
   const handleGeneratePreview = () => {
     if (!suggestedClass) return;
@@ -123,8 +140,9 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
 
   if (!isOpen) return null;
 
-  const totalAvailable = positionGames.warmup.length + positionGames.main.length + positionGames.cooldown.length +
-                         relatedGames.warmup.length + relatedGames.main.length + relatedGames.cooldown.length;
+  const positionTotal = positionGames.warmup.length + positionGames.main.length + positionGames.cooldown.length;
+  const allTotal = allGamesByType.warmup.length + allGamesByType.main.length + allGamesByType.cooldown.length;
+  const totalAvailable = Math.max(positionTotal, allTotal);
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -209,25 +227,30 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
               {selectedPosition && (
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Available Games for {getPositionLabel(selectedPosition)}
+                    Games for {getPositionLabel(selectedPosition)}
                   </p>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded">
-                      <p className="text-lg font-bold text-orange-600">{positionGames.warmup.length + relatedGames.warmup.length}</p>
+                      <p className="text-lg font-bold text-orange-600">{positionGames.warmup.length}</p>
                       <p className="text-xs text-orange-700 dark:text-orange-400">Warmup</p>
                     </div>
                     <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded">
-                      <p className="text-lg font-bold text-blue-600">{positionGames.main.length + relatedGames.main.length}</p>
+                      <p className="text-lg font-bold text-blue-600">{positionGames.main.length}</p>
                       <p className="text-xs text-blue-700 dark:text-blue-400">Main</p>
                     </div>
                     <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded">
-                      <p className="text-lg font-bold text-green-600">{positionGames.cooldown.length + relatedGames.cooldown.length}</p>
+                      <p className="text-lg font-bold text-green-600">{positionGames.cooldown.length}</p>
                       <p className="text-xs text-green-700 dark:text-green-400">Cooldown</p>
                     </div>
                   </div>
-                  {totalAvailable === 0 && (
+                  {positionTotal === 0 && allTotal > 0 && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                      No games found. Add games with this position to your library first.
+                      No position-specific games found. Will use your full library ({allTotal} games).
+                    </p>
+                  )}
+                  {allTotal === 0 && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                      No games in your library. Add some games first!
                     </p>
                   )}
                 </div>
@@ -236,7 +259,7 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
               {/* Generate Button */}
               <button
                 onClick={handleGeneratePreview}
-                disabled={!selectedPosition || totalAvailable === 0}
+                disabled={!selectedPosition || allTotal === 0}
                 className="btn-primary w-full"
               >
                 Generate {duration}-Minute Class
