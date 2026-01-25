@@ -9,6 +9,7 @@ import BottomNav from './components/BottomNav';
 import ToastContainer from './components/Toast';
 import Loading from './components/Loading';
 import Timer from './components/Timer';
+import KeyboardShortcuts from './components/KeyboardShortcuts';
 
 // Pages
 import Login from './pages/Login';
@@ -66,6 +67,7 @@ function PublicRoute({ children }) {
 function MainLayout({ children }) {
   const { showToast } = useApp();
   const [showTimer, setShowTimer] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -94,7 +96,7 @@ function MainLayout({ children }) {
       }
       // ? - Show shortcuts help
       if (e.key === '?') {
-        showToast('Shortcuts: N=New, A=AI, S=Search, T=Timer', 'info');
+        setShowShortcuts(true);
       }
     };
 
@@ -131,6 +133,12 @@ function MainLayout({ children }) {
 
       {/* Toast notifications */}
       <ToastContainer />
+
+      {/* Keyboard shortcuts help */}
+      <KeyboardShortcuts
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </div>
   );
 }

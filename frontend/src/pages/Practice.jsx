@@ -1,6 +1,33 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 
+// Custom hook for swipe detection
+function useSwipe(onSwipeLeft, onSwipeRight) {
+  const touchStart = useRef(null);
+  const touchEnd = useRef(null);
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    touchEnd.current = null;
+    touchStart.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchMove = (e) => {
+    touchEnd.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart.current || !touchEnd.current) return;
+    const distance = touchStart.current - touchEnd.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    if (isLeftSwipe && onSwipeLeft) onSwipeLeft();
+    if (isRightSwipe && onSwipeRight) onSwipeRight();
+  };
+
+  return { onTouchStart, onTouchMove, onTouchEnd };
+}
+
 const topicLabels = {
   offensive: 'Offensive / Submissions',
   defensive: 'Defensive / Escapes',
@@ -16,11 +43,12 @@ const topicColors = {
 };
 
 export default function Practice() {
-  const { games, markGameUsed } = useApp();
+  const { games, markGameUsed, showToast } = useApp();
   const [currentGame, setCurrentGame] = useState(null);
   const [filterTopic, setFilterTopic] = useState('');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Timer state
   const [timerDuration, setTimerDuration] = useState(180); // 3 minutes default
@@ -113,6 +141,32 @@ export default function Practice() {
   // Timer progress percentage
   const progress = (timeRemaining / timerDuration) * 100;
   const progressColor = timeRemaining <= 10 ? 'text-red-500' : timeRemaining <= 30 ? 'text-yellow-500' : 'text-primary-500';
+
+  // Copy game to clipboard
+  const copyGameToClipboard = useCallback(() => {
+    if (!currentGame) return;
+
+    const text = `${currentGame.name}
+Topic: ${topicLabels[currentGame.topic]}
+${currentGame.skills?.length ? `Skills: ${currentGame.skills.map(s => '#' + s).join(' ')}` : ''}
+${currentGame.topPlayer ? `\nTop Player:\n${currentGame.topPlayer}` : ''}
+${currentGame.bottomPlayer ? `\nBottom Player:\n${currentGame.bottomPlayer}` : ''}
+${currentGame.coaching ? `\nCoaching Notes:\n${currentGame.coaching}` : ''}`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      showToast('Game copied to clipboard', 'success');
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      showToast('Failed to copy', 'error');
+    });
+  }, [currentGame, showToast]);
+
+  // Swipe handlers for mobile
+  const swipeHandlers = useSwipe(
+    () => filteredGames.length > 0 && startNewRound(), // Swipe left = new round
+    () => setShowDetails(prev => !prev) // Swipe right = toggle details
+  );
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -256,19 +310,42 @@ export default function Practice() {
       </div>
 
       {/* Game display */}
-      <div className="card p-4">
+      <div
+        className="card p-4 select-none"
+        {...swipeHandlers}
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-gray-900 dark:text-white">Current Game</h2>
-          <button
-            onClick={startNewRound}
-            disabled={filteredGames.length === 0}
-            className="btn-primary"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-2">
-              <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
-            </svg>
-            New Round
-          </button>
+          <div className="flex gap-2">
+            {currentGame && (
+              <button
+                onClick={copyGameToClipboard}
+                className="btn-secondary px-3"
+                title="Copy game details"
+              >
+                {copied ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-500">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                    <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                  </svg>
+                )}
+              </button>
+            )}
+            <button
+              onClick={startNewRound}
+              disabled={filteredGames.length === 0}
+              className="btn-primary"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-2">
+                <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+              </svg>
+              New Round
+            </button>
+          </div>
         </div>
 
         {currentGame ? (
@@ -407,8 +484,12 @@ export default function Practice() {
               </div>
             ) : (
               <div>
-                <p className="mb-2">Click "New Round" to pick a random game</p>
-                <p className="text-sm">Timer will start automatically</p>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.96.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z" />
+                </svg>
+                <p className="mb-2 font-medium">Ready to practice?</p>
+                <p className="text-sm mb-4">Click "New Round" to pick a random game and start the timer</p>
+                <p className="text-xs text-gray-400 lg:hidden">Swipe left for new game, right to toggle details</p>
               </div>
             )}
           </div>
