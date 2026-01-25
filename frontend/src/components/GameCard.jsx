@@ -127,9 +127,54 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
 
   return (
     <div
-      className={`card card-hover p-4 cursor-pointer ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
+      className={`card card-hover p-4 cursor-pointer relative group ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
       onClick={() => setIsExpanded(!isExpanded)}
     >
+      {/* Quick Actions - visible on hover when collapsed */}
+      {!isExpanded && (
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-surface-dark rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(game);
+            }}
+            className="p-1.5 text-gray-500 hover:text-primary-500 rounded transition-colors"
+            title="Edit"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path d="M13.488 2.513a1.75 1.75 0 00-2.475 0L6.75 6.774a2.75 2.75 0 00-.596.892l-.848 2.047a.75.75 0 00.98.98l2.047-.848a2.75 2.75 0 00.892-.596l4.261-4.262a1.75 1.75 0 000-2.474z" />
+              <path d="M4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0114 9v2.25A2.75 2.75 0 0111.25 14h-6.5A2.75 2.75 0 012 11.25v-6.5A2.75 2.75 0 014.75 2H7a.75.75 0 010 1.5H4.75z" />
+            </svg>
+          </button>
+          <button
+            onClick={handleDuplicate}
+            className="p-1.5 text-gray-500 hover:text-primary-500 rounded transition-colors"
+            title="Duplicate"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path d="M5.5 3.5A1.5 1.5 0 017 2h2.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 01.439 1.061V9.5A1.5 1.5 0 0112 11h-.5v-2.5A2.5 2.5 0 009 6H5.5v-2.5z" />
+              <path d="M4 6a1.5 1.5 0 00-1.5 1.5v5A1.5 1.5 0 004 14h5a1.5 1.5 0 001.5-1.5V11H9a2.5 2.5 0 01-2.5-2.5V6H4z" />
+              <path d="M7 8.25a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5A.75.75 0 017 8.25z" />
+            </svg>
+          </button>
+          <button
+            onClick={copyToClipboard}
+            className="p-1.5 text-gray-500 hover:text-primary-500 rounded transition-colors"
+            title="Copy to clipboard"
+          >
+            {copied ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-green-500">
+                <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M10.986 3H12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h1.014A2.25 2.25 0 017.25 1h1.5a2.25 2.25 0 012.236 2zM9.5 4v-.75a.75.75 0 00-.75-.75h-1.5a.75.75 0 00-.75.75V4h3z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
+
       <div className="flex items-start gap-3">
         {selectable && (
           <input
@@ -294,100 +339,133 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
                 </span>
               </div>
 
-              {/* Actions */}
-              <div className="flex flex-wrap gap-2 pt-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(game);
-                  }}
-                  className="btn-secondary text-sm flex-1"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleMarkUsed}
-                  className="btn-secondary text-sm flex-1"
-                >
-                  Mark Used
-                </button>
-                <button
-                  onClick={handleDuplicate}
-                  className="btn-secondary text-sm px-3"
-                  title="Duplicate game"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                    <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
-                    <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
-                  </svg>
-                </button>
-                {/* Quick Add to Session */}
-                <div className="relative" ref={sessionMenuRef}>
+              {/* Actions - organized in groups */}
+              <div className="space-y-3 pt-2">
+                {/* Primary Actions */}
+                <div className="flex gap-2">
                   <button
-                    onClick={handleOpenSessionMenu}
-                    className="btn-secondary text-sm px-3"
-                    title="Add to session"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(game);
+                    }}
+                    className="btn-primary text-sm flex-1 flex items-center justify-center gap-1.5"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                      <path d="M13.488 2.513a1.75 1.75 0 00-2.475 0L6.75 6.774a2.75 2.75 0 00-.596.892l-.848 2.047a.75.75 0 00.98.98l2.047-.848a2.75 2.75 0 00.892-.596l4.261-4.262a1.75 1.75 0 000-2.474z" />
+                      <path d="M4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0114 9v2.25A2.75 2.75 0 0111.25 14h-6.5A2.75 2.75 0 012 11.25v-6.5A2.75 2.75 0 014.75 2H7a.75.75 0 010 1.5H4.75z" />
                     </svg>
+                    Edit
                   </button>
-                  {showSessionMenu && (
-                    <div className="absolute bottom-full right-0 mb-1 w-48 bg-white dark:bg-surface-dark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-fade-in">
-                      <div className="p-2">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 py-1">
-                          Add to Session
-                        </p>
-                        {loadingSessions ? (
-                          <div className="px-2 py-3 text-center">
-                            <span className="spinner" />
-                          </div>
-                        ) : recentSessions.length === 0 ? (
-                          <p className="px-2 py-2 text-sm text-gray-500 dark:text-gray-400">
-                            No sessions yet
-                          </p>
-                        ) : (
-                          recentSessions.map(session => (
-                            <button
-                              key={session._id}
-                              onClick={(e) => handleAddToSession(e, session._id)}
-                              className="w-full text-left px-2 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded truncate"
-                            >
-                              {session.name}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  <button
+                    onClick={handleMarkUsed}
+                    className="btn-secondary text-sm flex-1 flex items-center justify-center gap-1.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+                    </svg>
+                    Mark Used
+                  </button>
                 </div>
-                <button
-                  onClick={copyToClipboard}
-                  className="btn-secondary text-sm px-3"
-                  title="Copy to clipboard"
-                >
-                  {copied ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-500">
-                      <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+
+                {/* Secondary Actions - Quick Actions Row */}
+                <div className="flex items-center gap-1 p-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  {/* Duplicate - Creates a copy of the game */}
+                  <button
+                    onClick={handleDuplicate}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-white dark:hover:bg-gray-700 rounded transition-colors"
+                    title="Create a copy of this game"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path d="M5.5 3.5A1.5 1.5 0 017 2h2.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 01.439 1.061V9.5A1.5 1.5 0 0112 11h-.5v-2.5A2.5 2.5 0 009 6H5.5v-2.5z" />
+                      <path d="M4 6a1.5 1.5 0 00-1.5 1.5v5A1.5 1.5 0 004 14h5a1.5 1.5 0 001.5-1.5V11H9a2.5 2.5 0 01-2.5-2.5V6H4z" />
+                      <path d="M7 8.25a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5A.75.75 0 017 8.25z" />
                     </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                      <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
-                      <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
-                    </svg>
-                  )}
-                </button>
+                    Duplicate
+                  </button>
+
+                  <div className="w-px h-5 bg-gray-200 dark:bg-gray-700" />
+
+                  {/* Add to Session */}
+                  <div className="relative flex-1" ref={sessionMenuRef}>
+                    <button
+                      onClick={handleOpenSessionMenu}
+                      className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-white dark:hover:bg-gray-700 rounded transition-colors"
+                      title="Add to a training session"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                        <path d="M3.5 2A1.5 1.5 0 002 3.5v9A1.5 1.5 0 003.5 14h9a1.5 1.5 0 001.5-1.5v-7A1.5 1.5 0 0012.5 4H9.621a1.5 1.5 0 01-1.06-.44L7.439 2.44A1.5 1.5 0 006.38 2H3.5zM8.75 6.75a.75.75 0 00-1.5 0v1.5h-1.5a.75.75 0 000 1.5h1.5v1.5a.75.75 0 001.5 0v-1.5h1.5a.75.75 0 000-1.5h-1.5v-1.5z" />
+                      </svg>
+                      Add to Session
+                    </button>
+                    {showSessionMenu && (
+                      <div className="absolute bottom-full right-0 mb-1 w-48 bg-white dark:bg-surface-dark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-fade-in">
+                        <div className="p-2">
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 py-1">
+                            Select Session
+                          </p>
+                          {loadingSessions ? (
+                            <div className="px-2 py-3 text-center">
+                              <span className="spinner" />
+                            </div>
+                          ) : recentSessions.length === 0 ? (
+                            <p className="px-2 py-2 text-sm text-gray-500 dark:text-gray-400">
+                              No sessions yet
+                            </p>
+                          ) : (
+                            recentSessions.map(session => (
+                              <button
+                                key={session._id}
+                                onClick={(e) => handleAddToSession(e, session._id)}
+                                className="w-full text-left px-2 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded truncate"
+                              >
+                                {session.name}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="w-px h-5 bg-gray-200 dark:bg-gray-700" />
+
+                  {/* Copy to Clipboard */}
+                  <button
+                    onClick={copyToClipboard}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-white dark:hover:bg-gray-700 rounded transition-colors"
+                    title="Copy game details to clipboard"
+                  >
+                    {copied ? (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-green-500">
+                          <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-green-500">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                          <path fillRule="evenodd" d="M10.986 3H12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h1.014A2.25 2.25 0 017.25 1h1.5a2.25 2.25 0 012.236 2zM9.5 4v-.75a.75.75 0 00-.75-.75h-1.5a.75.75 0 00-.75.75V4h3z" clipRule="evenodd" />
+                        </svg>
+                        Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Danger Zone */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(game);
                   }}
-                  className="btn-danger text-sm px-3"
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   title="Delete game"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                    <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                    <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 000 1.5h.3l.815 8.15A1.5 1.5 0 005.357 15h5.285a1.5 1.5 0 001.493-1.35l.815-8.15h.3a.75.75 0 000-1.5H11v-.75A2.25 2.25 0 008.75 1h-1.5A2.25 2.25 0 005 3.25zm2.25-.75a.75.75 0 00-.75.75V4h3v-.75a.75.75 0 00-.75-.75h-1.5zM6.05 6a.75.75 0 01.787.713l.275 5.5a.75.75 0 01-1.498.075l-.275-5.5A.75.75 0 016.05 6zm3.9 0a.75.75 0 01.712.787l-.275 5.5a.75.75 0 01-1.498-.075l.275-5.5a.75.75 0 01.786-.711z" clipRule="evenodd" />
                   </svg>
+                  Delete Game
                 </button>
               </div>
             </div>
