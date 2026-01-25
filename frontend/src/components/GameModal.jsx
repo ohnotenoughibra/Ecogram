@@ -39,6 +39,7 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
   });
   const [showTechniqueSelect, setShowTechniqueSelect] = useState(false);
   const [skillInput, setSkillInput] = useState('');
+  const [techniqueInput, setTechniqueInput] = useState('');
   const [errors, setErrors] = useState({});
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -83,8 +84,28 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
     }
     setErrors({});
     setSkillInput('');
+    setTechniqueInput('');
     setShowTechniqueSelect(false);
   }, [game, isOpen]);
+
+  const handleAddCustomTechnique = (e) => {
+    e?.preventDefault();
+    const technique = techniqueInput.trim().toLowerCase().replace(/\s+/g, '-');
+    if (technique && !formData.techniques.includes(technique)) {
+      setFormData(prev => ({
+        ...prev,
+        techniques: [...prev.techniques, technique]
+      }));
+    }
+    setTechniqueInput('');
+  };
+
+  const handleTechniqueInputKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      handleAddCustomTechnique(e);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -272,37 +293,59 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
               </button>
 
               {showTechniqueSelect && (
-                <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg max-h-48 overflow-y-auto space-y-3">
-                  {Object.entries(TECHNIQUES).map(([category, techs]) => (
-                    <div key={category}>
-                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                        {category}
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {techs.map(tech => (
-                          <button
-                            key={tech.value}
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => ({
-                                ...prev,
-                                techniques: prev.techniques.includes(tech.value)
-                                  ? prev.techniques.filter(t => t !== tech.value)
-                                  : [...prev.techniques, tech.value]
-                              }));
-                            }}
-                            className={`px-2 py-1 text-xs rounded-full transition-colors ${
-                              formData.techniques.includes(tech.value)
-                                ? 'bg-purple-500 text-white'
-                                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                            }`}
-                          >
-                            {tech.label}
-                          </button>
-                        ))}
+                <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+                  {/* Custom technique input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={techniqueInput}
+                      onChange={(e) => setTechniqueInput(e.target.value)}
+                      onKeyDown={handleTechniqueInputKeyDown}
+                      placeholder="Add custom technique..."
+                      className="input text-sm flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomTechnique}
+                      className="btn-secondary text-sm px-3"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {/* Predefined techniques */}
+                  <div className="max-h-40 overflow-y-auto space-y-3">
+                    {Object.entries(TECHNIQUES).map(([category, techs]) => (
+                      <div key={category}>
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
+                          {category}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {techs.map(tech => (
+                            <button
+                              key={tech.value}
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  techniques: prev.techniques.includes(tech.value)
+                                    ? prev.techniques.filter(t => t !== tech.value)
+                                    : [...prev.techniques, tech.value]
+                                }));
+                              }}
+                              className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                                formData.techniques.includes(tech.value)
+                                  ? 'bg-purple-500 text-white'
+                                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                              }`}
+                            >
+                              {tech.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
