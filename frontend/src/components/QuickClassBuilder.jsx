@@ -8,6 +8,7 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
   const [duration, setDuration] = useState(60); // minutes
   const [creating, setCreating] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [shuffleKey, setShuffleKey] = useState(0); // Used to trigger re-generation
 
   // Get games for selected position - search broadly
   const positionGames = useMemo(() => {
@@ -123,15 +124,9 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
     return areas;
   }, [games]);
 
-  // Calculate suggested class structure - BALANCED across training areas
-  const suggestedClass = useMemo(() => {
-    if (!selectedPosition) return null;
-
-    // Randomly pick one game from a pool
-    const pickRandom = (pool) => {
-      if (pool.length === 0) return null;
-      return pool[Math.floor(Math.random() * pool.length)];
-    };
+  // Generate class structure - called fresh each time (for shuffle to work)
+  const generateClass = () => {
+    if (!selectedPosition || games.length === 0) return null;
 
     // Pick multiple games from pool, avoiding duplicates
     const pickMultiple = (pool, count, exclude = []) => {
@@ -146,40 +141,42 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
     const cooldownTime = Math.floor(duration * 0.15); // 15%
 
     // Build BALANCED main training section
-    // Priority: position-specific games first, then fill from each area
     const mainGames = [];
 
     // 1. Add position-specific games first (up to 2)
-    const positionSpecific = pickMultiple(positionGames.main, 2, mainGames);
-    mainGames.push(...positionSpecific);
+    if (positionGames.main.length > 0) {
+      const positionSpecific = pickMultiple(positionGames.main, 2, mainGames);
+      mainGames.push(...positionSpecific);
+    }
 
     // 2. Build balanced class: Standing -> Guard/Passing -> Pinning -> Submitting
     const areas = ['standing', 'passing', 'pinning', 'submitting'];
-    const gamesPerArea = Math.max(1, Math.floor((duration - 20) / 20)); // ~1 game per 20min per area
+    const gamesPerArea = Math.max(1, Math.floor((duration - 20) / 20));
 
     areas.forEach(area => {
-      const areaGames = pickMultiple(gamesByArea[area], gamesPerArea, mainGames);
-      mainGames.push(...areaGames);
+      if (gamesByArea[area].length > 0) {
+        const areaGames = pickMultiple(gamesByArea[area], gamesPerArea, mainGames);
+        mainGames.push(...areaGames);
+      }
     });
 
     // 3. If still need more games, add from guard and general pools
     const targetMainCount = Math.max(3, Math.floor(mainTime / 12));
     if (mainGames.length < targetMainCount) {
-      const moreGames = pickMultiple(
-        [...gamesByArea.guard, ...gamesByArea.general],
-        targetMainCount - mainGames.length,
-        mainGames
-      );
-      mainGames.push(...moreGames);
+      const guardAndGeneral = [...gamesByArea.guard, ...gamesByArea.general];
+      if (guardAndGeneral.length > 0) {
+        const moreGames = pickMultiple(guardAndGeneral, targetMainCount - mainGames.length, mainGames);
+        mainGames.push(...moreGames);
+      }
     }
 
-    // 4. If STILL not enough, add any remaining main games
-    if (mainGames.length < 2) {
-      const fallbackGames = pickMultiple(allGamesByType.main, 3, mainGames);
+    // 4. If STILL not enough, add any remaining main games from full library
+    if (mainGames.length < 2 && allGamesByType.main.length > 0) {
+      const fallbackGames = pickMultiple(allGamesByType.main, Math.max(3, targetMainCount), mainGames);
       mainGames.push(...fallbackGames);
     }
 
-    // Get warmup and cooldown
+    // Get warmup and cooldown (these are optional)
     const warmupCount = Math.max(1, Math.floor(warmupTime / 10));
     const cooldownCount = Math.max(1, Math.floor(cooldownTime / 10));
     const warmupGames = pickMultiple(allGamesByType.warmup, warmupCount, []);
@@ -193,7 +190,6 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
       mainTime,
       cooldownTime,
       totalGames: warmupGames.length + mainGames.length + cooldownGames.length,
-      // Track which areas are represented
       areas: {
         standing: mainGames.filter(g => gamesByArea.standing.find(sg => sg._id === g._id)).length,
         passing: mainGames.filter(g => gamesByArea.passing.find(sg => sg._id === g._id)).length,
@@ -201,11 +197,25 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
         submitting: mainGames.filter(g => gamesByArea.submitting.find(sg => sg._id === g._id)).length,
       }
     };
-  }, [selectedPosition, duration, positionGames, allGamesByType, gamesByArea]);
+  };
 
   const handleGeneratePreview = () => {
-    if (!suggestedClass) return;
-    setPreview(suggestedClass);
+    const newClass = generateClass();
+    if (newClass && newClass.main.length > 0) {
+      setPreview(newClass);
+    } else if (games.length === 0) {
+      showToast('No games in your library. Add some games first!', 'error');
+    } else {
+      showToast('Could not generate class. Try a different position.', 'error');
+    }
+  };
+
+  const handleShuffle = () => {
+    const newClass = generateClass();
+    if (newClass) {
+      setPreview(newClass);
+      showToast('Class shuffled!', 'success');
+    }
   };
 
   const handleCreateSession = async () => {
@@ -461,7 +471,7 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
               {/* Actions */}
               <div className="flex gap-2 pt-2">
                 <button
-                  onClick={handleGeneratePreview}
+                  onClick={handleShuffle}
                   className="btn-secondary flex-1"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
