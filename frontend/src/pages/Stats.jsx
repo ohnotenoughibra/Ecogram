@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Loading from '../components/Loading';
 import api from '../utils/api';
@@ -26,10 +27,20 @@ const gameTypeInfo = {
 export default function Stats() {
   const { stats, statsLoading, fetchStats, games, sessions } = useApp();
   const [activeTab, setActiveTab] = useState('overview');
+  const [animatedBars, setAnimatedBars] = useState(false);
+  const navigate = useNavigate();
+  const tabsRef = useRef(null);
 
   useEffect(() => {
     fetchStats();
   }, []);
+
+  // Trigger bar animations when tab changes
+  useEffect(() => {
+    setAnimatedBars(false);
+    const timer = setTimeout(() => setAnimatedBars(true), 100);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
 
   if (statsLoading || !stats) {
     return <Loading text="Loading statistics..." />;
@@ -193,50 +204,79 @@ export default function Stats() {
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+      {/* Tabs - Enhanced with icons and indicators */}
+      <div ref={tabsRef} className="flex gap-1 mb-6 overflow-x-auto pb-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
         {[
-          { id: 'overview', label: 'Overview' },
-          { id: 'activity', label: 'Activity' },
-          { id: 'library', label: 'Library' },
-          { id: 'insights', label: 'Insights' }
+          { id: 'overview', label: 'Overview', icon: '📊' },
+          { id: 'activity', label: 'Activity', icon: '📈' },
+          { id: 'library', label: 'Library', icon: '📚' },
+          { id: 'insights', label: 'Insights', icon: '💡' }
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
+            className={`flex-1 min-w-[80px] px-3 py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 ${
               activeTab === tab.id
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ? 'bg-white dark:bg-gray-900 text-primary-600 dark:text-primary-400 shadow-sm transform scale-[1.02]'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95'
             }`}
           >
-            {tab.label}
+            <span className="text-base">{tab.icon}</span>
+            <span className="hidden sm:inline">{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="card p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Total Games</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalGames}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Favorites</p>
-          <p className="text-2xl font-bold text-yellow-500">{stats.favoriteCount}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Used Games</p>
-          <p className="text-2xl font-bold text-green-500">{stats.usedCount}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Unused Games</p>
-          <p className="text-2xl font-bold text-gray-400">{stats.totalGames - stats.usedCount}</p>
-        </div>
-      </div>
+        <div className="animate-fade-in">
+          {/* Summary Cards - Interactive */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            <button
+              onClick={() => navigate('/')}
+              className="card p-4 text-left hover:shadow-lg hover:scale-[1.02] transition-all duration-200 active:scale-95 group"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Games</p>
+                <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">📋</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.totalGames}</p>
+              <p className="text-xs text-primary-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">View all →</p>
+            </button>
+            <button
+              onClick={() => navigate('/favorites')}
+              className="card p-4 text-left hover:shadow-lg hover:scale-[1.02] transition-all duration-200 active:scale-95 group"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Favorites</p>
+                <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">⭐</span>
+              </div>
+              <p className="text-2xl font-bold text-yellow-500 mt-1">{stats.favoriteCount}</p>
+              <p className="text-xs text-primary-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">View favorites →</p>
+            </button>
+            <button
+              onClick={() => navigate('/recent')}
+              className="card p-4 text-left hover:shadow-lg hover:scale-[1.02] transition-all duration-200 active:scale-95 group"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Used Games</p>
+                <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">✅</span>
+              </div>
+              <p className="text-2xl font-bold text-green-500 mt-1">{stats.usedCount}</p>
+              <p className="text-xs text-primary-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">View recent →</p>
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="card p-4 text-left hover:shadow-lg hover:scale-[1.02] transition-all duration-200 active:scale-95 group"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Unused</p>
+                <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">🆕</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-400 mt-1">{stats.totalGames - stats.usedCount}</p>
+              <p className="text-xs text-primary-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Try them →</p>
+            </button>
+          </div>
 
       {/* Topic Distribution */}
       <div className="card p-6 mb-8">
@@ -280,10 +320,10 @@ export default function Stats() {
                       )}
                     </div>
                   </div>
-                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden cursor-pointer hover:h-4 transition-all" onClick={() => navigate(`/?topic=${topic}`)}>
                     <div
-                      className={`h-full ${topicColors[topic]} transition-all`}
-                      style={{ width: `${(count / maxTopicCount) * 100}%` }}
+                      className={`h-full ${topicColors[topic]} transition-all duration-700 ease-out rounded-full`}
+                      style={{ width: animatedBars ? `${(count / maxTopicCount) * 100}%` : '0%' }}
                     />
                   </div>
                 </div>
@@ -410,12 +450,12 @@ export default function Stats() {
           )}
         </div>
       </div>
-        </>
+        </div>
       )}
 
       {/* Activity Tab */}
       {activeTab === 'activity' && (
-        <>
+        <div className="animate-fade-in">
           {/* Training Frequency */}
           <div className="card p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -430,10 +470,10 @@ export default function Stats() {
                       {week.count} games used
                     </span>
                   </div>
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-primary-500 transition-all"
-                      style={{ width: `${(week.count / maxWeeklyCount) * 100}%` }}
+                      className="h-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-700 ease-out rounded-full"
+                      style={{ width: animatedBars ? `${(week.count / maxWeeklyCount) * 100}%` : '0%' }}
                     />
                   </div>
                 </div>
@@ -497,15 +537,15 @@ export default function Stats() {
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Insights Tab */}
       {activeTab === 'insights' && (
-        <>
+        <div className="animate-fade-in">
           {/* Training Streak & Quick Stats with Animations */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="card p-4 text-center group hover:scale-105 transition-transform cursor-pointer" onClick={() => window.location.href = '/goals'}>
+            <div className="card p-4 text-center group hover:scale-105 transition-transform cursor-pointer" onClick={() => navigate('/goals')}>
               <div className="text-3xl mb-1 group-hover:animate-bounce">🔥</div>
               <p className="text-2xl font-bold text-orange-500">{trainingStreak}</p>
               <p className="text-sm text-gray-500">Day Streak</p>
@@ -642,7 +682,7 @@ export default function Stats() {
                     </div>
                     {rec.type === 'topic' && (
                       <button
-                        onClick={() => window.location.href = `/?topic=${rec.topic || rec.message.split(' ')[2]}`}
+                        onClick={() => navigate(`/?topic=${rec.topic || rec.message.split(' ')[2]}`)}
                         className="btn-secondary text-xs py-1 px-3"
                       >
                         View Games
@@ -650,7 +690,7 @@ export default function Stats() {
                     )}
                     {rec.type === 'unused' && (
                       <button
-                        onClick={() => window.location.href = '/'}
+                        onClick={() => navigate('/')}
                         className="btn-secondary text-xs py-1 px-3"
                       >
                         Explore
@@ -658,7 +698,7 @@ export default function Stats() {
                     )}
                     {rec.type === 'warmup' && (
                       <button
-                        onClick={() => window.location.href = '/ai'}
+                        onClick={() => navigate('/ai')}
                         className="btn-secondary text-xs py-1 px-3"
                       >
                         Create
@@ -715,7 +755,7 @@ export default function Stats() {
               </h2>
               {topEffectiveGames.length > 0 && (
                 <button
-                  onClick={() => window.location.href = '/sessions'}
+                  onClick={() => navigate('/sessions')}
                   className="text-sm text-primary-600 hover:underline"
                 >
                   Build Session
@@ -783,7 +823,7 @@ export default function Stats() {
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <button
-                onClick={() => window.location.href = '/sessions'}
+                onClick={() => navigate('/sessions')}
                 className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors text-center"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 mx-auto mb-2 text-primary-600">
@@ -792,7 +832,7 @@ export default function Stats() {
                 <span className="text-sm font-medium text-primary-700 dark:text-primary-300">New Session</span>
               </button>
               <button
-                onClick={() => window.location.href = '/ai'}
+                onClick={() => navigate('/ai')}
                 className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors text-center"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 mx-auto mb-2 text-purple-600">
@@ -801,7 +841,7 @@ export default function Stats() {
                 <span className="text-sm font-medium text-purple-700 dark:text-purple-300">AI Designer</span>
               </button>
               <button
-                onClick={() => window.location.href = '/goals'}
+                onClick={() => navigate('/goals')}
                 className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-center"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 mx-auto mb-2 text-green-600">
@@ -810,7 +850,7 @@ export default function Stats() {
                 <span className="text-sm font-medium text-green-700 dark:text-green-300">Set Goals</span>
               </button>
               <button
-                onClick={() => window.location.href = '/competition'}
+                onClick={() => navigate('/competition')}
                 className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors text-center"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 mx-auto mb-2 text-yellow-600">
@@ -820,12 +860,12 @@ export default function Stats() {
               </button>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Library Tab */}
       {activeTab === 'library' && (
-        <>
+        <div className="animate-fade-in">
           {/* Game Type Distribution */}
           <div className="card p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -872,10 +912,10 @@ export default function Stats() {
                         {count} ({percentage}%)
                       </span>
                     </div>
-                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
-                        className={`h-full ${diff.color} transition-all`}
-                        style={{ width: `${percentage}%` }}
+                        className={`h-full ${diff.color} transition-all duration-700 ease-out rounded-full`}
+                        style={{ width: animatedBars ? `${percentage}%` : '0%' }}
                       />
                     </div>
                   </div>
@@ -911,10 +951,10 @@ export default function Stats() {
                           {count} ({percentage}%)
                         </span>
                       </div>
-                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden cursor-pointer hover:h-4 transition-all" onClick={() => navigate(`/?topic=${topic}`)}>
                         <div
-                          className={`h-full ${topicColors[topic]} transition-all`}
-                          style={{ width: `${(count / maxTopicCount) * 100}%` }}
+                          className={`h-full ${topicColors[topic]} transition-all duration-700 ease-out rounded-full`}
+                          style={{ width: animatedBars ? `${(count / maxTopicCount) * 100}%` : '0%' }}
                         />
                       </div>
                     </div>
@@ -923,7 +963,7 @@ export default function Stats() {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
