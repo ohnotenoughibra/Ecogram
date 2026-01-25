@@ -98,7 +98,7 @@ export default function FilterBar({ onSearch }) {
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder="Search games, skills..."
-            className="input pl-10"
+            className="input pl-11"
           />
           {searchValue && (
             <button

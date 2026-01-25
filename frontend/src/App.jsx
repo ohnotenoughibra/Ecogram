@@ -11,6 +11,8 @@ import Loading from './components/Loading';
 import Timer from './components/Timer';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
 import OfflineIndicator from './components/OfflineIndicator';
+import Onboarding from './components/Onboarding';
+import QuickActions from './components/QuickActions';
 
 // Pages
 import Login from './pages/Login';
@@ -74,6 +76,7 @@ function MainLayout({ children }) {
   const { showToast } = useApp();
   const [showTimer, setShowTimer] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -146,6 +149,14 @@ function MainLayout({ children }) {
         isOpen={showShortcuts}
         onClose={() => setShowShortcuts(false)}
       />
+
+      {/* Onboarding tutorial for new users */}
+      {showOnboarding && (
+        <Onboarding onComplete={() => setShowOnboarding(false)} />
+      )}
+
+      {/* Quick actions FAB */}
+      <QuickActions />
     </div>
   );
 }

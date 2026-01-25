@@ -9,6 +9,8 @@ import Loading from '../components/Loading';
 import QuickAccess from '../components/QuickAccess';
 import SmartSessionBuilder from '../components/SmartSessionBuilder';
 import { WhatsNewBanner } from '../components/FeatureTip';
+import SkillBalance from '../components/SkillBalance';
+import EmptyState from '../components/EmptyState';
 
 export default function Games() {
   const {
@@ -152,6 +154,13 @@ export default function Games() {
       {/* Quick Access Section */}
       <QuickAccess onSmartBuild={() => setShowSmartBuilder(true)} />
 
+      {/* Skill Balance - show only when user has games */}
+      {games.length > 0 && localStorage.getItem('showBalanceTips') !== 'false' && (
+        <div className="mb-6">
+          <SkillBalance showSuggestions={games.length >= 3} />
+        </div>
+      )}
+
       {/* Filters */}
       <div className="mb-6">
         <FilterBar onSearch={handleSearch} />
@@ -161,21 +170,10 @@ export default function Games() {
       {gamesLoading && games.length === 0 ? (
         <Loading text="Loading games..." />
       ) : games.length === 0 ? (
-        <div className="text-center py-12">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3" />
-          </svg>
-          <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No games yet</h3>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">
-            Get started by creating your first training game.
-          </p>
-          <button
-            onClick={() => setShowGameModal(true)}
-            className="btn-primary mt-4"
-          >
-            Create your first game
-          </button>
-        </div>
+        <EmptyState
+          type="games"
+          onAction={() => setShowGameModal(true)}
+        />
       ) : (
         <div className="space-y-4">
           {games.map(game => (
