@@ -5,7 +5,9 @@ let socket = null;
 export const connectSocket = () => {
   if (socket?.connected) return socket;
 
-  socket = io('/', {
+  const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || '/';
+
+  socket = io(socketUrl, {
     transports: ['websocket', 'polling'],
     autoConnect: true
   });
