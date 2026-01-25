@@ -40,7 +40,7 @@ const difficulties = [
 ];
 
 export default function AIDesigner() {
-  const { createGame, showToast, games } = useApp();
+  const { createGame, deleteGame, showToast, games, fetchGames } = useApp();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState('generate'); // 'generate' | 'search' | 'variations'
@@ -64,6 +64,9 @@ export default function AIDesigner() {
   // Similar games state
   const [similarGames, setSimilarGames] = useState(null);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
+  const [deletingGameId, setDeletingGameId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [gameToDelete, setGameToDelete] = useState(null);
 
   // Check AI status on mount
   useEffect(() => {
@@ -134,6 +137,33 @@ export default function AIDesigner() {
       showToast('Failed to find similar games', 'error');
     } finally {
       setLoadingSimilar(false);
+    }
+  };
+
+  // Handle delete game from duplicates
+  const handleDeleteDuplicate = (game) => {
+    setGameToDelete(game);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteDuplicate = async () => {
+    if (!gameToDelete) return;
+
+    setDeletingGameId(gameToDelete._id);
+    try {
+      const result = await deleteGame(gameToDelete._id);
+      if (result?.success !== false) {
+        showToast(`"${gameToDelete.name}" deleted`, 'success');
+        // Refresh the similar games list
+        findSimilarGames();
+        fetchGames();
+      }
+    } catch (err) {
+      showToast('Failed to delete game', 'error');
+    } finally {
+      setDeletingGameId(null);
+      setShowDeleteConfirm(false);
+      setGameToDelete(null);
     }
   };
 
@@ -1165,14 +1195,31 @@ export default function AIDesigner() {
 
                 {similarGames.groups.map((group, groupIdx) => (
                   <div key={groupIdx} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-yellow-500">
-                        <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
-                        <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
-                      </svg>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {group.similar.length + 1} similar games
-                      </span>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-yellow-500">
+                          <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                          <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                        </svg>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {group.similar.length + 1} similar games
+                        </span>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (window.confirm(`Delete all ${group.similar.length} similar games and keep only "${group.primary.name}"?`)) {
+                            for (const similar of group.similar) {
+                              await deleteGame(similar._id);
+                            }
+                            showToast(`Deleted ${group.similar.length} duplicate games`, 'success');
+                            findSimilarGames();
+                            fetchGames();
+                          }
+                        }}
+                        className="text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        Remove All Duplicates
+                      </button>
                     </div>
 
                     <div className="space-y-2">
@@ -1214,12 +1261,25 @@ export default function AIDesigner() {
                               </span>
                             </div>
                           </div>
-                          <button
-                            onClick={() => navigate(`/games?edit=${similar._id}`)}
-                            className="text-xs text-gray-500 hover:text-primary-500 px-2"
-                          >
-                            View
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => navigate(`/games?edit=${similar._id}`)}
+                              className="text-xs text-gray-500 hover:text-primary-500 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600"
+                            >
+                              View
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDuplicate(similar)}
+                              disabled={deletingGameId === similar._id}
+                              className="text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                            >
+                              {deletingGameId === similar._id ? (
+                                <span className="spinner-sm" />
+                              ) : (
+                                'Delete'
+                              )}
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1337,6 +1397,52 @@ export default function AIDesigner() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-surface-dark rounded-2xl shadow-2xl w-full max-w-sm animate-scale-in">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-red-600 dark:text-red-400">
+                  <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-center text-gray-900 dark:text-white mb-2">
+                Delete Game?
+              </h3>
+              <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">
+                Are you sure you want to delete "{gameToDelete?.name}"? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setGameToDelete(null);
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteDuplicate}
+                  disabled={deletingGameId}
+                  className="btn-danger flex-1"
+                >
+                  {deletingGameId ? (
+                    <>
+                      <span className="spinner mr-2" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import GameCard from '../components/GameCard';
 import GameModal from '../components/GameModal';
@@ -28,6 +29,7 @@ export default function Games() {
     createSession
   } = useApp();
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showGameModal, setShowGameModal] = useState(false);
   const [editingGame, setEditingGame] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -39,6 +41,20 @@ export default function Games() {
     fetchGames();
     fetchSessions();
   }, []);
+
+  // Handle ?edit= query parameter from duplicates page
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && games.length > 0) {
+      const gameToEdit = games.find(g => g._id === editId);
+      if (gameToEdit) {
+        setEditingGame(gameToEdit);
+        setShowGameModal(true);
+        // Clear the query param after opening
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, games, setSearchParams]);
 
   // Keyboard shortcut: N for new game
   useEffect(() => {
