@@ -437,28 +437,31 @@ Skills: mount, submissions, pressure`;
                     className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <span className={`badge badge-${game.topic || 'transition'}`}>
-                        {topicLabels[game.topic] || 'Transition'}
+                      <span className="badge bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                        {game.topic || 'General'}
                       </span>
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="font-medium text-gray-900 dark:text-white truncate">
                         {game.name}
                       </span>
                     </div>
                     {game.topPlayer && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                        <strong>Top:</strong> {game.topPlayer.substring(0, 60)}...
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 truncate">
+                        <strong>Top:</strong> {game.topPlayer.substring(0, 80)}{game.topPlayer.length > 80 ? '...' : ''}
                       </p>
                     )}
                     {game.bottomPlayer && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                        <strong>Bottom:</strong> {game.bottomPlayer.substring(0, 60)}...
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 truncate">
+                        <strong>Bottom:</strong> {game.bottomPlayer.substring(0, 80)}{game.bottomPlayer.length > 80 ? '...' : ''}
                       </p>
                     )}
-                    {game.skills && game.skills.length > 0 && (
+                    {game.skills && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {game.skills.slice(0, 5).map((skill, i) => (
+                        {(Array.isArray(game.skills)
+                          ? game.skills
+                          : game.skills.split(/[#,\s]+/).filter(s => s.trim())
+                        ).slice(0, 5).map((skill, i) => (
                           <span key={i} className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">
-                            #{skill}
+                            #{skill.replace(/^#/, '')}
                           </span>
                         ))}
                       </div>
