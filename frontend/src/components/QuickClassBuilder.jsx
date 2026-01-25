@@ -1,6 +1,52 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { ALL_POSITIONS, POSITIONS, getPositionLabel, POSITION_COLORS } from '../utils/constants';
+
+// Position chains - positions that naturally flow together in training
+const POSITION_CHAINS = {
+  // Guard positions chain
+  'closed-guard': ['half-guard', 'butterfly', 'open-guard', 'mount', 'back-control'],
+  'half-guard': ['closed-guard', 'deep-half', 'knee-shield', 'side-control', 'back-control'],
+  'butterfly': ['x-guard', 'slx', 'closed-guard', 'standing'],
+  'open-guard': ['de-la-riva', 'spider', 'lasso', 'collar-sleeve', 'standing'],
+  'de-la-riva': ['berimbolo', 'x-guard', 'back-control', 'single-leg-x'],
+  'spider': ['lasso', 'triangle', 'omoplata', 'sweep'],
+  'x-guard': ['slx', 'single-leg-x', 'leg-entanglement', 'sweep'],
+  'slx': ['x-guard', 'single-leg-x', 'leg-entanglement', 'heel-hook'],
+  'single-leg-x': ['ashi-garami', 'outside-ashi', 'heel-hook', '50-50'],
+  // Leg lock positions
+  'ashi-garami': ['outside-ashi', 'inside-sankaku', '50-50', 'heel-hook', 'knee-bar'],
+  'outside-ashi': ['ashi-garami', 'saddle', 'heel-hook', 'knee-bar'],
+  'inside-sankaku': ['saddle', 'honey-hole', 'heel-hook', '50-50'],
+  '50-50': ['ashi-garami', 'heel-hook', 'back-step', 'leg-drag'],
+  // Top positions chain
+  'mount': ['s-mount', 'technical-mount', 'back-control', 'armbar', 'cross-collar'],
+  'side-control': ['mount', 'knee-on-belly', 'north-south', 'back-control'],
+  'knee-on-belly': ['mount', 'side-control', 'armbar', 'back-take'],
+  'north-south': ['side-control', 'kimura', 'armbar', 'back-control'],
+  'back-control': ['rear-naked-choke', 'armbar', 'mount', 'turtle'],
+  // Neutral
+  'standing': ['takedown', 'guard-pull', 'clinch', 'wrestling', 'judo'],
+  'turtle': ['back-control', 'front-headlock', 'crucifix', 'clock-choke']
+};
+
+// Modern grappling meta - techniques that are currently dominant
+const META_TECHNIQUES = [
+  // Leg locks (Danaher Death Squad influence)
+  'heel-hook', 'inside-heel-hook', 'outside-heel-hook', 'knee-bar', 'toe-hold',
+  'ashi-garami', 'saddle', 'honey-hole', 'inside-sankaku', '50-50', 'outside-ashi',
+  // Modern guard systems
+  'k-guard', 'z-guard', 'reverse-de-la-riva', 'matrix', 'mirroring', 'body-lock',
+  // Wrestling integration
+  'front-headlock', 'guillotine', 'darce', 'anaconda', 'arm-in-guillotine',
+  'single-leg', 'double-leg', 'body-lock-takedown', 'snap-down',
+  // Back attacks
+  'body-triangle', 'rear-naked-choke', 'short-choke', 'arm-trap',
+  // Modern passing
+  'body-lock-pass', 'over-under', 'leg-drag', 'knee-cut', 'smash-pass',
+  // Submission chains
+  'armbar', 'triangle', 'kimura', 'omoplata', 'straight-ankle'
+];
 
 export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated }) {
   const { games, createSession, showToast } = useApp();
@@ -8,7 +54,9 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
   const [duration, setDuration] = useState(60); // minutes
   const [creating, setCreating] = useState(false);
   const [preview, setPreview] = useState(null);
-  const [shuffleKey, setShuffleKey] = useState(0); // Used to trigger re-generation
+
+  // Track recently suggested games to ensure variety
+  const recentlyUsed = useRef(new Set());
 
   // Get games for selected position - search broadly
   const positionGames = useMemo(() => {
@@ -79,11 +127,11 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
       ].join(' ').toLowerCase();
 
       // Standing / Takedowns
-      if (searchText.match(/standing|takedown|wrestling|clinch|single.?leg|double.?leg|snap.?down|arm.?drag/)) {
+      if (searchText.match(/standing|takedown|wrestling|clinch|single.?leg|double.?leg|snap.?down|arm.?drag|judo|throw/)) {
         return 'standing';
       }
       // Passing
-      if (searchText.match(/pass|passing|torreando|knee.?cut|smash|over.?under|leg.?drag|stack/)) {
+      if (searchText.match(/pass|passing|torreando|knee.?cut|smash|over.?under|leg.?drag|stack|body.?lock.?pass/)) {
         return 'passing';
       }
       // Pinning / Control
@@ -91,7 +139,7 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
         return 'pinning';
       }
       // Submissions
-      if (searchText.match(/submit|submission|armbar|triangle|kimura|choke|heel.?hook|knee.?bar|guillotine|rnc|strangle|tap/)) {
+      if (searchText.match(/submit|submission|armbar|triangle|kimura|choke|heel.?hook|knee.?bar|guillotine|rnc|strangle|tap|ankle|toe.?hold/)) {
         return 'submitting';
       }
       // Guard / Defensive
@@ -124,11 +172,83 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
     return areas;
   }, [games]);
 
+  // Score a game's relevance to the selected position (higher = more relevant)
+  const scoreGameRelevance = (game, position) => {
+    let score = 0;
+    const positionLabel = getPositionLabel(position).toLowerCase();
+    const positionWords = position.split('-').filter(w => w.length > 1);
+    const relatedPositions = POSITION_CHAINS[position] || [];
+
+    const searchText = [
+      game.name || '',
+      game.topPlayer || '',
+      game.bottomPlayer || '',
+      game.coaching || '',
+      ...(game.skills || []),
+      ...(game.techniques || []),
+      game.position || '',
+      game.aiMetadata?.startPosition || '',
+      game.aiMetadata?.description || ''
+    ].join(' ').toLowerCase();
+
+    // Direct position match = highest score
+    if (game.position === position) score += 100;
+    if (searchText.includes(positionLabel)) score += 80;
+
+    // Position word matches
+    positionWords.forEach(word => {
+      if (searchText.includes(word)) score += 30;
+    });
+
+    // Related position matches (position chains)
+    relatedPositions.forEach(relPos => {
+      if (searchText.includes(relPos.replace(/-/g, ' '))) score += 40;
+      if (searchText.includes(relPos.replace(/-/g, ''))) score += 35;
+    });
+
+    // Meta technique bonus - games with modern techniques score higher
+    META_TECHNIQUES.forEach(tech => {
+      if (searchText.includes(tech.replace(/-/g, ' ')) || searchText.includes(tech.replace(/-/g, ''))) {
+        score += 15;
+      }
+    });
+
+    // Penalty for recently used (ensures variety)
+    if (recentlyUsed.current.has(game._id)) {
+      score -= 50;
+    }
+
+    // Small random factor to ensure variety even with equal scores
+    score += Math.random() * 20;
+
+    return score;
+  };
+
+  // Get games sorted by relevance to position
+  const getRelevantGames = (pool, position, count, exclude = []) => {
+    const available = pool.filter(g => !exclude.find(e => e._id === g._id));
+
+    // Score all games
+    const scored = available.map(g => ({
+      game: g,
+      score: scoreGameRelevance(g, position)
+    }));
+
+    // Sort by score (highest first) with some randomization in the top tier
+    scored.sort((a, b) => b.score - a.score);
+
+    // Take top candidates (more than needed) and randomly select from them
+    const topCandidates = scored.slice(0, Math.min(count * 3, scored.length));
+    const shuffled = [...topCandidates].sort(() => Math.random() - 0.5);
+
+    return shuffled.slice(0, count).map(s => s.game);
+  };
+
   // Generate class structure - called fresh each time (for shuffle to work)
   const generateClass = () => {
     if (!selectedPosition || games.length === 0) return null;
 
-    // Pick multiple games from pool, avoiding duplicates
+    // Pick multiple games from pool, avoiding duplicates (simple version for warmup/cooldown)
     const pickMultiple = (pool, count, exclude = []) => {
       const available = pool.filter(g => !exclude.find(e => e._id === g._id));
       const shuffled = [...available].sort(() => Math.random() - 0.5);
@@ -140,47 +260,98 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
     const mainTime = Math.floor(duration * 0.7);    // 70%
     const cooldownTime = Math.floor(duration * 0.15); // 15%
 
-    // Build BALANCED main training section
+    // Build BALANCED main training section with position awareness
     const mainGames = [];
+    const relatedPositions = POSITION_CHAINS[selectedPosition] || [];
 
-    // 1. Add position-specific games first (up to 2)
-    if (positionGames.main.length > 0) {
-      const positionSpecific = pickMultiple(positionGames.main, 2, mainGames);
-      mainGames.push(...positionSpecific);
+    // 1. Add position-specific games first using smart relevance scoring
+    const positionRelevantGames = getRelevantGames(
+      [...positionGames.main, ...allGamesByType.main],
+      selectedPosition,
+      3,
+      mainGames
+    );
+    mainGames.push(...positionRelevantGames);
+
+    // 2. Add games from related positions (position chain)
+    if (relatedPositions.length > 0) {
+      const relatedPool = allGamesByType.main.filter(g => {
+        const gameText = [
+          g.name || '',
+          g.position || '',
+          ...(g.techniques || []),
+          g.aiMetadata?.startPosition || ''
+        ].join(' ').toLowerCase();
+
+        return relatedPositions.some(rp =>
+          gameText.includes(rp.replace(/-/g, ' ')) ||
+          gameText.includes(rp.replace(/-/g, ''))
+        );
+      });
+
+      if (relatedPool.length > 0) {
+        const relatedGames = getRelevantGames(relatedPool, selectedPosition, 2, mainGames);
+        mainGames.push(...relatedGames);
+      }
     }
 
-    // 2. Build balanced class: Standing -> Guard/Passing -> Pinning -> Submitting
+    // 3. Build balanced class: Standing -> Passing -> Pinning -> Submitting
     const areas = ['standing', 'passing', 'pinning', 'submitting'];
-    const gamesPerArea = Math.max(1, Math.floor((duration - 20) / 20));
+    const gamesPerArea = Math.max(1, Math.floor((duration - 20) / 25));
 
     areas.forEach(area => {
-      if (gamesByArea[area].length > 0) {
-        const areaGames = pickMultiple(gamesByArea[area], gamesPerArea, mainGames);
+      // Check if we already have games from this area
+      const existingInArea = mainGames.filter(g =>
+        gamesByArea[area].find(ag => ag._id === g._id)
+      ).length;
+
+      // Only add if we don't have enough from this area
+      if (existingInArea < gamesPerArea && gamesByArea[area].length > 0) {
+        const needed = gamesPerArea - existingInArea;
+        const areaGames = getRelevantGames(gamesByArea[area], selectedPosition, needed, mainGames);
         mainGames.push(...areaGames);
       }
     });
 
-    // 3. If still need more games, add from guard and general pools
-    const targetMainCount = Math.max(3, Math.floor(mainTime / 12));
+    // 4. If still need more games, add from guard and general pools
+    const targetMainCount = Math.max(4, Math.floor(mainTime / 10));
     if (mainGames.length < targetMainCount) {
       const guardAndGeneral = [...gamesByArea.guard, ...gamesByArea.general];
       if (guardAndGeneral.length > 0) {
-        const moreGames = pickMultiple(guardAndGeneral, targetMainCount - mainGames.length, mainGames);
+        const moreGames = getRelevantGames(
+          guardAndGeneral,
+          selectedPosition,
+          targetMainCount - mainGames.length,
+          mainGames
+        );
         mainGames.push(...moreGames);
       }
     }
 
-    // 4. If STILL not enough, add any remaining main games from full library
+    // 5. If STILL not enough, add any remaining main games from full library
     if (mainGames.length < 2 && allGamesByType.main.length > 0) {
       const fallbackGames = pickMultiple(allGamesByType.main, Math.max(3, targetMainCount), mainGames);
       mainGames.push(...fallbackGames);
     }
 
-    // Get warmup and cooldown (these are optional)
+    // Get warmup and cooldown - also position-aware
     const warmupCount = Math.max(1, Math.floor(warmupTime / 10));
     const cooldownCount = Math.max(1, Math.floor(cooldownTime / 10));
-    const warmupGames = pickMultiple(allGamesByType.warmup, warmupCount, []);
+    const warmupGames = allGamesByType.warmup.length > 0
+      ? getRelevantGames(allGamesByType.warmup, selectedPosition, warmupCount, [])
+      : [];
     const cooldownGames = pickMultiple(allGamesByType.cooldown, cooldownCount, []);
+
+    // Track these games as recently used for variety next time
+    [...warmupGames, ...mainGames, ...cooldownGames].forEach(g => {
+      recentlyUsed.current.add(g._id);
+    });
+
+    // Clear old entries if set gets too large (keep last 50)
+    if (recentlyUsed.current.size > 50) {
+      const entries = Array.from(recentlyUsed.current);
+      recentlyUsed.current = new Set(entries.slice(-30));
+    }
 
     return {
       warmup: warmupGames,
@@ -195,7 +366,9 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
         passing: mainGames.filter(g => gamesByArea.passing.find(sg => sg._id === g._id)).length,
         pinning: mainGames.filter(g => gamesByArea.pinning.find(sg => sg._id === g._id)).length,
         submitting: mainGames.filter(g => gamesByArea.submitting.find(sg => sg._id === g._id)).length,
-      }
+      },
+      // Include meta info for display
+      positionChain: relatedPositions.slice(0, 4)
     };
   };
 
@@ -211,10 +384,12 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
   };
 
   const handleShuffle = () => {
+    // Clear recently used to get completely fresh suggestions
+    recentlyUsed.current.clear();
     const newClass = generateClass();
     if (newClass) {
       setPreview(newClass);
-      showToast('Class shuffled!', 'success');
+      showToast('Fresh class generated!', 'success');
     }
   };
 
@@ -395,6 +570,24 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
                   ← Change
                 </button>
               </div>
+
+              {/* Position Flow - shows related positions */}
+              {preview.positionChain && preview.positionChain.length > 0 && (
+                <div className="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
+                  <p className="text-xs text-primary-600 dark:text-primary-400 mb-1.5">Position Flow</p>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-xs font-medium text-primary-700 dark:text-primary-300 bg-primary-100 dark:bg-primary-800/50 px-2 py-0.5 rounded">
+                      {getPositionLabel(selectedPosition)}
+                    </span>
+                    <span className="text-primary-400">→</span>
+                    {preview.positionChain.map((pos, i) => (
+                      <span key={pos} className="text-xs text-primary-600 dark:text-primary-400">
+                        {pos.replace(/-/g, ' ')}{i < preview.positionChain.length - 1 ? ' · ' : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Balance Indicator */}
               {preview.areas && (
