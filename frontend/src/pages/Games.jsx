@@ -6,6 +6,8 @@ import FilterBar from '../components/FilterBar';
 import BulkActionBar from '../components/BulkActionBar';
 import ConfirmModal from '../components/ConfirmModal';
 import Loading from '../components/Loading';
+import QuickAccess from '../components/QuickAccess';
+import SmartSessionBuilder from '../components/SmartSessionBuilder';
 
 export default function Games() {
   const {
@@ -28,6 +30,7 @@ export default function Games() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [gameToDelete, setGameToDelete] = useState(null);
   const [showSessionSelect, setShowSessionSelect] = useState(false);
+  const [showSmartBuilder, setShowSmartBuilder] = useState(false);
 
   useEffect(() => {
     fetchGames();
@@ -141,6 +144,9 @@ export default function Games() {
           <kbd className="hidden lg:inline-flex ml-2 px-1.5 py-0.5 text-xs font-mono bg-primary-700 rounded">N</kbd>
         </button>
       </div>
+
+      {/* Quick Access Section */}
+      <QuickAccess onSmartBuild={() => setShowSmartBuilder(true)} />
 
       {/* Filters */}
       <div className="mb-6">
@@ -264,6 +270,13 @@ export default function Games() {
 
       {/* Padding for bulk action bar */}
       {selectedGames.size > 0 && <div className="h-20" />}
+
+      {/* Smart Session Builder */}
+      <SmartSessionBuilder
+        isOpen={showSmartBuilder}
+        onClose={() => setShowSmartBuilder(false)}
+        onSessionCreated={() => fetchSessions()}
+      />
     </div>
   );
 }

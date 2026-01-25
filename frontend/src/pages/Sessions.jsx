@@ -5,6 +5,7 @@ import SessionItem from '../components/SessionItem';
 import SessionCalendar from '../components/SessionCalendar';
 import ConfirmModal from '../components/ConfirmModal';
 import Loading from '../components/Loading';
+import SmartSessionBuilder from '../components/SmartSessionBuilder';
 import api from '../utils/api';
 
 export default function Sessions() {
@@ -21,6 +22,7 @@ export default function Sessions() {
 
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showSmartBuilder, setShowSmartBuilder] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState(null);
@@ -174,20 +176,32 @@ export default function Sessions() {
             Plan and track your training sessions
           </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingSession(null);
-            setSessionName('');
-            setScheduledDate('');
-            setShowCreateModal(true);
-          }}
-          className="btn-primary"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
-            <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-          </svg>
-          New Session
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowSmartBuilder(true)}
+            className="btn-secondary"
+            title="Auto-generate a balanced session"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
+              <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.683a1 1 0 01-.633-.633L6.95 5.684z" />
+            </svg>
+            Smart Build
+          </button>
+          <button
+            onClick={() => {
+              setEditingSession(null);
+              setSessionName('');
+              setScheduledDate('');
+              setShowCreateModal(true);
+            }}
+            className="btn-primary"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
+              <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+            </svg>
+            New Session
+          </button>
+        </div>
       </div>
 
       {/* Today's Quick Start */}
@@ -479,6 +493,13 @@ export default function Sessions() {
         message={`Are you sure you want to delete "${sessionToDelete?.name}"? This will not delete the games in the session.`}
         confirmText="Delete"
         danger
+      />
+
+      {/* Smart Session Builder */}
+      <SmartSessionBuilder
+        isOpen={showSmartBuilder}
+        onClose={() => setShowSmartBuilder(false)}
+        onSessionCreated={() => fetchSessions()}
       />
     </div>
   );

@@ -36,9 +36,22 @@ export default function ToastContainer() {
           className="card p-4 flex items-start gap-3 animate-slide-up shadow-lg"
         >
           {icons[toast.type] || icons.info}
-          <p className="flex-1 text-sm text-gray-700 dark:text-gray-300">
-            {toast.message}
-          </p>
+          <div className="flex-1">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              {toast.message}
+            </p>
+            {toast.action && (
+              <button
+                onClick={() => {
+                  toast.action.onClick();
+                  removeToast(toast.id);
+                }}
+                className="mt-1 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+              >
+                {toast.action.label}
+              </button>
+            )}
+          </div>
           <button
             onClick={() => removeToast(toast.id)}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"

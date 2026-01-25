@@ -55,12 +55,12 @@ export function AppProvider({ children }) {
   }, [user?.preferences?.darkMode]);
 
   // Toast helpers
-  const showToast = useCallback((message, type = 'info', duration = 3000) => {
+  const showToast = useCallback((message, type = 'info', duration = 3000, action = null) => {
     const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type, action }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, duration);
+    }, action ? 5000 : duration); // Longer duration when there's an action
   }, []);
 
   const removeToast = useCallback((id) => {

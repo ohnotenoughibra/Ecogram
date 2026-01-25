@@ -341,6 +341,131 @@ router.delete('/:id', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/sessions/smart-build
+// @desc    Auto-generate a balanced session based on topic/focus
+// @access  Private
+router.post('/smart-build', protect, async (req, res) => {
+  try {
+    const { topic, focus, duration, name } = req.body;
+
+    // Session structure based on duration
+    const sessionStructure = {
+      short: { warmup: 1, main: 2, cooldown: 0 },      // ~30 min
+      medium: { warmup: 1, main: 3, cooldown: 1 },     // ~45-60 min
+      long: { warmup: 2, main: 4, cooldown: 1 }        // ~90 min
+    };
+
+    const structure = sessionStructure[duration || 'medium'];
+
+    // Get user's games
+    const userGames = await Game.find({ user: req.user._id });
+
+    if (userGames.length === 0) {
+      return res.status(400).json({
+        message: 'No games in library. Add some games first to auto-generate sessions.'
+      });
+    }
+
+    // Categorize games
+    const warmupGames = userGames.filter(g => g.gameType === 'warmup');
+    const cooldownGames = userGames.filter(g => g.gameType === 'cooldown');
+    let mainGames = userGames.filter(g => g.gameType === 'main' || !g.gameType);
+
+    // Filter main games by topic if specified
+    if (topic) {
+      const topicFiltered = mainGames.filter(g => g.topic === topic);
+      if (topicFiltered.length >= structure.main) {
+        mainGames = topicFiltered;
+      }
+    }
+
+    // Helper to pick random games, prioritizing favorites and less-used games
+    const pickGames = (games, count) => {
+      if (games.length === 0) return [];
+      if (games.length <= count) return games;
+
+      // Score games: higher score = better pick
+      const scored = games.map(g => ({
+        game: g,
+        score: (g.favorite ? 10 : 0) +
+               (5 - Math.min(g.usageCount || 0, 5)) + // Less used = higher score
+               (g.rating || 0) +
+               Math.random() * 3 // Add some randomness
+      }));
+
+      scored.sort((a, b) => b.score - a.score);
+      return scored.slice(0, count).map(s => s.game);
+    };
+
+    const selectedGames = [];
+
+    // Pick warmup games (or use main games if no warmups)
+    const warmups = pickGames(warmupGames.length > 0 ? warmupGames : mainGames, structure.warmup);
+    selectedGames.push(...warmups);
+
+    // Pick main games (excluding already selected)
+    const selectedIds = new Set(selectedGames.map(g => g._id.toString()));
+    const availableMain = mainGames.filter(g => !selectedIds.has(g._id.toString()));
+    const mains = pickGames(availableMain, structure.main);
+    selectedGames.push(...mains);
+
+    // Pick cooldown games (or skip if none available)
+    if (structure.cooldown > 0) {
+      const availableCooldown = cooldownGames.length > 0
+        ? cooldownGames
+        : mainGames.filter(g => !selectedIds.has(g._id.toString()) && !mains.includes(g));
+      const cooldowns = pickGames(availableCooldown, structure.cooldown);
+      selectedGames.push(...cooldowns);
+    }
+
+    if (selectedGames.length === 0) {
+      return res.status(400).json({
+        message: 'Not enough games to build a session. Add more games to your library.'
+      });
+    }
+
+    // Generate session name
+    const topicNames = {
+      offensive: 'Attack',
+      defensive: 'Defense',
+      control: 'Control',
+      transition: 'Movement'
+    };
+    const sessionName = name || `${topicNames[topic] || 'Training'} Session - ${new Date().toLocaleDateString()}`;
+
+    // Create the session
+    const games = selectedGames.map((g, index) => ({
+      game: g._id,
+      order: index,
+      completed: false
+    }));
+
+    const session = await Session.create({
+      user: req.user._id,
+      name: sessionName,
+      games,
+      scheduledDate: new Date()
+    });
+
+    const populatedSession = await Session.findById(session._id)
+      .populate('games.game', 'name topic skills gameType');
+
+    res.status(201).json({
+      session: populatedSession,
+      summary: {
+        warmup: warmups.length,
+        main: mains.length,
+        cooldown: structure.cooldown > 0 ? selectedGames.length - warmups.length - mains.length : 0,
+        total: selectedGames.length,
+        topic: topic || 'mixed'
+      }
+    });
+  } catch (error) {
+    console.error('Smart build session error:', error);
+    res.status(500).json({ message: 'Server error generating session' });
+  }
+});
+
 // @route   POST /api/sessions/:id/duplicate
 // @desc    Duplicate a session
 // @access  Private

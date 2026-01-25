@@ -55,13 +55,38 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
   };
 
   const handleRemoveGame = async (gameId) => {
+    // Find the game being removed for undo
+    const removedGame = session.games.find(g => (g.game?._id || g.game) === gameId);
+    const gameName = removedGame?.game?.name || 'Game';
+
     try {
       const response = await api.put(`/sessions/${session._id}/games`, {
         action: 'remove',
         gameId
       });
       if (onSessionUpdate) onSessionUpdate(response.data);
-      showToast('Game removed from session', 'success');
+
+      // Show toast with undo action
+      showToast(
+        `"${gameName}" removed`,
+        'success',
+        5000,
+        {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              const undoResponse = await api.put(`/sessions/${session._id}/games`, {
+                action: 'add',
+                gameId
+              });
+              if (onSessionUpdate) onSessionUpdate(undoResponse.data);
+              showToast('Game restored', 'success');
+            } catch (err) {
+              showToast('Failed to restore game', 'error');
+            }
+          }
+        }
+      );
     } catch (err) {
       showToast('Failed to remove game', 'error');
     }

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import Timer from '../components/Timer';
 import SessionTimer from '../components/SessionTimer';
+import DrillTimer from '../components/DrillTimer';
 import Loading from '../components/Loading';
 import api from '../utils/api';
 import {
@@ -45,6 +46,7 @@ export default function SessionView() {
   const [editMode, setEditMode] = useState(false);
   const [showAddGame, setShowAddGame] = useState(false);
   const [availableGames, setAvailableGames] = useState([]);
+  const [timerMode, setTimerMode] = useState('drill'); // 'simple' | 'drill'
 
   useEffect(() => {
     loadSession();
@@ -111,7 +113,9 @@ export default function SessionView() {
   };
 
   const handleRemoveGame = async (gameId) => {
-    if (!confirm('Remove this game from the session?')) return;
+    // Find the game being removed for undo
+    const removedGameEntry = session.games.find(g => g.game._id === gameId);
+    const removedGameIndex = session.games.findIndex(g => g.game._id === gameId);
 
     try {
       await api.put(`/sessions/${id}/games`, {
@@ -130,7 +134,28 @@ export default function SessionView() {
         setCurrentGameIndex(Math.max(0, session.games.length - 2));
       }
 
-      showToast('Game removed from session', 'success');
+      // Show toast with undo action
+      showToast(
+        `"${removedGameEntry?.game?.name || 'Game'}" removed`,
+        'success',
+        5000,
+        {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              await api.put(`/sessions/${id}/games`, {
+                action: 'add',
+                gameId
+              });
+              // Reload session to get proper order
+              await loadSession();
+              showToast('Game restored', 'success');
+            } catch (err) {
+              showToast('Failed to restore game', 'error');
+            }
+          }
+        }
+      );
     } catch (error) {
       showToast('Failed to remove game', 'error');
     }
@@ -330,13 +355,50 @@ export default function SessionView() {
         </div>
       </div>
 
-      {/* Inline Session Timer */}
+      {/* Timer Mode Toggle & Timer */}
       <div className="mb-6">
-        <SessionTimer
-          onTimerEnd={() => {
-            showToast('Time is up!', 'info');
-          }}
-        />
+        {/* Timer Mode Toggle */}
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Session Timer</h3>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <button
+              onClick={() => setTimerMode('drill')}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                timerMode === 'drill'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              Drill Timer
+            </button>
+            <button
+              onClick={() => setTimerMode('simple')}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                timerMode === 'simple'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              Simple Timer
+            </button>
+          </div>
+        </div>
+
+        {timerMode === 'drill' ? (
+          <DrillTimer
+            games={session.games}
+            currentGameIndex={currentGameIndex}
+            onGameComplete={handleGameComplete}
+            onNextGame={nextGame}
+            onPrevGame={prevGame}
+          />
+        ) : (
+          <SessionTimer
+            onTimerEnd={() => {
+              showToast('Time is up!', 'info');
+            }}
+          />
+        )}
       </div>
 
       {/* Current Game Display */}
