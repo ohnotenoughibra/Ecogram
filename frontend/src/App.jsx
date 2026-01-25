@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useApp } from './context/AppContext';
@@ -129,8 +129,6 @@ function MainLayout({ children }) {
     </div>
   );
 }
-
-import { useState } from 'react';
 
 export default function App() {
   return (
