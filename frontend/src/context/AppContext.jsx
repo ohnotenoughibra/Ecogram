@@ -285,12 +285,15 @@ export function AppProvider({ children }) {
 
   const importGames = useCallback(async (games) => {
     try {
+      console.log('Importing games:', games.length);
       const response = await api.post('/games/import', { games });
+      console.log('Import response:', response.data);
       await fetchGames();
       showToast(response.data.message, 'success');
       return { success: true };
     } catch (err) {
-      showToast('Failed to import games', 'error');
+      console.error('Import error:', err.response?.data || err.message);
+      showToast(err.response?.data?.message || 'Failed to import games', 'error');
       return { success: false };
     }
   }, [fetchGames, showToast]);

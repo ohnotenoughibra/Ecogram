@@ -149,6 +149,107 @@ router.get('/stats', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/games/import
+// @desc    Import games from JSON
+// @access  Private
+// NOTE: This route MUST be before /:id to avoid being caught by the param route
+router.post('/import', protect, async (req, res) => {
+  try {
+    const { games } = req.body;
+
+    console.log('Import request received, games count:', games?.length);
+
+    if (!games || !Array.isArray(games)) {
+      return res.status(400).json({ message: 'Games array required' });
+    }
+
+    // Topic mapping for different formats
+    const topicMap = {
+      'takedowns': 'transition',
+      'takedown': 'transition',
+      'wrestling': 'transition',
+      'guard': 'defensive',
+      'guard passing': 'control',
+      'passing': 'control',
+      'submissions': 'offensive',
+      'submission': 'offensive',
+      'escapes': 'defensive',
+      'escape': 'defensive',
+      'sweeps': 'transition',
+      'sweep': 'transition',
+      'offensive': 'offensive',
+      'defensive': 'defensive',
+      'control': 'control',
+      'transition': 'transition'
+    };
+
+    const importedGames = [];
+
+    for (const gameData of games) {
+      // Parse skills - handle both array and string formats
+      let skills = [];
+      if (Array.isArray(gameData.skills)) {
+        skills = gameData.skills;
+      } else if (typeof gameData.skills === 'string') {
+        // Parse "#tag1 #tag2" or "tag1, tag2" format
+        skills = gameData.skills
+          .split(/[#,\s]+/)
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
+      }
+
+      // Map topic to our categories
+      const topicLower = (gameData.topic || '').toLowerCase();
+      const mappedTopic = topicMap[topicLower] || 'transition';
+
+      // Build coaching notes - include author if present
+      let coaching = gameData.coaching || '';
+      if (gameData.author && !coaching.includes(gameData.author)) {
+        coaching = coaching ? `${coaching}\n\nBy: ${gameData.author}` : `By: ${gameData.author}`;
+      }
+
+      const game = await Game.create({
+        user: req.user._id,
+        name: gameData.name || 'Imported Game',
+        topic: mappedTopic,
+        topPlayer: gameData.topPlayer || '',
+        bottomPlayer: gameData.bottomPlayer || '',
+        coaching: coaching.trim(),
+        skills: skills,
+        favorite: gameData.favorite || false,
+        rating: gameData.rating || 0
+      });
+      importedGames.push(game);
+    }
+
+    console.log('Successfully imported:', importedGames.length, 'games');
+
+    res.status(201).json({
+      message: `Successfully imported ${importedGames.length} games`,
+      games: importedGames
+    });
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ message: 'Server error importing games' });
+  }
+});
+
+// @route   GET /api/games/export/all
+// @desc    Export all games as JSON
+// @access  Private
+router.get('/export/all', protect, async (req, res) => {
+  try {
+    const games = await Game.find({ user: req.user._id })
+      .select('-user -__v')
+      .lean();
+
+    res.json({ games, exportDate: new Date() });
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ message: 'Server error exporting games' });
+  }
+});
+
 // @route   GET /api/games/:id
 // @desc    Get single game
 // @access  Private
@@ -315,102 +416,6 @@ router.post('/bulk', protect, async (req, res) => {
   } catch (error) {
     console.error('Bulk operation error:', error);
     res.status(500).json({ message: 'Server error during bulk operation' });
-  }
-});
-
-// @route   POST /api/games/import
-// @desc    Import games from JSON
-// @access  Private
-router.post('/import', protect, async (req, res) => {
-  try {
-    const { games } = req.body;
-
-    if (!games || !Array.isArray(games)) {
-      return res.status(400).json({ message: 'Games array required' });
-    }
-
-    // Topic mapping for different formats
-    const topicMap = {
-      'takedowns': 'transition',
-      'takedown': 'transition',
-      'wrestling': 'transition',
-      'guard': 'defensive',
-      'guard passing': 'control',
-      'passing': 'control',
-      'submissions': 'offensive',
-      'submission': 'offensive',
-      'escapes': 'defensive',
-      'escape': 'defensive',
-      'sweeps': 'transition',
-      'sweep': 'transition',
-      'offensive': 'offensive',
-      'defensive': 'defensive',
-      'control': 'control',
-      'transition': 'transition'
-    };
-
-    const importedGames = [];
-
-    for (const gameData of games) {
-      // Parse skills - handle both array and string formats
-      let skills = [];
-      if (Array.isArray(gameData.skills)) {
-        skills = gameData.skills;
-      } else if (typeof gameData.skills === 'string') {
-        // Parse "#tag1 #tag2" or "tag1, tag2" format
-        skills = gameData.skills
-          .split(/[#,\s]+/)
-          .map(s => s.trim())
-          .filter(s => s.length > 0);
-      }
-
-      // Map topic to our categories
-      const topicLower = (gameData.topic || '').toLowerCase();
-      const mappedTopic = topicMap[topicLower] || 'transition';
-
-      // Build coaching notes - include author if present
-      let coaching = gameData.coaching || '';
-      if (gameData.author && !coaching.includes(gameData.author)) {
-        coaching = coaching ? `${coaching}\n\nBy: ${gameData.author}` : `By: ${gameData.author}`;
-      }
-
-      const game = await Game.create({
-        user: req.user._id,
-        name: gameData.name || 'Imported Game',
-        topic: mappedTopic,
-        topPlayer: gameData.topPlayer || '',
-        bottomPlayer: gameData.bottomPlayer || '',
-        coaching: coaching.trim(),
-        skills: skills,
-        favorite: gameData.favorite || false,
-        rating: gameData.rating || 0
-      });
-      importedGames.push(game);
-    }
-
-    res.status(201).json({
-      message: `Successfully imported ${importedGames.length} games`,
-      games: importedGames
-    });
-  } catch (error) {
-    console.error('Import error:', error);
-    res.status(500).json({ message: 'Server error importing games' });
-  }
-});
-
-// @route   GET /api/games/export/all
-// @desc    Export all games as JSON
-// @access  Private
-router.get('/export/all', protect, async (req, res) => {
-  try {
-    const games = await Game.find({ user: req.user._id })
-      .select('-user -__v')
-      .lean();
-
-    res.json({ games, exportDate: new Date() });
-  } catch (error) {
-    console.error('Export error:', error);
-    res.status(500).json({ message: 'Server error exporting games' });
   }
 });
 
