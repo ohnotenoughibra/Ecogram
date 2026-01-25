@@ -14,21 +14,32 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
     if (!selectedPosition) return { warmup: [], main: [], cooldown: [] };
 
     const positionLabel = getPositionLabel(selectedPosition).toLowerCase();
-    const positionWords = selectedPosition.split('-').filter(w => w.length > 2);
+    const positionWords = selectedPosition.split('-').filter(w => w.length > 1);
 
     const filtered = games.filter(g => {
       // Direct position match
       if (g.position === selectedPosition) return true;
 
       // Check aiMetadata.startPosition
-      if (g.aiMetadata?.startPosition?.toLowerCase().includes(selectedPosition.replace('-', ' '))) return true;
-      if (g.aiMetadata?.startPosition?.toLowerCase().includes(positionLabel)) return true;
+      const aiPosition = g.aiMetadata?.startPosition?.toLowerCase() || '';
+      if (aiPosition.includes(selectedPosition.replace(/-/g, ' '))) return true;
+      if (aiPosition.includes(positionLabel)) return true;
 
-      // Search in game content for position keywords
-      const searchText = `${g.name} ${g.topPlayer || ''} ${g.bottomPlayer || ''} ${g.coaching || ''} ${(g.skills || []).join(' ')}`.toLowerCase();
+      // Search in ALL game content for position keywords
+      const searchText = [
+        g.name || '',
+        g.topPlayer || '',
+        g.bottomPlayer || '',
+        g.coaching || '',
+        ...(g.skills || []),
+        ...(g.techniques || []),
+        g.aiMetadata?.description || ''
+      ].join(' ').toLowerCase();
 
-      // Check for position label or position words
+      // Check for position label (e.g. "half guard", "closed guard")
       if (searchText.includes(positionLabel)) return true;
+
+      // Check for any position word (e.g. "guard", "mount", "half")
       if (positionWords.some(word => searchText.includes(word))) return true;
 
       return false;
@@ -41,7 +52,7 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
     };
   }, [games, selectedPosition]);
 
-  // Get ALL games as fallback when position-specific games are limited
+  // Get ALL games categorized by type AND by training area for balanced classes
   const allGamesByType = useMemo(() => {
     return {
       warmup: games.filter(g => g.gameType === 'warmup'),
@@ -50,52 +61,147 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
     };
   }, [games]);
 
-  // Calculate suggested class structure
+  // Categorize games by training area for balanced class building
+  const gamesByArea = useMemo(() => {
+    const categorize = (game) => {
+      const searchText = [
+        game.name || '',
+        game.topPlayer || '',
+        game.bottomPlayer || '',
+        game.coaching || '',
+        game.topic || '',
+        ...(game.skills || []),
+        ...(game.techniques || []),
+        game.position || '',
+        game.aiMetadata?.startPosition || '',
+        game.aiMetadata?.description || ''
+      ].join(' ').toLowerCase();
+
+      // Standing / Takedowns
+      if (searchText.match(/standing|takedown|wrestling|clinch|single.?leg|double.?leg|snap.?down|arm.?drag/)) {
+        return 'standing';
+      }
+      // Passing
+      if (searchText.match(/pass|passing|torreando|knee.?cut|smash|over.?under|leg.?drag|stack/)) {
+        return 'passing';
+      }
+      // Pinning / Control
+      if (searchText.match(/mount|side.?control|north.?south|knee.?on|pin|control|pressure|back.?control|crossface/)) {
+        return 'pinning';
+      }
+      // Submissions
+      if (searchText.match(/submit|submission|armbar|triangle|kimura|choke|heel.?hook|knee.?bar|guillotine|rnc|strangle|tap/)) {
+        return 'submitting';
+      }
+      // Guard / Defensive
+      if (searchText.match(/guard|sweep|retain|escape|defensive|recover/)) {
+        return 'guard';
+      }
+      // Default - check topic
+      if (game.topic === 'offensive') return 'submitting';
+      if (game.topic === 'control') return 'pinning';
+      if (game.topic === 'transition') return 'passing';
+      if (game.topic === 'defensive') return 'guard';
+
+      return 'general';
+    };
+
+    const areas = {
+      standing: [],
+      passing: [],
+      pinning: [],
+      submitting: [],
+      guard: [],
+      general: []
+    };
+
+    games.forEach(g => {
+      const area = categorize(g);
+      areas[area].push(g);
+    });
+
+    return areas;
+  }, [games]);
+
+  // Calculate suggested class structure - BALANCED across training areas
   const suggestedClass = useMemo(() => {
     if (!selectedPosition) return null;
 
-    // Use position-specific games, fallback to all games if not enough
-    const getPoolWithFallback = (positionPool, allPool) => {
-      if (positionPool.length >= 2) return positionPool;
-      // Add all games as fallback, but keep position-specific first
-      const combined = [...positionPool];
-      allPool.forEach(g => {
-        if (!combined.find(c => c._id === g._id)) {
-          combined.push(g);
-        }
-      });
-      return combined;
+    // Randomly pick one game from a pool
+    const pickRandom = (pool) => {
+      if (pool.length === 0) return null;
+      return pool[Math.floor(Math.random() * pool.length)];
     };
 
-    const allWarmups = getPoolWithFallback(positionGames.warmup, allGamesByType.warmup);
-    const allMains = getPoolWithFallback(positionGames.main, allGamesByType.main);
-    const allCooldowns = getPoolWithFallback(positionGames.cooldown, allGamesByType.cooldown);
+    // Pick multiple games from pool, avoiding duplicates
+    const pickMultiple = (pool, count, exclude = []) => {
+      const available = pool.filter(g => !exclude.find(e => e._id === g._id));
+      const shuffled = [...available].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, count);
+    };
 
     // Time allocation based on duration
     const warmupTime = Math.floor(duration * 0.15); // 15%
     const mainTime = Math.floor(duration * 0.7);    // 70%
     const cooldownTime = Math.floor(duration * 0.15); // 15%
 
-    // Select games (prioritize position-specific, then related)
-    const selectGames = (pool, count) => {
-      const shuffled = [...pool].sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, count);
-    };
+    // Build BALANCED main training section
+    // Priority: position-specific games first, then fill from each area
+    const mainGames = [];
 
+    // 1. Add position-specific games first (up to 2)
+    const positionSpecific = pickMultiple(positionGames.main, 2, mainGames);
+    mainGames.push(...positionSpecific);
+
+    // 2. Build balanced class: Standing -> Guard/Passing -> Pinning -> Submitting
+    const areas = ['standing', 'passing', 'pinning', 'submitting'];
+    const gamesPerArea = Math.max(1, Math.floor((duration - 20) / 20)); // ~1 game per 20min per area
+
+    areas.forEach(area => {
+      const areaGames = pickMultiple(gamesByArea[area], gamesPerArea, mainGames);
+      mainGames.push(...areaGames);
+    });
+
+    // 3. If still need more games, add from guard and general pools
+    const targetMainCount = Math.max(3, Math.floor(mainTime / 12));
+    if (mainGames.length < targetMainCount) {
+      const moreGames = pickMultiple(
+        [...gamesByArea.guard, ...gamesByArea.general],
+        targetMainCount - mainGames.length,
+        mainGames
+      );
+      mainGames.push(...moreGames);
+    }
+
+    // 4. If STILL not enough, add any remaining main games
+    if (mainGames.length < 2) {
+      const fallbackGames = pickMultiple(allGamesByType.main, 3, mainGames);
+      mainGames.push(...fallbackGames);
+    }
+
+    // Get warmup and cooldown
     const warmupCount = Math.max(1, Math.floor(warmupTime / 10));
-    const mainCount = Math.max(2, Math.floor(mainTime / 15));
     const cooldownCount = Math.max(1, Math.floor(cooldownTime / 10));
+    const warmupGames = pickMultiple(allGamesByType.warmup, warmupCount, []);
+    const cooldownGames = pickMultiple(allGamesByType.cooldown, cooldownCount, []);
 
     return {
-      warmup: selectGames(allWarmups, warmupCount),
-      main: selectGames(allMains, mainCount),
-      cooldown: selectGames(allCooldowns, cooldownCount),
+      warmup: warmupGames,
+      main: mainGames,
+      cooldown: cooldownGames,
       warmupTime,
       mainTime,
       cooldownTime,
-      totalGames: warmupCount + mainCount + cooldownCount
+      totalGames: warmupGames.length + mainGames.length + cooldownGames.length,
+      // Track which areas are represented
+      areas: {
+        standing: mainGames.filter(g => gamesByArea.standing.find(sg => sg._id === g._id)).length,
+        passing: mainGames.filter(g => gamesByArea.passing.find(sg => sg._id === g._id)).length,
+        pinning: mainGames.filter(g => gamesByArea.pinning.find(sg => sg._id === g._id)).length,
+        submitting: mainGames.filter(g => gamesByArea.submitting.find(sg => sg._id === g._id)).length,
+      }
     };
-  }, [selectedPosition, duration, positionGames, allGamesByType]);
+  }, [selectedPosition, duration, positionGames, allGamesByType, gamesByArea]);
 
   const handleGeneratePreview = () => {
     if (!suggestedClass) return;
@@ -282,6 +388,27 @@ export default function QuickClassBuilder({ isOpen, onClose, onSessionCreated })
                   ← Change
                 </button>
               </div>
+
+              {/* Balance Indicator */}
+              {preview.areas && (
+                <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-2">Class Balance</p>
+                  <div className="flex gap-1">
+                    <div className={`flex-1 text-center p-1.5 rounded text-xs ${preview.areas.standing > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-700'}`}>
+                      Standing {preview.areas.standing > 0 && `(${preview.areas.standing})`}
+                    </div>
+                    <div className={`flex-1 text-center p-1.5 rounded text-xs ${preview.areas.passing > 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-700'}`}>
+                      Passing {preview.areas.passing > 0 && `(${preview.areas.passing})`}
+                    </div>
+                    <div className={`flex-1 text-center p-1.5 rounded text-xs ${preview.areas.pinning > 0 ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-700'}`}>
+                      Pinning {preview.areas.pinning > 0 && `(${preview.areas.pinning})`}
+                    </div>
+                    <div className={`flex-1 text-center p-1.5 rounded text-xs ${preview.areas.submitting > 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-700'}`}>
+                      Subs {preview.areas.submitting > 0 && `(${preview.areas.submitting})`}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Warmup */}
               {preview.warmup.length > 0 && (
