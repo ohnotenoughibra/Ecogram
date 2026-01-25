@@ -10,6 +10,7 @@ import ToastContainer from './components/Toast';
 import Loading from './components/Loading';
 import Timer from './components/Timer';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
+import OfflineIndicator from './components/OfflineIndicator';
 
 // Pages
 import Login from './pages/Login';
@@ -111,6 +112,7 @@ function MainLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
+      <OfflineIndicator />
       <Navbar />
       <main className="pb-28 lg:pb-8" style={{ paddingBottom: 'max(7rem, calc(5rem + env(safe-area-inset-bottom, 0px)))' }}>
         {children}

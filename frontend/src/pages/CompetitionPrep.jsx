@@ -398,7 +398,7 @@ export default function CompetitionPrep() {
 
       {/* Create Competition Modal */}
       {showCreateModal && (
-        <div className="modal-overlay\" onClick={() => setShowCreateModal(false)}>
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content max-w-lg" onClick={e => e.stopPropagation()}>
             <div className="p-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">

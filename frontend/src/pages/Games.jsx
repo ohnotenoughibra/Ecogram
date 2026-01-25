@@ -8,6 +8,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import Loading from '../components/Loading';
 import QuickAccess from '../components/QuickAccess';
 import SmartSessionBuilder from '../components/SmartSessionBuilder';
+import { WhatsNewBanner } from '../components/FeatureTip';
 
 export default function Games() {
   const {
@@ -120,6 +121,9 @@ export default function Games() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
+      {/* What's New Banner */}
+      <WhatsNewBanner />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
