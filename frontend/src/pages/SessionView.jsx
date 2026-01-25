@@ -7,6 +7,7 @@ import SessionTimer from '../components/SessionTimer';
 import DrillTimer from '../components/DrillTimer';
 import EffectivenessRating from '../components/EffectivenessRating';
 import SessionPrintShare from '../components/SessionPrintShare';
+import PostSessionNotes from '../components/PostSessionNotes';
 import Loading from '../components/Loading';
 import api from '../utils/api';
 import {
@@ -707,6 +708,13 @@ export default function SessionView() {
           ))}
         </div>
       </div>
+
+      {/* Post-Session Notes */}
+      <PostSessionNotes
+        session={session}
+        onUpdate={(updatedSession) => setSession(updatedSession)}
+        showToast={showToast}
+      />
 
       {/* Add Game Modal */}
       {showAddGame && (

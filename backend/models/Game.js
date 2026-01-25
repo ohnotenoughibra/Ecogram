@@ -1,6 +1,40 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 
+// Position categories for grappling
+const POSITIONS = [
+  'closed-guard', 'open-guard', 'half-guard', 'butterfly-guard', 'x-guard',
+  'dlr', 'rdlr', 'spider-guard', 'lasso-guard', 'collar-sleeve',
+  'mount', 'side-control', 'north-south', 'knee-on-belly',
+  'back-control', 'turtle', 'front-headlock',
+  'standing', 'clinch', 'single-leg', 'double-leg',
+  '50-50', 'saddle', 'ashi-garami', 'inside-sankaku',
+  'other'
+];
+
+// Common techniques for tagging
+const TECHNIQUES = [
+  // Submissions
+  'armbar', 'triangle', 'kimura', 'americana', 'omoplata',
+  'guillotine', 'darce', 'anaconda', 'rnc', 'ezekiel',
+  'heel-hook', 'knee-bar', 'toe-hold', 'calf-slicer', 'ankle-lock',
+  'wrist-lock', 'shoulder-lock', 'neck-crank',
+  // Sweeps & Reversals
+  'scissor-sweep', 'hip-bump', 'flower-sweep', 'pendulum-sweep',
+  'elevator-sweep', 'overhead-sweep', 'sickle-sweep',
+  // Escapes
+  'hip-escape', 'bridge', 'elbow-knee', 'frame', 'underhook',
+  // Passes
+  'knee-cut', 'torreando', 'stack-pass', 'leg-drag', 'body-lock-pass',
+  'over-under', 'smash-pass', 'long-step',
+  // Takedowns
+  'single-leg', 'double-leg', 'ankle-pick', 'arm-drag', 'snap-down',
+  // Control
+  'crossface', 'underhook', 'overhook', 'seatbelt', 'body-triangle',
+  // Movement
+  'granby', 'inversion', 'berimbolo', 'leg-pummeling'
+];
+
 const gameSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -19,6 +53,18 @@ const gameSchema = new mongoose.Schema({
     enum: ['offensive', 'defensive', 'control', 'transition'],
     default: 'transition'
   },
+  // Starting position for the drill
+  position: {
+    type: String,
+    enum: [...POSITIONS, ''],
+    default: ''
+  },
+  // Specific techniques involved
+  techniques: [{
+    type: String,
+    trim: true,
+    lowercase: true
+  }],
   gameType: {
     type: String,
     enum: ['warmup', 'main', 'cooldown'],
@@ -138,6 +184,8 @@ gameSchema.index({ user: 1, favorite: 1 });
 gameSchema.index({ user: 1, lastUsed: -1 });
 gameSchema.index({ user: 1, topic: 1 });
 gameSchema.index({ user: 1, gameType: 1 });
+gameSchema.index({ user: 1, position: 1 });
+gameSchema.index({ user: 1, techniques: 1 });
 gameSchema.index({ shareId: 1 });
 
 // Generate share ID
@@ -147,4 +195,8 @@ gameSchema.methods.generateShareId = function() {
   return this.shareId;
 };
 
-module.exports = mongoose.model('Game', gameSchema);
+const Game = mongoose.model('Game', gameSchema);
+
+module.exports = Game;
+module.exports.POSITIONS = POSITIONS;
+module.exports.TECHNIQUES = TECHNIQUES;

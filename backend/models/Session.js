@@ -93,6 +93,45 @@ const sessionSchema = new mongoose.Schema({
   usageCount: {
     type: Number,
     default: 0
+  },
+  // Post-class notes and reflections
+  postClassNotes: {
+    type: String,
+    default: '',
+    maxlength: [3000, 'Post-class notes cannot exceed 3000 characters']
+  },
+  // What worked well
+  whatWorked: {
+    type: String,
+    default: '',
+    maxlength: [1000, 'What worked notes cannot exceed 1000 characters']
+  },
+  // What to improve
+  whatToImprove: {
+    type: String,
+    default: '',
+    maxlength: [1000, 'What to improve notes cannot exceed 1000 characters']
+  },
+  // Overall session effectiveness rating
+  sessionEffectiveness: {
+    type: Number,
+    min: 1,
+    max: 5,
+    default: null
+  },
+  // Focus position for this session (for quick class builder)
+  focusPosition: {
+    type: String,
+    default: ''
+  },
+  // Class completed status
+  completed: {
+    type: Boolean,
+    default: false
+  },
+  completedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

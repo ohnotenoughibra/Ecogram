@@ -33,6 +33,8 @@ export function AppProvider({ children }) {
     topic: '',
     search: '',
     favorite: false,
+    position: '',
+    technique: '',
     sortBy: 'createdAt',
     sortOrder: 'desc'
   });

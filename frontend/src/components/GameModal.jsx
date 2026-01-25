@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { ALL_POSITIONS, POSITIONS, ALL_TECHNIQUES, TECHNIQUES, getPositionLabel } from '../utils/constants';
+import DrillChainManager from './DrillChainManager';
 
 const topics = [
   { value: 'offensive', label: 'Offensive / Submissions', color: 'bg-red-500' },
@@ -23,6 +25,8 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
   const [formData, setFormData] = useState({
     name: '',
     topic: 'transition',
+    position: '',
+    techniques: [],
     gameType: 'main',
     difficulty: 'intermediate',
     topPlayer: '',
@@ -30,8 +34,10 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
     coaching: '',
     personalNotes: '',
     videoUrl: '',
-    skills: []
+    skills: [],
+    linkedGames: { previous: null, next: null }
   });
+  const [showTechniqueSelect, setShowTechniqueSelect] = useState(false);
   const [skillInput, setSkillInput] = useState('');
   const [errors, setErrors] = useState({});
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -41,6 +47,8 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
       setFormData({
         name: game.name || '',
         topic: game.topic || 'transition',
+        position: game.position || '',
+        techniques: game.techniques || [],
         gameType: game.gameType || 'main',
         difficulty: game.difficulty || 'intermediate',
         topPlayer: game.topPlayer || '',
@@ -48,7 +56,8 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
         coaching: game.coaching || '',
         personalNotes: game.personalNotes || '',
         videoUrl: game.videoUrl || '',
-        skills: game.skills || []
+        skills: game.skills || [],
+        linkedGames: game.linkedGames || { previous: null, next: null }
       });
       // Show advanced if non-default values
       if (game.gameType !== 'main' || game.difficulty !== 'intermediate' || game.videoUrl) {
@@ -58,6 +67,8 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
       setFormData({
         name: '',
         topic: 'transition',
+        position: '',
+        techniques: [],
         gameType: 'main',
         difficulty: 'intermediate',
         topPlayer: '',
@@ -65,12 +76,14 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
         coaching: '',
         personalNotes: '',
         videoUrl: '',
-        skills: []
+        skills: [],
+        linkedGames: { previous: null, next: null }
       });
       setShowAdvanced(false);
     }
     setErrors({});
     setSkillInput('');
+    setShowTechniqueSelect(false);
   }, [game, isOpen]);
 
   const handleChange = (e) => {
@@ -180,6 +193,118 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Position */}
+            <div>
+              <label className="label">Starting Position</label>
+              <select
+                value={formData.position}
+                onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
+                className="input"
+              >
+                <option value="">Select position...</option>
+                <optgroup label="Guard">
+                  {POSITIONS.guard.map(p => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Top Positions">
+                  {POSITIONS.top.map(p => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Neutral">
+                  {POSITIONS.neutral.map(p => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Leg Lock Positions">
+                  {POSITIONS.legLocks.map(p => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </optgroup>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* Techniques */}
+            <div>
+              <label className="label flex items-center justify-between">
+                <span>Techniques Involved</span>
+                {formData.techniques.length > 0 && (
+                  <span className="text-xs text-gray-500">{formData.techniques.length} selected</span>
+                )}
+              </label>
+
+              {/* Selected techniques */}
+              {formData.techniques.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {formData.techniques.map(tech => (
+                    <span
+                      key={tech}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs"
+                    >
+                      {ALL_TECHNIQUES.find(t => t.value === tech)?.label || tech}
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          techniques: prev.techniques.filter(t => t !== tech)
+                        }))}
+                        className="hover:text-red-500"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                          <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowTechniqueSelect(!showTechniqueSelect)}
+                className="btn-secondary text-sm w-full"
+              >
+                {showTechniqueSelect ? 'Hide Techniques' : '+ Add Techniques'}
+              </button>
+
+              {showTechniqueSelect && (
+                <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg max-h-48 overflow-y-auto space-y-3">
+                  {Object.entries(TECHNIQUES).map(([category, techs]) => (
+                    <div key={category}>
+                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
+                        {category}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {techs.map(tech => (
+                          <button
+                            key={tech.value}
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                techniques: prev.techniques.includes(tech.value)
+                                  ? prev.techniques.filter(t => t !== tech.value)
+                                  : [...prev.techniques, tech.value]
+                              }));
+                            }}
+                            className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                              formData.techniques.includes(tech.value)
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                            }`}
+                          >
+                            {tech.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Game Type & Difficulty Toggle */}
@@ -368,6 +493,14 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
                 </div>
               )}
             </div>
+
+            {/* Drill Progression Chain - only show when editing existing game */}
+            {game && (
+              <DrillChainManager
+                game={{ ...game, linkedGames: formData.linkedGames }}
+                onLinkUpdated={(linkedGames) => setFormData(prev => ({ ...prev, linkedGames }))}
+              />
+            )}
 
             {/* Actions */}
             <div className="flex gap-3 pt-4">

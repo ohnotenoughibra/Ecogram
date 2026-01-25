@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import { POSITIONS, TECHNIQUES, getPositionLabel, getTechniqueLabel } from '../utils/constants';
 
 const topics = [
   { value: '', label: 'All Topics' },
@@ -66,19 +67,31 @@ export default function FilterBar({ onSearch }) {
     if (onSearch) onSearch();
   };
 
+  const handlePositionChange = (position) => {
+    setFilters(prev => ({ ...prev, position }));
+    if (onSearch) onSearch();
+  };
+
+  const handleTechniqueChange = (technique) => {
+    setFilters(prev => ({ ...prev, technique }));
+    if (onSearch) onSearch();
+  };
+
   const clearFilters = () => {
     setSearchValue('');
     setFilters({
       topic: '',
       search: '',
       favorite: false,
+      position: '',
+      technique: '',
       sortBy: 'createdAt',
       sortOrder: 'desc'
     });
     if (onSearch) onSearch();
   };
 
-  const hasActiveFilters = filters.topic || filters.search || filters.favorite;
+  const hasActiveFilters = filters.topic || filters.search || filters.favorite || filters.position || filters.technique;
 
   return (
     <div className="space-y-3">
@@ -143,6 +156,75 @@ export default function FilterBar({ onSearch }) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Position filter */}
+          <div>
+            <label className="label">Position</label>
+            <select
+              value={filters.position || ''}
+              onChange={(e) => handlePositionChange(e.target.value)}
+              className="input py-2"
+            >
+              <option value="">All Positions</option>
+              <optgroup label="Guard">
+                {POSITIONS.guard.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Top">
+                {POSITIONS.top.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Neutral">
+                {POSITIONS.neutral.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Leg Locks">
+                {POSITIONS.legLocks.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+
+          {/* Technique filter */}
+          <div>
+            <label className="label">Technique</label>
+            <select
+              value={filters.technique || ''}
+              onChange={(e) => handleTechniqueChange(e.target.value)}
+              className="input py-2"
+            >
+              <option value="">All Techniques</option>
+              <optgroup label="Submissions">
+                {TECHNIQUES.submissions.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Sweeps">
+                {TECHNIQUES.sweeps.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Escapes">
+                {TECHNIQUES.escapes.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Passes">
+                {TECHNIQUES.passes.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Takedowns">
+                {TECHNIQUES.takedowns.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </optgroup>
+            </select>
           </div>
 
           {/* Sort options */}
@@ -231,6 +313,28 @@ export default function FilterBar({ onSearch }) {
             <span className="chip chip-active">
               Favorites
               <button onClick={handleFavoriteToggle} className="ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                  <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
+                </svg>
+              </button>
+            </span>
+          )}
+
+          {filters.position && (
+            <span className="chip chip-active">
+              {getPositionLabel(filters.position)}
+              <button onClick={() => handlePositionChange('')} className="ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                  <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
+                </svg>
+              </button>
+            </span>
+          )}
+
+          {filters.technique && (
+            <span className="chip chip-active">
+              {getTechniqueLabel(filters.technique)}
+              <button onClick={() => handleTechniqueChange('')} className="ml-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
                 </svg>

@@ -6,6 +6,7 @@ import SessionCalendar from '../components/SessionCalendar';
 import ConfirmModal from '../components/ConfirmModal';
 import Loading from '../components/Loading';
 import SmartSessionBuilder from '../components/SmartSessionBuilder';
+import QuickClassBuilder from '../components/QuickClassBuilder';
 import api from '../utils/api';
 
 export default function Sessions() {
@@ -39,6 +40,7 @@ export default function Sessions() {
   const [templateDescription, setTemplateDescription] = useState('');
   const [showUseTemplateModal, setShowUseTemplateModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showQuickBuilder, setShowQuickBuilder] = useState(false);
 
   useEffect(() => {
     fetchSessions();
@@ -259,6 +261,16 @@ export default function Sessions() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowQuickBuilder(true)}
+            className="btn-secondary"
+            title="Build a class by position"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
+              <path fillRule="evenodd" d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1zM5.05 3.05a.75.75 0 011.06 0l1.062 1.06a.75.75 0 11-1.061 1.062L5.05 4.11a.75.75 0 010-1.06zm9.9 0a.75.75 0 010 1.06l-1.06 1.062a.75.75 0 01-1.062-1.061l1.061-1.06a.75.75 0 011.06 0z" clipRule="evenodd" />
+            </svg>
+            Quick Build
+          </button>
           <button
             onClick={() => setShowSmartBuilder(true)}
             className="btn-secondary"
@@ -657,6 +669,13 @@ export default function Sessions() {
       <SmartSessionBuilder
         isOpen={showSmartBuilder}
         onClose={() => setShowSmartBuilder(false)}
+        onSessionCreated={() => fetchSessions()}
+      />
+
+      {/* Quick Class Builder */}
+      <QuickClassBuilder
+        isOpen={showQuickBuilder}
+        onClose={() => setShowQuickBuilder(false)}
         onSessionCreated={() => fetchSessions()}
       />
 

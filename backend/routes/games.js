@@ -15,6 +15,8 @@ router.get('/', protect, async (req, res) => {
       topic,
       favorite,
       search,
+      position,
+      technique,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
@@ -24,6 +26,16 @@ router.get('/', protect, async (req, res) => {
     // Topic filter
     if (topic && ['offensive', 'defensive', 'control', 'transition'].includes(topic)) {
       query.topic = topic;
+    }
+
+    // Position filter
+    if (position) {
+      query.position = position;
+    }
+
+    // Technique filter
+    if (technique) {
+      query.techniques = technique;
     }
 
     // Favorite filter
@@ -36,7 +48,8 @@ router.get('/', protect, async (req, res) => {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { skills: { $elemMatch: { $regex: search, $options: 'i' } } },
-        { coaching: { $regex: search, $options: 'i' } }
+        { coaching: { $regex: search, $options: 'i' } },
+        { techniques: { $elemMatch: { $regex: search, $options: 'i' } } }
       ];
     }
 
@@ -309,7 +322,7 @@ router.post('/', protect, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, topic, topPlayer, bottomPlayer, coaching, skills, aiGenerated, aiMetadata } = req.body;
+    const { name, topic, topPlayer, bottomPlayer, coaching, skills, aiGenerated, aiMetadata, position, techniques, gameType, difficulty } = req.body;
 
     const game = await Game.create({
       user: req.user._id,
@@ -319,6 +332,10 @@ router.post('/', protect, [
       bottomPlayer: bottomPlayer || '',
       coaching: coaching || '',
       skills: skills || [],
+      position: position || '',
+      techniques: techniques || [],
+      gameType: gameType || 'main',
+      difficulty: difficulty || 'intermediate',
       aiGenerated: aiGenerated || false,
       aiMetadata: aiMetadata || null
     });
@@ -341,7 +358,7 @@ router.put('/:id', protect, async (req, res) => {
       return res.status(404).json({ message: 'Game not found' });
     }
 
-    const allowedFields = ['name', 'topic', 'topPlayer', 'bottomPlayer', 'coaching', 'skills', 'favorite', 'rating', 'videoUrl', 'personalNotes', 'gameType', 'difficulty'];
+    const allowedFields = ['name', 'topic', 'topPlayer', 'bottomPlayer', 'coaching', 'skills', 'favorite', 'rating', 'videoUrl', 'personalNotes', 'gameType', 'difficulty', 'position', 'techniques', 'linkedGames'];
 
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
