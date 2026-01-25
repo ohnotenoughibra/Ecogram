@@ -110,6 +110,13 @@ export default function AIDesigner() {
       const response = await api.post('/ai/generate-variations', { game });
       setGeneratedVariations(response.data.allVariations);
       showToast('Variations generated!', 'success');
+      // Auto-scroll to show variations
+      setTimeout(() => {
+        const variationsSection = document.getElementById('generated-variations');
+        if (variationsSection) {
+          variationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     } catch (err) {
       showToast('Failed to generate variations', 'error');
     } finally {
@@ -1048,7 +1055,7 @@ export default function AIDesigner() {
 
           {/* Generated Variations Display */}
           {generatedVariations && (
-            <div className="mt-6 space-y-4">
+            <div id="generated-variations" className="mt-6 space-y-4 animate-fade-in">
               <h3 className="font-medium text-gray-900 dark:text-white">Generated Variations</h3>
               {['beginner', 'intermediate', 'advanced'].map(level => {
                 const variation = generatedVariations[level];
