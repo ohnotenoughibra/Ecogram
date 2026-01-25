@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import api from '../utils/api';
+import { useNavigate } from 'react-router-dom';
 
 const examplePrompts = [
   "Create a game to improve guard retention against pressure passers",
@@ -39,9 +40,10 @@ const difficulties = [
 ];
 
 export default function AIDesigner() {
-  const { createGame, showToast } = useApp();
+  const { createGame, showToast, games } = useApp();
+  const navigate = useNavigate();
 
-  const [mode, setMode] = useState('generate'); // 'generate' | 'search'
+  const [mode, setMode] = useState('generate'); // 'generate' | 'search' | 'variations'
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedGame, setGeneratedGame] = useState(null);
@@ -49,6 +51,19 @@ export default function AIDesigner() {
   const [editMode, setEditMode] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);
   const [generationSource, setGenerationSource] = useState(null);
+
+  // Duplicate detection state
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+
+  // Variations state
+  const [selectedGameForVariation, setSelectedGameForVariation] = useState(null);
+  const [generatedVariations, setGeneratedVariations] = useState(null);
+  const [loadingVariations, setLoadingVariations] = useState(false);
+
+  // Similar games state
+  const [similarGames, setSimilarGames] = useState(null);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
 
   // Check AI status on mount
   useEffect(() => {
@@ -61,6 +76,57 @@ export default function AIDesigner() {
       setAiStatus(response.data);
     } catch (err) {
       setAiStatus({ available: true, provider: 'template', features: { gameGeneration: true } });
+    }
+  };
+
+  // Check for duplicates when a game is generated
+  const checkForDuplicates = useCallback(async (game) => {
+    if (!game) return;
+    setCheckingDuplicates(true);
+    try {
+      const response = await api.post('/ai/check-duplicates', {
+        name: game.name,
+        topPlayer: game.topPlayer,
+        bottomPlayer: game.bottomPlayer,
+        skills: game.skills
+      });
+      if (response.data.hasDuplicates || response.data.hasSimilar) {
+        setDuplicateWarning(response.data);
+      } else {
+        setDuplicateWarning(null);
+      }
+    } catch (err) {
+      console.error('Failed to check duplicates:', err);
+      setDuplicateWarning(null);
+    } finally {
+      setCheckingDuplicates(false);
+    }
+  }, []);
+
+  // Generate skill level variations
+  const generateVariations = async (game) => {
+    setLoadingVariations(true);
+    try {
+      const response = await api.post('/ai/generate-variations', { game });
+      setGeneratedVariations(response.data.allVariations);
+      showToast('Variations generated!', 'success');
+    } catch (err) {
+      showToast('Failed to generate variations', 'error');
+    } finally {
+      setLoadingVariations(false);
+    }
+  };
+
+  // Find similar games in library
+  const findSimilarGames = async () => {
+    setLoadingSimilar(true);
+    try {
+      const response = await api.get('/ai/find-similar');
+      setSimilarGames(response.data);
+    } catch (err) {
+      showToast('Failed to find similar games', 'error');
+    } finally {
+      setLoadingSimilar(false);
     }
   };
 
@@ -82,6 +148,10 @@ export default function AIDesigner() {
       setGeneratedGame(game);
       setGenerationSource(source);
       setEditMode(false);
+      setDuplicateWarning(null);
+
+      // Check for duplicates
+      checkForDuplicates(game);
 
       if (source === 'claude') {
         showToast('Game generated with Claude AI (Anthropic)', 'success');
@@ -226,8 +296,9 @@ export default function AIDesigner() {
           onClick={() => {
             setMode('generate');
             setSearchResult(null);
+            setSimilarGames(null);
           }}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
             mode === 'generate'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400'
@@ -237,15 +308,53 @@ export default function AIDesigner() {
             <path d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1z" />
             <path fillRule="evenodd" d="M10 5a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd" />
           </svg>
-          Generate Game
+          <span className="hidden sm:inline">Generate</span>
+        </button>
+        <button
+          onClick={() => {
+            setMode('variations');
+            setGeneratedGame(null);
+            setSearchResult(null);
+            setGeneratedVariations(null);
+          }}
+          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+            mode === 'variations'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" />
+          </svg>
+          <span className="hidden sm:inline">Variations</span>
+        </button>
+        <button
+          onClick={() => {
+            setMode('manage');
+            setGeneratedGame(null);
+            setSearchResult(null);
+            findSimilarGames();
+          }}
+          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+            mode === 'manage'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+            <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+          </svg>
+          <span className="hidden sm:inline">Duplicates</span>
         </button>
         <button
           onClick={() => {
             setMode('search');
             setGeneratedGame(null);
+            setSimilarGames(null);
           }}
           disabled={aiStatus?.provider !== 'claude'}
-          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
             mode === 'search'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400'
@@ -254,14 +363,12 @@ export default function AIDesigner() {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
             <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
           </svg>
-          Search Solutions
-          {aiStatus?.provider !== 'claude' && (
-            <span className="text-xs opacity-75">(API key required)</span>
-          )}
+          <span className="hidden sm:inline">Search</span>
         </button>
       </div>
 
-      {/* Input Section */}
+      {/* Input Section - only for generate and search modes */}
+      {(mode === 'generate' || mode === 'search') && (
       <div className="card p-6 mb-6">
         <label className="label">
           {mode === 'generate'
@@ -328,6 +435,7 @@ export default function AIDesigner() {
           )}
         </button>
       </div>
+      )}
 
       {/* Search Results */}
       {searchResult && (
@@ -734,22 +842,402 @@ export default function AIDesigner() {
             </div>
           )}
 
+          {/* Duplicate Warning */}
+          {duplicateWarning && (duplicateWarning.hasDuplicates || duplicateWarning.hasSimilar) && (
+            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5">
+                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <h4 className="font-medium text-yellow-800 dark:text-yellow-200">
+                    {duplicateWarning.hasDuplicates ? 'Potential Duplicate Found!' : 'Similar Games Exist'}
+                  </h4>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                    {duplicateWarning.hasDuplicates
+                      ? 'This game appears to already exist in your library.'
+                      : 'You have similar games that might serve the same purpose.'}
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {[...duplicateWarning.duplicates, ...duplicateWarning.similar].slice(0, 3).map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-yellow-200 dark:border-yellow-700">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {item.game.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {item.similarity}% similar • {item.reason}
+                          </p>
+                        </div>
+                        <span className={`ml-2 px-2 py-0.5 text-xs rounded ${
+                          item.type === 'duplicate'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        }`}>
+                          {item.type === 'duplicate' ? 'Duplicate' : 'Similar'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Generate Variations Button */}
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => generateVariations(generatedGame)}
+              disabled={loadingVariations}
+              className="btn-secondary text-sm flex-1"
+            >
+              {loadingVariations ? (
+                <>
+                  <span className="spinner mr-2" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
+                    <path d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39z" />
+                  </svg>
+                  Generate Skill Variations
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Skill Level Variations */}
+          {generatedVariations && (
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-3">Skill Level Variations</h4>
+              <div className="grid gap-3">
+                {['beginner', 'intermediate', 'advanced'].map(level => {
+                  const variation = generatedVariations[level];
+                  if (!variation) return null;
+                  return (
+                    <div key={level} className="p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                            level === 'beginner' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                            level === 'intermediate' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {level.charAt(0).toUpperCase() + level.slice(1)}
+                          </span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {variation.name}
+                          </span>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const result = await createGame(variation);
+                            if (result.success) {
+                              showToast(`${level} variation added to library!`, 'success');
+                            }
+                          }}
+                          className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                        >
+                          Add to Library
+                        </button>
+                      </div>
+                      {variation.aiMetadata?.pedagogicalNote && (
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {variation.aiMetadata.pedagogicalNote}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={handleAddToLibrary}
-              className="btn-primary w-full"
+              className={`btn-primary w-full ${duplicateWarning?.hasDuplicates ? 'bg-yellow-600 hover:bg-yellow-700' : ''}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
                 <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
               </svg>
-              Add to Library
+              {duplicateWarning?.hasDuplicates ? 'Add Anyway' : 'Add to Library'}
             </button>
           </div>
         </div>
       )}
 
+      {/* Variations Mode */}
+      {mode === 'variations' && (
+        <div className="card p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Generate Skill Level Variations
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Select a game from your library to create beginner, intermediate, and advanced versions.
+          </p>
+
+          {/* Game selector */}
+          <div className="mb-4">
+            <label className="label">Select a Game</label>
+            <select
+              value={selectedGameForVariation?._id || ''}
+              onChange={(e) => {
+                const game = games?.find(g => g._id === e.target.value);
+                setSelectedGameForVariation(game);
+                setGeneratedVariations(null);
+              }}
+              className="input"
+            >
+              <option value="">Choose a game...</option>
+              {games?.map(game => (
+                <option key={game._id} value={game._id}>
+                  {game.name} ({game.difficulty || 'intermediate'})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedGameForVariation && (
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                {selectedGameForVariation.name}
+              </h3>
+              <div className="flex flex-wrap gap-2 mb-2">
+                <span className={`badge badge-${selectedGameForVariation.topic}`}>
+                  {selectedGameForVariation.topic}
+                </span>
+                <span className={`badge ${
+                  selectedGameForVariation.difficulty === 'beginner' ? 'bg-green-100 text-green-700' :
+                  selectedGameForVariation.difficulty === 'advanced' ? 'bg-red-100 text-red-700' :
+                  'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {selectedGameForVariation.difficulty || 'intermediate'}
+                </span>
+              </div>
+              {selectedGameForVariation.skills?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {selectedGameForVariation.skills.map((skill, idx) => (
+                    <span key={idx} className="chip text-xs">#{skill}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={() => selectedGameForVariation && generateVariations(selectedGameForVariation)}
+            disabled={!selectedGameForVariation || loadingVariations}
+            className="btn-primary w-full"
+          >
+            {loadingVariations ? (
+              <>
+                <span className="spinner mr-2" />
+                Generating Variations...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
+                  <path d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" />
+                </svg>
+                Generate All Variations
+              </>
+            )}
+          </button>
+
+          {/* Generated Variations Display */}
+          {generatedVariations && (
+            <div className="mt-6 space-y-4">
+              <h3 className="font-medium text-gray-900 dark:text-white">Generated Variations</h3>
+              {['beginner', 'intermediate', 'advanced'].map(level => {
+                const variation = generatedVariations[level];
+                if (!variation) return null;
+                const levelColors = {
+                  beginner: { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', badge: 'bg-green-500' },
+                  intermediate: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800', badge: 'bg-yellow-500' },
+                  advanced: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', badge: 'bg-red-500' }
+                };
+                const colors = levelColors[level];
+
+                return (
+                  <div key={level} className={`p-4 rounded-lg border ${colors.bg} ${colors.border}`}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`w-2 h-2 rounded-full ${colors.badge}`} />
+                          <span className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                            {level}
+                          </span>
+                        </div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">
+                          {variation.name}
+                        </h4>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const result = await createGame(variation);
+                          if (result.success) {
+                            showToast(`${level.charAt(0).toUpperCase() + level.slice(1)} version added!`, 'success');
+                          }
+                        }}
+                        className="btn-primary text-xs"
+                      >
+                        Add to Library
+                      </button>
+                    </div>
+
+                    {variation.aiMetadata?.pedagogicalNote && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        {variation.aiMetadata.pedagogicalNote}
+                      </p>
+                    )}
+
+                    {variation.aiMetadata?.constraints && (
+                      <div className="mb-2">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Key Constraints:</p>
+                        <ul className="text-xs text-gray-600 dark:text-gray-400 list-disc list-inside">
+                          {variation.aiMetadata.constraints.slice(0, 3).map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Duplicate Management Mode */}
+      {mode === 'manage' && (
+        <div className="card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Find Similar & Duplicate Games
+            </h2>
+            <button
+              onClick={findSimilarGames}
+              disabled={loadingSimilar}
+              className="btn-secondary text-sm"
+            >
+              {loadingSimilar ? (
+                <>
+                  <span className="spinner mr-1" />
+                  Scanning...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
+                    <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+                  </svg>
+                  Rescan
+                </>
+              )}
+            </button>
+          </div>
+
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Review games that might be duplicates or very similar. Consider merging or removing redundant games.
+          </p>
+
+          {loadingSimilar ? (
+            <div className="text-center py-12">
+              <span className="spinner mx-auto mb-3" />
+              <p className="text-gray-500 dark:text-gray-400">Analyzing your game library...</p>
+            </div>
+          ) : similarGames ? (
+            similarGames.groups.length > 0 ? (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                  <span>{similarGames.totalGames} games in library</span>
+                  <span>{similarGames.totalGroups} groups of similar games found</span>
+                </div>
+
+                {similarGames.groups.map((group, groupIdx) => (
+                  <div key={groupIdx} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-yellow-500">
+                        <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                        <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                      </svg>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {group.similar.length + 1} similar games
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {/* Primary game */}
+                      <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-lg border-2 border-primary-300 dark:border-primary-700">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">
+                            {group.primary.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs badge badge-${group.primary.topic}`}>
+                              {group.primary.topic}
+                            </span>
+                            {group.primary.difficulty && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {group.primary.difficulty}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 text-xs bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 rounded">
+                          Keep
+                        </span>
+                      </div>
+
+                      {/* Similar games */}
+                      {group.similar.map((similar, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-lg">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-white truncate">
+                              {similar.name}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-xs badge badge-${similar.topic}`}>
+                                {similar.topic}
+                              </span>
+                              <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                                {similar.similarity}% similar
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => navigate(`/games?edit=${similar._id}`)}
+                            className="text-xs text-gray-500 hover:text-primary-500 px-2"
+                          >
+                            View
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mx-auto mb-3 opacity-50">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="font-medium">No duplicates found!</p>
+                <p className="text-sm mt-1">Your game library looks clean.</p>
+              </div>
+            )
+          ) : (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <p>Click "Rescan" to analyze your game library</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Info section */}
-      {!generatedGame && !searchResult && (
+      {!generatedGame && !searchResult && mode !== 'variations' && mode !== 'manage' && (
         <div className="card p-6 bg-gray-50 dark:bg-gray-800/50">
           <h3 className="font-medium text-gray-900 dark:text-white mb-3">
             {mode === 'generate' ? 'About Constraint-Led Training' : 'About AI Search'}

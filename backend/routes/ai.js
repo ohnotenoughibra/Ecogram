@@ -380,6 +380,65 @@ const GAME_LIBRARY = {
       progressions: ['Basic hook sweep', 'Add arm drag', 'Include single leg X entries'],
       skills: ['butterfly guard', 'sweeps', 'guard passing', 'hooks'],
       keywords: ['butterfly', 'sweep', 'hook', 'arm drag', 'elevate']
+    },
+    {
+      name: 'Front Headlock Flow',
+      startPosition: 'Standing with snap down opportunity',
+      topPlayer: 'Snap to front headlock, work guillotine, darce, or anaconda. Win by submission or 3 clean go-behinds.',
+      bottomPlayer: 'Defend the front headlock, work to reguard or stand. Win by escaping 3 times.',
+      coaching: 'Attacker: keep head on hip side, constant pressure forward. Defender: posture up, clear the head.',
+      constraints: ['Start from standing', 'Reset after submission attempt or escape', 'No jumping guard'],
+      progressions: ['Snap down only', 'Add go-behind', 'Full front headlock series'],
+      skills: ['front headlock', 'guillotine', 'darce', 'anaconda', 'wrestling'],
+      keywords: ['front headlock', 'snap', 'guillotine', 'darce', 'anaconda', 'choke']
+    },
+    {
+      name: 'Single Leg X Entry Game',
+      startPosition: 'Open guard with feet on hips',
+      topPlayer: 'Pass without getting caught in leg entanglements. Win by passing to side control.',
+      bottomPlayer: 'Enter single leg X (ashi garami) position. Win by 3 clean entries with heel exposure.',
+      coaching: 'Guard player: control the knee line, elevate to off-balance. Top: keep knees together, posture.',
+      constraints: ['No submissions (positional only)', 'Reset after entry or pass', 'Top can stand'],
+      progressions: ['Basic entry only', 'Add outside ashi transition', 'Full leg lock flow'],
+      skills: ['single leg x', 'ashi garami', 'leg entanglement', 'guard retention'],
+      keywords: ['single leg x', 'slx', 'ashi', 'leg lock', 'heel hook', 'outside ashi']
+    }
+  ],
+
+  // WARMUP GAMES - Flow and movement focused
+  warmup: [
+    {
+      name: 'Position Flow Drill',
+      startPosition: 'Any position, partners take turns',
+      topPlayer: 'Flow through positions: side control, mount, back, north-south. Move at 50% with control.',
+      bottomPlayer: 'Allow movement but maintain frames. Practice defensive positioning without resistance.',
+      coaching: 'Focus on smooth transitions, proper weight distribution, and correct body positioning.',
+      constraints: ['50% speed maximum', 'No submissions', 'Move through all major positions'],
+      progressions: ['Attacker only moves', 'Add light frames', 'Both players active at 50%'],
+      skills: ['transitions', 'movement', 'body awareness', 'positioning'],
+      keywords: ['warmup', 'flow', 'drill', 'movement', 'transitions', 'warm up']
+    },
+    {
+      name: 'Guard Retention Flow',
+      startPosition: 'Open guard vs standing passer',
+      topPlayer: 'Walk around the guard slowly, testing entries. No explosive passes.',
+      bottomPlayer: 'Maintain guard using hip movement and frames. Focus on staying connected.',
+      coaching: 'This is about movement quality, not winning. Both players work on their movement patterns.',
+      constraints: ['30% speed', 'No passing or sweeping', 'Focus on connection and movement'],
+      progressions: ['Passer walks only', 'Add light pressure', 'Increase to 50% speed'],
+      skills: ['guard retention', 'hip movement', 'framing', 'body awareness'],
+      keywords: ['warmup', 'guard retention', 'flow', 'hip movement', 'warm up']
+    },
+    {
+      name: 'Grip Fighting Warm Up',
+      startPosition: 'Standing, neutral position',
+      topPlayer: 'Work for dominant grips: collar ties, wrist control, underhooks. Reset every 15 seconds.',
+      bottomPlayer: 'Same objective. Fight for grip dominance while staying relaxed.',
+      coaching: 'Focus on grip fighting principles: inside position, breaking grips efficiently, constant movement.',
+      constraints: ['No takedowns', '15 second rounds', 'Stay standing'],
+      progressions: ['Single grip focus', 'Two grip combinations', 'Add collar ties'],
+      skills: ['grip fighting', 'pummeling', 'underhooks', 'hand fighting'],
+      keywords: ['warmup', 'grip', 'pummel', 'hand fighting', 'warm up', 'standing']
     }
   ]
 };
@@ -398,6 +457,7 @@ function generateTemplateGame(prompt) {
 
   // Score each topic based on keyword matches
   for (const [topicName, games] of Object.entries(GAME_LIBRARY)) {
+    if (topicName === 'warmup') continue; // Handle warmup separately
     for (const game of games) {
       for (const keyword of game.keywords) {
         if (promptLower.includes(keyword)) {
@@ -410,6 +470,11 @@ function generateTemplateGame(prompt) {
       }
     }
   }
+
+  // Check for warmup specific keywords
+  const isWarmup = promptLower.includes('warmup') || promptLower.includes('warm up') ||
+                   promptLower.includes('flow') || promptLower.includes('light') ||
+                   promptLower.includes('easy') || promptLower.includes('beginner drill');
 
   // Find highest scoring topic
   let maxScore = 0;
@@ -435,22 +500,42 @@ function generateTemplateGame(prompt) {
   let bestGame = null;
   let bestMatchScore = 0;
 
-  for (const game of GAME_LIBRARY[topic]) {
-    let matchScore = 0;
-    for (const keyword of game.keywords) {
-      if (promptLower.includes(keyword)) {
-        matchScore += 1;
+  // If warmup requested, search warmup games first
+  if (isWarmup && GAME_LIBRARY.warmup) {
+    for (const game of GAME_LIBRARY.warmup) {
+      let matchScore = 1; // Base score for warmup match
+      for (const keyword of game.keywords) {
+        if (promptLower.includes(keyword)) {
+          matchScore += 2;
+        }
+      }
+      if (matchScore > bestMatchScore) {
+        bestMatchScore = matchScore;
+        bestGame = game;
+        gameType = 'warmup';
       }
     }
-    if (matchScore > bestMatchScore) {
-      bestMatchScore = matchScore;
-      bestGame = game;
+  }
+
+  // Search topic-specific games
+  if (GAME_LIBRARY[topic]) {
+    for (const game of GAME_LIBRARY[topic]) {
+      let matchScore = 0;
+      for (const keyword of game.keywords) {
+        if (promptLower.includes(keyword)) {
+          matchScore += 1;
+        }
+      }
+      if (matchScore > bestMatchScore) {
+        bestMatchScore = matchScore;
+        bestGame = game;
+      }
     }
   }
 
   // If no good match, pick random from topic
   if (!bestGame || bestMatchScore === 0) {
-    const games = GAME_LIBRARY[topic];
+    const games = GAME_LIBRARY[topic] || GAME_LIBRARY.transition;
     bestGame = games[Math.floor(Math.random() * games.length)];
   }
 
@@ -1203,6 +1288,421 @@ router.post('/suggest-game', protect, async (req, res) => {
   } catch (error) {
     console.error('Suggest game error:', error);
     res.status(500).json({ message: 'Failed to create game', error: error.message });
+  }
+});
+
+// @route   POST /api/ai/check-duplicates
+// @desc    Check for duplicate or similar games
+// @access  Private
+router.post('/check-duplicates', protect, async (req, res) => {
+  try {
+    const { name, topPlayer, bottomPlayer, skills } = req.body;
+    const Game = require('../models/Game');
+
+    // Get user's existing games
+    const userGames = await Game.find({ user: req.user._id });
+
+    const duplicates = [];
+    const similar = [];
+
+    // Normalize text for comparison
+    const normalize = (text) => (text || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    const normalizedName = normalize(name);
+    const normalizedTop = normalize(topPlayer);
+    const normalizedBottom = normalize(bottomPlayer);
+    const normalizedSkills = (skills || []).map(s => normalize(s));
+
+    for (const game of userGames) {
+      const gameName = normalize(game.name);
+      const gameTop = normalize(game.topPlayer);
+      const gameBottom = normalize(game.bottomPlayer);
+      const gameSkills = (game.skills || []).map(s => normalize(s));
+
+      // Calculate similarity scores
+      let nameScore = 0;
+      let contentScore = 0;
+      let skillScore = 0;
+
+      // Name similarity (exact match or contains)
+      if (gameName === normalizedName) {
+        nameScore = 100;
+      } else if (gameName.includes(normalizedName) || normalizedName.includes(gameName)) {
+        nameScore = 80;
+      } else {
+        // Word overlap
+        const gameWords = new Set(gameName.split(' ').filter(w => w.length > 2));
+        const newWords = new Set(normalizedName.split(' ').filter(w => w.length > 2));
+        const overlap = [...gameWords].filter(w => newWords.has(w)).length;
+        if (gameWords.size > 0 && newWords.size > 0) {
+          nameScore = Math.round((overlap / Math.max(gameWords.size, newWords.size)) * 60);
+        }
+      }
+
+      // Content similarity (top/bottom player instructions)
+      const gameContent = gameTop + ' ' + gameBottom;
+      const newContent = normalizedTop + ' ' + normalizedBottom;
+      if (gameContent.length > 20 && newContent.length > 20) {
+        // Word overlap in content
+        const gameContentWords = new Set(gameContent.split(' ').filter(w => w.length > 3));
+        const newContentWords = new Set(newContent.split(' ').filter(w => w.length > 3));
+        const contentOverlap = [...gameContentWords].filter(w => newContentWords.has(w)).length;
+        if (gameContentWords.size > 0 && newContentWords.size > 0) {
+          contentScore = Math.round((contentOverlap / Math.min(gameContentWords.size, newContentWords.size)) * 100);
+        }
+      }
+
+      // Skill similarity
+      if (gameSkills.length > 0 && normalizedSkills.length > 0) {
+        const skillOverlap = gameSkills.filter(s => normalizedSkills.some(ns => ns.includes(s) || s.includes(ns))).length;
+        skillScore = Math.round((skillOverlap / Math.max(gameSkills.length, normalizedSkills.length)) * 100);
+      }
+
+      // Overall similarity (weighted)
+      const overallScore = Math.round(nameScore * 0.4 + contentScore * 0.4 + skillScore * 0.2);
+
+      if (nameScore >= 90 || overallScore >= 85) {
+        duplicates.push({
+          game: {
+            _id: game._id,
+            name: game.name,
+            topic: game.topic,
+            skills: game.skills
+          },
+          similarity: overallScore,
+          type: 'duplicate',
+          reason: nameScore >= 90 ? 'Same or very similar name' : 'Very similar content'
+        });
+      } else if (overallScore >= 50 || nameScore >= 50 || contentScore >= 60) {
+        similar.push({
+          game: {
+            _id: game._id,
+            name: game.name,
+            topic: game.topic,
+            skills: game.skills
+          },
+          similarity: overallScore,
+          type: 'similar',
+          reason: contentScore >= 60 ? 'Similar instructions' :
+                  skillScore >= 70 ? 'Same skill focus' :
+                  'Related game'
+        });
+      }
+    }
+
+    // Sort by similarity
+    duplicates.sort((a, b) => b.similarity - a.similarity);
+    similar.sort((a, b) => b.similarity - a.similarity);
+
+    res.json({
+      duplicates: duplicates.slice(0, 3),
+      similar: similar.slice(0, 5),
+      hasDuplicates: duplicates.length > 0,
+      hasSimilar: similar.length > 0
+    });
+  } catch (error) {
+    console.error('Duplicate check error:', error);
+    res.status(500).json({ message: 'Failed to check for duplicates', error: error.message });
+  }
+});
+
+// @route   POST /api/ai/generate-variations
+// @desc    Generate beginner/intermediate/advanced variations of a game
+// @access  Private
+router.post('/generate-variations', protect, async (req, res) => {
+  try {
+    const { game, targetDifficulty } = req.body;
+
+    if (!game || !game.name) {
+      return res.status(400).json({ message: 'Game information is required' });
+    }
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    // Template-based variation generation
+    const generateTemplateVariation = (baseGame, difficulty) => {
+      const difficultyModifiers = {
+        beginner: {
+          namePrefix: 'Beginner: ',
+          constraints: [
+            'Start from a stable, non-threatening position',
+            'Both players move at 50% speed',
+            'Reset after each successful attempt',
+            'Coach can pause to give feedback'
+          ],
+          progressions: [
+            'Walk through the position with no resistance',
+            'Add light, predictable resistance',
+            'Increase to moderate resistance with pauses'
+          ],
+          topMod: 'Move slowly and deliberately. Focus on proper technique over speed. Allow your partner to work the position. Give clear feedback.',
+          bottomMod: 'Move slowly and deliberately. Focus on proper technique over speed. Ask questions if unsure. Focus on one concept at a time.',
+          coachingMod: 'Break down each movement. Emphasize correct body position before adding resistance. Celebrate small wins.'
+        },
+        intermediate: {
+          namePrefix: '',
+          constraints: baseGame.aiMetadata?.constraints || [
+            'Standard rules apply',
+            'Full speed allowed',
+            'Reset on position loss'
+          ],
+          progressions: baseGame.aiMetadata?.progressions || [
+            'Basic technique',
+            'Add combinations',
+            'Full situational sparring'
+          ],
+          topMod: '',
+          bottomMod: '',
+          coachingMod: ''
+        },
+        advanced: {
+          namePrefix: 'Advanced: ',
+          constraints: [
+            'Start from disadvantaged position',
+            'Time pressure (30-second rounds)',
+            'Opponent actively counters',
+            'Chain to next technique required'
+          ],
+          progressions: [
+            'Start with opponent having slight advantage',
+            'Add time pressure and fatigue element',
+            'Multiple opponents rotating in'
+          ],
+          topMod: 'Apply full resistance and active counters. Chain attacks together. Punish mistakes immediately. Work at competition intensity.',
+          bottomMod: 'Apply full resistance and active counters. Chain attacks together. Punish mistakes immediately. Work at competition intensity.',
+          coachingMod: 'Focus on timing windows, common counters, and recovery when technique fails. Address competition-specific scenarios.'
+        }
+      };
+
+      const mod = difficultyModifiers[difficulty];
+
+      return {
+        name: `${mod.namePrefix}${baseGame.name}`.replace(/^(Beginner: |Advanced: )*(Beginner: |Advanced: )/, '$2'),
+        topic: baseGame.topic,
+        topPlayer: mod.topMod ? `${baseGame.topPlayer}\n\n${mod.topMod}` : baseGame.topPlayer,
+        bottomPlayer: mod.bottomMod ? `${baseGame.bottomPlayer}\n\n${mod.bottomMod}` : baseGame.bottomPlayer,
+        coaching: mod.coachingMod ? `${baseGame.coaching}\n\n${mod.coachingMod}` : baseGame.coaching,
+        skills: baseGame.skills || [],
+        gameType: baseGame.gameType || 'main',
+        difficulty: difficulty,
+        aiGenerated: true,
+        aiMetadata: {
+          startPosition: baseGame.aiMetadata?.startPosition || 'As described',
+          constraints: mod.constraints,
+          winConditions: baseGame.aiMetadata?.winConditions || {
+            top: 'Achieve the objective',
+            bottom: 'Defend or counter'
+          },
+          progressions: mod.progressions,
+          pedagogicalNote: `${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} variation of "${baseGame.name}". ` +
+            (difficulty === 'beginner' ? 'Focus on learning the movements without pressure.' :
+             difficulty === 'advanced' ? 'Competition-level intensity with realistic resistance.' :
+             'Standard training intensity.')
+        }
+      };
+    };
+
+    if (!apiKey) {
+      // Generate template-based variation
+      const variation = generateTemplateVariation(game, targetDifficulty || 'intermediate');
+      return res.json({
+        variation,
+        source: 'template',
+        allVariations: targetDifficulty ? null : {
+          beginner: generateTemplateVariation(game, 'beginner'),
+          intermediate: generateTemplateVariation(game, 'intermediate'),
+          advanced: generateTemplateVariation(game, 'advanced')
+        }
+      });
+    }
+
+    // Use Claude for smarter variation generation
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 3000,
+        system: `You are an expert BJJ/NoGi grappling coach specializing in constraint-led training. You adapt training games for different skill levels while maintaining the core learning objective.
+
+For each difficulty level:
+- BEGINNER: Slower pace, simpler constraints, more guidance, focus on understanding the position
+- INTERMEDIATE: Standard pace, moderate complexity, balanced offense/defense
+- ADVANCED: Competition pace, complex scenarios, chained techniques, disadvantaged starts
+
+Return a JSON object with this structure:
+{
+  "beginner": { full game object for beginner level },
+  "intermediate": { full game object for intermediate level },
+  "advanced": { full game object for advanced level }
+}
+
+Each game object should have: name, topic, topPlayer, bottomPlayer, coaching, skills, gameType, difficulty, aiMetadata (with startPosition, constraints, winConditions, progressions, pedagogicalNote)`,
+        messages: [
+          {
+            role: 'user',
+            content: `Create beginner, intermediate, and advanced variations of this training game:
+
+Name: ${game.name}
+Topic: ${game.topic}
+Top Player: ${game.topPlayer}
+Bottom Player: ${game.bottomPlayer}
+Coaching: ${game.coaching}
+Skills: ${(game.skills || []).join(', ')}
+
+Keep the core learning objective but adjust complexity, pace, and constraints for each level.`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const variation = generateTemplateVariation(game, targetDifficulty || 'intermediate');
+      return res.json({
+        variation,
+        source: 'template',
+        apiError: true
+      });
+    }
+
+    const data = await response.json();
+    const textContent = data.content?.find(c => c.type === 'text')?.text;
+
+    let variations;
+    try {
+      const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+      variations = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(textContent);
+
+      // Ensure all levels exist
+      ['beginner', 'intermediate', 'advanced'].forEach(level => {
+        if (!variations[level]) {
+          variations[level] = generateTemplateVariation(game, level);
+        }
+        variations[level].aiGenerated = true;
+        variations[level].difficulty = level;
+      });
+    } catch (parseError) {
+      console.error('Failed to parse variations:', parseError);
+      const variation = generateTemplateVariation(game, targetDifficulty || 'intermediate');
+      return res.json({
+        variation,
+        source: 'template',
+        parseError: true
+      });
+    }
+
+    res.json({
+      variation: targetDifficulty ? variations[targetDifficulty] : variations.intermediate,
+      source: 'claude',
+      allVariations: variations
+    });
+  } catch (error) {
+    console.error('Generate variations error:', error);
+    res.status(500).json({ message: 'Failed to generate variations', error: error.message });
+  }
+});
+
+// @route   GET /api/ai/find-similar
+// @desc    Find similar games in user's library
+// @access  Private
+router.get('/find-similar', protect, async (req, res) => {
+  try {
+    const Game = require('../models/Game');
+    const userGames = await Game.find({ user: req.user._id });
+
+    // Group games by similarity
+    const similarGroups = [];
+    const processed = new Set();
+
+    const normalize = (text) => (text || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+
+    for (let i = 0; i < userGames.length; i++) {
+      if (processed.has(userGames[i]._id.toString())) continue;
+
+      const game = userGames[i];
+      const gameName = normalize(game.name);
+      const gameSkills = (game.skills || []).map(s => normalize(s));
+      const gameContent = normalize(game.topPlayer + ' ' + game.bottomPlayer);
+
+      const group = {
+        primary: {
+          _id: game._id,
+          name: game.name,
+          topic: game.topic,
+          skills: game.skills,
+          difficulty: game.difficulty
+        },
+        similar: []
+      };
+
+      for (let j = i + 1; j < userGames.length; j++) {
+        if (processed.has(userGames[j]._id.toString())) continue;
+
+        const other = userGames[j];
+        const otherName = normalize(other.name);
+        const otherSkills = (other.skills || []).map(s => normalize(s));
+        const otherContent = normalize(other.topPlayer + ' ' + other.bottomPlayer);
+
+        // Calculate similarity
+        let similarity = 0;
+
+        // Name similarity
+        if (gameName === otherName) {
+          similarity += 50;
+        } else {
+          const gameWords = gameName.split(' ').filter(w => w.length > 2);
+          const otherWords = otherName.split(' ').filter(w => w.length > 2);
+          const nameOverlap = gameWords.filter(w => otherWords.includes(w)).length;
+          similarity += (nameOverlap / Math.max(gameWords.length, otherWords.length, 1)) * 30;
+        }
+
+        // Skill similarity
+        if (gameSkills.length > 0 && otherSkills.length > 0) {
+          const skillOverlap = gameSkills.filter(s => otherSkills.some(os => os.includes(s) || s.includes(os))).length;
+          similarity += (skillOverlap / Math.max(gameSkills.length, otherSkills.length)) * 30;
+        }
+
+        // Content similarity
+        if (gameContent.length > 30 && otherContent.length > 30) {
+          const gameContentWords = new Set(gameContent.split(' ').filter(w => w.length > 3));
+          const otherContentWords = new Set(otherContent.split(' ').filter(w => w.length > 3));
+          const contentOverlap = [...gameContentWords].filter(w => otherContentWords.has(w)).length;
+          similarity += (contentOverlap / Math.min(gameContentWords.size, otherContentWords.size, 1)) * 40;
+        }
+
+        if (similarity >= 50) {
+          group.similar.push({
+            _id: other._id,
+            name: other.name,
+            topic: other.topic,
+            skills: other.skills,
+            difficulty: other.difficulty,
+            similarity: Math.round(similarity)
+          });
+          processed.add(other._id.toString());
+        }
+      }
+
+      if (group.similar.length > 0) {
+        processed.add(game._id.toString());
+        similarGroups.push(group);
+      }
+    }
+
+    // Sort groups by number of similar games
+    similarGroups.sort((a, b) => b.similar.length - a.similar.length);
+
+    res.json({
+      groups: similarGroups,
+      totalGroups: similarGroups.length,
+      totalGames: userGames.length
+    });
+  } catch (error) {
+    console.error('Find similar error:', error);
+    res.status(500).json({ message: 'Failed to find similar games', error: error.message });
   }
 });
 
