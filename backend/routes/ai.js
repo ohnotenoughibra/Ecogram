@@ -2598,4 +2598,169 @@ function generateSmartTemplateSuggestions(analysis, games, excludeIds = []) {
   return suggestions.slice(0, 3);
 }
 
+// @route   POST /api/ai/analyze-problem
+// @desc    Analyze a coaching problem and suggest targeted games
+// @access  Private
+router.post('/analyze-problem', protect, async (req, res) => {
+  try {
+    const { problem, category, position } = req.body;
+    const Game = require('../models/Game');
+
+    if (!problem || problem.trim().length === 0) {
+      return res.status(400).json({ message: 'Problem description is required' });
+    }
+
+    // Get user's existing games for context
+    const userGames = await Game.find({ user: req.user._id }).lean();
+    const existingGameNames = userGames.map(g => g.name.toLowerCase());
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    // Problem-specific game templates for fallback
+    const problemTemplates = {
+      guard_passed: [
+        { name: 'Guard Retention Survival', description: 'Maintain guard for time against aggressive passing', prompt: 'Create a guard retention game with progressive resistance levels', topic: 'defensive', matchScore: 95 },
+        { name: 'Hip Movement Drill', description: 'Focus on hip escapes and angle creation', prompt: 'Create a guard game focused on hip movement and re-guarding', topic: 'defensive', matchScore: 90 },
+        { name: 'Frame Recovery Game', description: 'Recover frames under pressure', prompt: 'Create a game where guard player must maintain frames vs passer', topic: 'defensive', matchScore: 85 }
+      ],
+      cant_finish: [
+        { name: 'Finish or Reset', description: 'Must submit within time limit', prompt: 'Create an offensive game with 30-second submission windows', topic: 'offensive', matchScore: 95 },
+        { name: 'Submission Chain Drill', description: 'Chain attacks when first is defended', prompt: 'Create a game requiring 3-attack chains before reset', topic: 'offensive', matchScore: 90 },
+        { name: 'Position to Submission', description: 'Control before attacking', prompt: 'Create a game requiring position control before submission attempts', topic: 'offensive', matchScore: 85 }
+      ],
+      stuck_bottom: [
+        { name: 'Sweep or Stand', description: 'Must escape bottom within time', prompt: 'Create a game where bottom player must sweep or stand up in 30 seconds', topic: 'transition', matchScore: 95 },
+        { name: 'Guard Offense Game', description: 'Points for sweep attempts and off-balancing', prompt: 'Create a guard game scoring sweeps and submission attempts', topic: 'transition', matchScore: 90 },
+        { name: 'Hip Bump Challenge', description: 'Use hip movement to create sweeps', prompt: 'Create a closed guard game focused on hip bump and scissor sweep entries', topic: 'transition', matchScore: 85 }
+      ],
+      loses_back: [
+        { name: 'Back Control Maintenance', description: 'Keep back for time against escapes', prompt: 'Create a back control game with points for time in position', topic: 'control', matchScore: 95 },
+        { name: 'Seatbelt Battle', description: 'Maintain seatbelt grip under pressure', prompt: 'Create a back control game focused on grip retention', topic: 'control', matchScore: 90 },
+        { name: 'Hook Recovery Drill', description: 'Recover hooks when defended', prompt: 'Create a game where back attacker must maintain or recover hooks', topic: 'control', matchScore: 85 }
+      ],
+      leg_lock_panic: [
+        { name: 'Leg Lock Survival', description: 'Escape leg entanglements safely', prompt: 'Create a defensive leg lock game focused on boot and rotation escapes', topic: 'defensive', matchScore: 95 },
+        { name: 'Ashi Escape Drill', description: 'Systematic escapes from ashi garami', prompt: 'Create a game escaping various leg lock positions', topic: 'defensive', matchScore: 90 },
+        { name: 'Leg Lock Awareness', description: 'Recognize and prevent entries', prompt: 'Create a passing game where passer must avoid leg entanglements', topic: 'control', matchScore: 85 }
+      ],
+      default: [
+        { name: 'Targeted Positional Round', description: 'Focused training on problem area', prompt: `Create a training game addressing: ${problem}`, topic: 'transition', matchScore: 80 },
+        { name: 'Problem-Focused Drill', description: 'Constraints designed for improvement', prompt: `Create a game with constraints that solve: ${problem}`, topic: 'transition', matchScore: 75 },
+        { name: 'Skill Builder Game', description: 'Progressive skill development', prompt: `Create a progressive training game for: ${problem}`, topic: 'transition', matchScore: 70 }
+      ]
+    };
+
+    if (!apiKey) {
+      // Template-based fallback
+      const templates = problemTemplates[category] || problemTemplates.default;
+      return res.json({
+        analysis: {
+          rootCause: 'Based on your description, this appears to be a common training challenge.',
+          keySkills: ['awareness', 'timing', 'positioning'],
+          claApproach: 'Use constraints that force students to solve this problem repeatedly under varying conditions.'
+        },
+        games: templates.filter(g => !existingGameNames.includes(g.name.toLowerCase())),
+        source: 'template'
+      });
+    }
+
+    // Call Claude for intelligent analysis
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2500,
+        temperature: 0.7,
+        system: `You are an expert NoGi grappling coach and motor learning specialist. A coach describes a problem they're seeing with their students. Your job is to:
+
+1. Analyze the ROOT CAUSE of the problem (not just symptoms)
+2. Identify KEY SKILLS that need development
+3. Suggest a CLA-BASED approach (constraints that guide discovery)
+4. Recommend 3 SPECIFIC training games that address the issue
+
+Be specific and practical. These are real coaching problems.
+
+Return ONLY this JSON:
+{
+  "analysis": {
+    "rootCause": "The underlying issue causing this problem",
+    "keySkills": ["skill1", "skill2", "skill3"],
+    "claApproach": "How to use constraints to address this"
+  },
+  "games": [
+    {
+      "name": "Specific game name",
+      "description": "What the game does and why it helps",
+      "prompt": "Detailed prompt to generate the full game",
+      "topic": "offensive|defensive|control|transition",
+      "matchScore": 85-99,
+      "reasoning": "Why this game specifically addresses the problem"
+    }
+  ]
+}`,
+        messages: [
+          {
+            role: 'user',
+            content: `My students have this problem: "${problem}"${position ? ` (mainly in ${position})` : ''}${category ? ` (${category} related)` : ''}
+
+Analyze the root cause and suggest 3 training games that will help them improve. Be specific - I need games I can actually run in class.`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      // Fallback to templates
+      const templates = problemTemplates[category] || problemTemplates.default;
+      return res.json({
+        analysis: {
+          rootCause: 'Unable to analyze deeply, but here are proven games for this type of issue.',
+          keySkills: ['fundamentals', 'repetition', 'progressive resistance'],
+          claApproach: 'Start with high success rate, gradually increase difficulty.'
+        },
+        games: templates.filter(g => !existingGameNames.includes(g.name.toLowerCase())),
+        source: 'template'
+      });
+    }
+
+    const data = await response.json();
+    const textContent = data.content?.find(c => c.type === 'text')?.text;
+
+    let result;
+    try {
+      const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(textContent);
+    } catch (parseError) {
+      const templates = problemTemplates[category] || problemTemplates.default;
+      return res.json({
+        analysis: {
+          rootCause: 'Based on your description, this is a common training challenge.',
+          keySkills: ['awareness', 'timing', 'decision-making'],
+          claApproach: 'Use game-based constraints to create repetition under realistic conditions.'
+        },
+        games: templates.filter(g => !existingGameNames.includes(g.name.toLowerCase())),
+        source: 'template'
+      });
+    }
+
+    // Filter out games they already have
+    if (result.games) {
+      result.games = result.games.filter(g =>
+        !existingGameNames.includes(g.name.toLowerCase())
+      );
+    }
+
+    res.json({ ...result, source: 'claude' });
+
+  } catch (error) {
+    console.error('Problem analysis error:', error);
+    res.status(500).json({ message: 'Failed to analyze problem', error: error.message });
+  }
+});
+
 module.exports = router;

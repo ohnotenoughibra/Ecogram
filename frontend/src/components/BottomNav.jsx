@@ -10,7 +10,9 @@ const navItems = [
 ];
 
 const moreItems = [
+  { path: '/problems', label: 'Problem Solver', icon: 'stethoscope', description: 'Find games for student issues' },
   { path: '/ai', label: 'AI Designer', icon: 'sparkles', description: 'Generate training games' },
+  { path: '/learn', label: 'Learn CLA', icon: 'book', description: 'Coaching & pedagogy' },
   { path: '/competition', label: 'Comp Prep', icon: 'trophy', description: 'Competition countdown' },
   { path: '/goals', label: 'Goals', icon: 'target', description: 'Training milestones' },
   { path: '/profile', label: 'Profile', icon: 'user', description: 'Account settings' }
@@ -60,6 +62,16 @@ const icons = {
   user: (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
       <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
+    </svg>
+  ),
+  stethoscope: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+      <path fillRule="evenodd" d="M3.5 2A1.5 1.5 0 002 3.5V5c0 1.149.15 2.263.43 3.326a13.022 13.022 0 009.244 9.244c1.063.28 2.177.43 3.326.43h1.5a1.5 1.5 0 001.5-1.5v-1.148a1.5 1.5 0 00-1.175-1.465l-3.223-.716a1.5 1.5 0 00-1.767 1.052l-.267.933a9.77 9.77 0 01-4.168-3.122 9.77 9.77 0 01-3.122-4.168l.933-.267a1.5 1.5 0 001.052-1.767l-.716-3.223A1.5 1.5 0 004.648 2H3.5zm9.5 8a3 3 0 100-6 3 3 0 000 6zm-1-3a1 1 0 112 0 1 1 0 01-2 0z" clipRule="evenodd" />
+    </svg>
+  ),
+  book: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+      <path d="M10.75 16.82A7.462 7.462 0 0115 15.5c.71 0 1.396.098 2.046.282A.75.75 0 0018 15.06v-11a.75.75 0 00-.546-.721A9.006 9.006 0 0015 3a8.963 8.963 0 00-4.25 1.065V16.82zM9.25 4.065A8.963 8.963 0 005 3c-.85 0-1.673.118-2.454.339A.75.75 0 002 4.06v11a.75.75 0 00.954.721A7.506 7.506 0 015 15.5c1.579 0 3.042.487 4.25 1.32V4.065z" />
     </svg>
   )
 };

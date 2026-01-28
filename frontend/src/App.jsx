@@ -31,6 +31,8 @@ import Import from './pages/Import';
 import Practice from './pages/Practice';
 import CompetitionPrep from './pages/CompetitionPrep';
 import Goals from './pages/Goals';
+import ProblemSolver from './pages/ProblemSolver';
+import Learn from './pages/Learn';
 
 // Protected route wrapper
 function ProtectedRoute({ children }) {
@@ -315,6 +317,26 @@ export default function App() {
           <ProtectedRoute>
             <MainLayout>
               <Goals />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/problems"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <ProblemSolver />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/learn"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Learn />
             </MainLayout>
           </ProtectedRoute>
         }
