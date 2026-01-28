@@ -396,39 +396,40 @@ export default function Sessions() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-primary-500">
-              <path d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h12.5c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0016.25 5h-4.836a.25.25 0 01-.177-.073L9.823 3.513A1.75 1.75 0 008.586 3H3.75zM3.75 9A1.75 1.75 0 002 10.75v4.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0018 15.25v-4.5A1.75 1.75 0 0016.25 9H3.75z" />
-            </svg>
             Sessions
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             Plan and track your training sessions
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowQuickBuilder(true)}
-            className="btn-secondary"
-            title="Build a class by position"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
-              <path fillRule="evenodd" d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1zM5.05 3.05a.75.75 0 011.06 0l1.062 1.06a.75.75 0 11-1.061 1.062L5.05 4.11a.75.75 0 010-1.06zm9.9 0a.75.75 0 010 1.06l-1.06 1.062a.75.75 0 01-1.062-1.061l1.061-1.06a.75.75 0 011.06 0z" clipRule="evenodd" />
-            </svg>
-            Quick Build
-          </button>
-          <button
-            onClick={() => setShowSmartBuilder(true)}
-            className="btn-secondary"
-            title="Auto-generate a balanced session"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
-              <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.683a1 1 0 01-.633-.633L6.95 5.684z" />
-            </svg>
-            Smart Build
-          </button>
+        <div className="flex items-center gap-2">
+          {/* Build options grouped as subtle secondary actions */}
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <button
+              onClick={() => setShowQuickBuilder(true)}
+              className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm transition-all flex items-center gap-1.5"
+              title="Build a class by position"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M8 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 018 1zM4.11 2.111a.75.75 0 011.06 0l1.062 1.06a.75.75 0 11-1.061 1.062L4.11 3.172a.75.75 0 010-1.06zm7.78 0a.75.75 0 010 1.06l-1.06 1.062a.75.75 0 01-1.062-1.061l1.061-1.06a.75.75 0 011.06 0z" clipRule="evenodd" />
+              </svg>
+              Quick
+            </button>
+            <button
+              onClick={() => setShowSmartBuilder(true)}
+              className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm transition-all flex items-center gap-1.5"
+              title="Auto-generate a balanced session"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path d="M13.442 1.543a.75.75 0 00-1.384 0l-.18.54a.75.75 0 01-.47.47l-.54.18a.75.75 0 000 1.384l.54.18a.75.75 0 01.47.47l.18.54a.75.75 0 001.384 0l.18-.54a.75.75 0 01.47-.47l.54-.18a.75.75 0 000-1.384l-.54-.18a.75.75 0 01-.47-.47l-.18-.54zM5.839 4.728a.75.75 0 00-1.378 0l-.475 1.137a.75.75 0 01-.424.424l-1.137.475a.75.75 0 000 1.378l1.137.475a.75.75 0 01.424.424l.475 1.137a.75.75 0 001.378 0l.475-1.137a.75.75 0 01.424-.424l1.137-.475a.75.75 0 000-1.378l-1.137-.475a.75.75 0 01-.424-.424l-.475-1.137z" />
+              </svg>
+              Smart
+            </button>
+          </div>
+          {/* Primary action */}
           <button
             onClick={() => {
               setEditingSession(null);
@@ -436,7 +437,7 @@ export default function Sessions() {
               setScheduledDate('');
               setShowCreateModal(true);
             }}
-            className="btn-primary"
+            className="btn-primary shadow-sm"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
               <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -446,54 +447,95 @@ export default function Sessions() {
         </div>
       </div>
 
-      {/* Today's Quick Start */}
+      {/* Today's Quick Start - More prominent with multiple sessions */}
       {categorizedSessions.todaySessions.length > 0 && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Today's Training</h3>
-              <p className="text-sm text-primary-100">
-                {categorizedSessions.todaySessions[0].name}
-                {categorizedSessions.todaySessions.length > 1 &&
-                  ` +${categorizedSessions.todaySessions.length - 1} more`}
-              </p>
+        <div className="mb-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl text-white overflow-hidden shadow-lg shadow-primary-500/20">
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M1 8a7 7 0 1114 0A7 7 0 011 8zm7.75-4.25a.75.75 0 00-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5h-2.5v-3.5z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-lg">Today's Training</h3>
             </div>
-            <button
-              onClick={() => handleStartSession(categorizedSessions.todaySessions[0])}
-              className="px-4 py-2 bg-white text-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors"
-            >
-              Start Now
-            </button>
+            <div className="space-y-2">
+              {categorizedSessions.todaySessions.map((todaySession, idx) => (
+                <div key={todaySession._id} className="flex items-center justify-between bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-sm font-mono text-primary-200">{idx + 1}</span>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{todaySession.name}</p>
+                      <p className="text-xs text-primary-200">{todaySession.games?.length || 0} games</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleStartSession(todaySession)}
+                    className="flex-shrink-0 px-4 py-2 bg-white text-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors text-sm shadow-sm"
+                  >
+                    Start
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* View Toggle & Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        {/* Filter Tabs */}
-        <div className="flex gap-1 overflow-x-auto no-scrollbar">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        {/* Filter Tabs - With icons */}
+        <div className="flex gap-1 overflow-x-auto no-scrollbar pb-0.5">
           {[
-            { key: 'all', label: 'All', count: sessions.filter(s => !s.isTemplate).length },
-            { key: 'upcoming', label: 'Upcoming', count: categorizedSessions.upcoming.length },
-            { key: 'recent', label: 'Recent', count: categorizedSessions.recent.length },
-            { key: 'favorites', label: 'Favorites', count: categorizedSessions.favorites.length },
-            { key: 'templates', label: 'Templates', count: templates.length, icon: '📋' }
+            {
+              key: 'all',
+              label: 'All',
+              count: sessions.filter(s => !s.isTemplate).length,
+              icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5"><path d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h8.5c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0012.25 5H9.164a.25.25 0 01-.177-.073L7.823 3.513A1.75 1.75 0 006.586 3H3.75zM3.75 9A1.75 1.75 0 002 10.75v2.5c0 .966.784 1.75 1.75 1.75h8.5A1.75 1.75 0 0014 13.25v-2.5A1.75 1.75 0 0012.25 9H3.75z" /></svg>
+            },
+            {
+              key: 'upcoming',
+              label: 'Upcoming',
+              count: categorizedSessions.upcoming.length,
+              icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5"><path fillRule="evenodd" d="M4 1.75a.75.75 0 01.75.75V3h6.5V2.5a.75.75 0 011.5 0V3h.25A2.75 2.75 0 0115.75 5.75v7.5A2.75 2.75 0 0113 16H3A2.75 2.75 0 01.25 13.25v-7.5A2.75 2.75 0 013 3h.25V2.5A.75.75 0 014 1.75zM1.75 7.75v5.5c0 .69.56 1.25 1.25 1.25h10c.69 0 1.25-.56 1.25-1.25v-5.5H1.75z" clipRule="evenodd" /></svg>
+            },
+            {
+              key: 'recent',
+              label: 'Recent',
+              count: categorizedSessions.recent.length,
+              icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5"><path fillRule="evenodd" d="M1 8a7 7 0 1114 0A7 7 0 011 8zm7.75-4.25a.75.75 0 00-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5h-2.5v-3.5z" clipRule="evenodd" /></svg>
+            },
+            {
+              key: 'favorites',
+              label: 'Favorites',
+              count: categorizedSessions.favorites.length,
+              icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5"><path d="M7.433 1.963a.612.612 0 011.134 0l1.358 3.386a.612.612 0 00.494.376l3.6.389c.53.058.744.716.36 1.107l-2.698 2.756a.612.612 0 00-.189.584l.75 3.64c.107.52-.443.92-.917.672l-3.14-1.646a.612.612 0 00-.57 0l-3.14 1.646c-.474.249-1.024-.152-.917-.672l.75-3.64a.612.612 0 00-.189-.584L1.621 7.221c-.384-.39-.17-1.05.36-1.107l3.6-.389a.612.612 0 00.494-.376L7.433 1.963z" /></svg>
+            },
+            {
+              key: 'templates',
+              label: 'Templates',
+              count: templates.length,
+              icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5"><path d="M5 3.5A1.5 1.5 0 016.5 2h3a1.5 1.5 0 011.5 1.5V5h2.5A1.5 1.5 0 0115 6.5v7a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 13.5v-7A1.5 1.5 0 012.5 5H5V3.5zm1.5 0V5h3V3.5a.5.5 0 00-.5-.5h-2a.5.5 0 00-.5.5z" /></svg>
+            }
           ].map(tab => (
             <button
               key={tab.key}
               onClick={() => setFilterTab(tab.key)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
                 filterTab === tab.key
-                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
+              <span className={filterTab === tab.key ? 'text-primary-500 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}>
+                {tab.icon}
+              </span>
               {tab.label}
               {tab.count > 0 && (
-                <span className={`ml-1.5 px-1.5 py-0.5 rounded text-xs ${
+                <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${
                   filterTab === tab.key
-                    ? 'bg-primary-200 dark:bg-primary-800'
-                    : 'bg-gray-200 dark:bg-gray-700'
+                    ? 'bg-primary-200 dark:bg-primary-800 text-primary-800 dark:text-primary-300'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                 }`}>
                   {tab.count}
                 </span>
@@ -503,30 +545,30 @@ export default function Sessions() {
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-shrink-0">
           <button
             onClick={() => setViewMode('list')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${
               viewMode === 'list'
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 inline mr-1">
-              <path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" clipRule="evenodd" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M2 4a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4zm0 4a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H2.75A.75.75 0 012 8zm0 4a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H2.75A.75.75 0 012 12z" clipRule="evenodd" />
             </svg>
             List
           </button>
           <button
             onClick={() => setViewMode('calendar')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${
               viewMode === 'calendar'
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 inline mr-1">
-              <path fillRule="evenodd" d="M5.75 2a.75.75 0 01.75.75V4h7V2.75a.75.75 0 011.5 0V4h.25A2.75 2.75 0 0118 6.75v8.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25v-8.5A2.75 2.75 0 014.75 4H5V2.75A.75.75 0 015.75 2zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75z" clipRule="evenodd" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M4 1.75a.75.75 0 01.75.75V3h6.5V2.5a.75.75 0 011.5 0V3h.25A2.75 2.75 0 0115.75 5.75v7.5A2.75 2.75 0 0113 16H3A2.75 2.75 0 01.25 13.25v-7.5A2.75 2.75 0 013 3h.25V2.5A.75.75 0 014 1.75zM1.75 7.75v5.5c0 .69.56 1.25 1.25 1.25h10c.69 0 1.25-.56 1.25-1.25v-5.5H1.75z" clipRule="evenodd" />
             </svg>
             Calendar
           </button>
@@ -705,33 +747,39 @@ export default function Sessions() {
             </div>
           )}
 
-          {/* Smart Insights */}
-          {filterTab === 'all' && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {sessions.length}
+          {/* Smart Insights - Compact inline stats */}
+          {filterTab === 'all' && sessions.filter(s => !s.isTemplate).length > 0 && (
+            <div className="flex items-center gap-4 mb-6 px-1 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <span className="text-base font-bold text-gray-700 dark:text-gray-300">{sessions.filter(s => !s.isTemplate).length}</span>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Total Sessions</div>
+                <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">Total</span>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
-                <div className="text-2xl font-bold text-primary-500">
-                  {categorizedSessions.upcoming.length}
+              {categorizedSessions.upcoming.length > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
+                    <span className="text-base font-bold text-primary-600 dark:text-primary-400">{categorizedSessions.upcoming.length}</span>
+                  </div>
+                  <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">Upcoming</span>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Upcoming</div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
-                <div className="text-2xl font-bold text-green-500">
-                  {categorizedSessions.recent.length}
+              )}
+              {categorizedSessions.recent.length > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                    <span className="text-base font-bold text-green-600 dark:text-green-400">{categorizedSessions.recent.length}</span>
+                  </div>
+                  <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">This Week</span>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">This Week</div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
-                <div className="text-2xl font-bold text-yellow-500">
-                  {categorizedSessions.favorites.length}
+              )}
+              {categorizedSessions.favorites.length > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-8 h-8 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
+                    <span className="text-base font-bold text-yellow-600 dark:text-yellow-400">{categorizedSessions.favorites.length}</span>
+                  </div>
+                  <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">Favorites</span>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Favorites</div>
-              </div>
+              )}
             </div>
           )}
 
@@ -740,35 +788,43 @@ export default function Sessions() {
             /* Templates View */
             <div>
               {templates.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-3xl">📋</span>
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/30 dark:to-purple-900/10 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-purple-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Templates Yet</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
-                    Save your favorite sessions as templates to quickly create similar training plans.
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Templates Yet</h3>
+                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    Save your sessions as templates to quickly replicate training plans.
                   </p>
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                   {templates.map(template => (
-                    <div key={template._id} className="card p-4 hover:shadow-md transition-shadow">
+                    <div key={template._id} className="card p-4 hover:shadow-md transition-all group border border-gray-200 dark:border-gray-700">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">📋</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5 text-purple-500">
+                              <path d="M5 3.5A1.5 1.5 0 016.5 2h3a1.5 1.5 0 011.5 1.5V5h2.5A1.5 1.5 0 0115 6.5v7a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 13.5v-7A1.5 1.5 0 012.5 5H5V3.5zm1.5 0V5h3V3.5a.5.5 0 00-.5-.5h-2a.5.5 0 00-.5.5z" />
+                            </svg>
+                          </div>
                           <div>
                             <h3 className="font-semibold text-gray-900 dark:text-white">
                               {template.templateName || template.name}
                             </h3>
-                            <p className="text-xs text-gray-500">
-                              {template.games?.length || 0} games
-                              {template.usageCount > 0 && ` • Used ${template.usageCount}x`}
+                            <p className="text-xs text-gray-500 flex items-center gap-2">
+                              <span>{template.games?.length || 0} games</span>
+                              {template.usageCount > 0 && (
+                                <span className="text-purple-500">Used {template.usageCount}x</span>
+                              )}
                             </p>
                           </div>
                         </div>
                         <button
                           onClick={() => handleDeleteTemplateClick(template)}
-                          className="btn-icon text-gray-400 hover:text-red-500"
+                          className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
                           title="Delete template"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -784,27 +840,32 @@ export default function Sessions() {
                       )}
 
                       {/* Games preview */}
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {template.games?.slice(0, 4).map((g, idx) => (
-                          <span
-                            key={idx}
-                            className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded truncate max-w-[100px]"
-                          >
-                            {g.game?.name || 'Game'}
-                          </span>
-                        ))}
-                        {template.games?.length > 4 && (
-                          <span className="text-xs text-gray-400">
-                            +{template.games.length - 4} more
-                          </span>
-                        )}
-                      </div>
+                      {template.games?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {template.games?.slice(0, 4).map((g, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md truncate max-w-[120px]"
+                            >
+                              {g.game?.name || 'Game'}
+                            </span>
+                          ))}
+                          {template.games?.length > 4 && (
+                            <span className="text-xs text-gray-400 py-1">
+                              +{template.games.length - 4} more
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <button
                         onClick={() => handleUseTemplate(template)}
-                        className="btn-primary w-full text-sm"
+                        className="w-full py-2.5 px-4 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-xl transition-colors flex items-center justify-center gap-1.5"
                       >
-                        Use This Template
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                          <path d="M6.3 2.841A1.5 1.5 0 005 4.11V11.89a1.5 1.5 0 002.3 1.269l5.344-3.89a1.5 1.5 0 000-2.538L7.3 2.84z" />
+                        </svg>
+                        Use Template
                       </button>
                     </div>
                   ))}
@@ -826,24 +887,51 @@ export default function Sessions() {
               ))}
             </div>
           ) : sessions.length === 0 ? (
-            <div className="text-center py-12">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-              </svg>
-              <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No sessions yet</h3>
-              <p className="mt-1 text-gray-500 dark:text-gray-400">
-                Create a session to organize your training games.
+            <div className="text-center py-16">
+              <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-900/10 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-primary-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Build Your First Session</h3>
+              <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
+                Group your training games into structured sessions for class.
               </p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="btn-primary mt-4"
-              >
-                Create your first session
-              </button>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => {
+                    setEditingSession(null);
+                    setSessionName('');
+                    setScheduledDate('');
+                    setShowCreateModal(true);
+                  }}
+                  className="btn-primary shadow-sm"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                  </svg>
+                  Create Session
+                </button>
+                <button
+                  onClick={() => setShowSmartBuilder(true)}
+                  className="btn-secondary"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 mr-1">
+                    <path d="M13.442 1.543a.75.75 0 00-1.384 0l-.18.54a.75.75 0 01-.47.47l-.54.18a.75.75 0 000 1.384l.54.18a.75.75 0 01.47.47l.18.54a.75.75 0 001.384 0l.18-.54a.75.75 0 01.47-.47l.54-.18a.75.75 0 000-1.384l-.54-.18a.75.75 0 01-.47-.47l-.18-.54zM5.839 4.728a.75.75 0 00-1.378 0l-.475 1.137a.75.75 0 01-.424.424l-1.137.475a.75.75 0 000 1.378l1.137.475a.75.75 0 01.424.424l.475 1.137a.75.75 0 001.378 0l.475-1.137a.75.75 0 01.424-.424l1.137-.475a.75.75 0 000-1.378l-1.137-.475a.75.75 0 01-.424-.424l-.475-1.137z" />
+                  </svg>
+                  Smart Build
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              <p>No sessions in this category</p>
+            <div className="text-center py-16">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-gray-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </div>
+              <p className="text-gray-500 dark:text-gray-400 font-medium">No sessions match this filter</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Try a different category or create a new session</p>
             </div>
           )}
         </>
