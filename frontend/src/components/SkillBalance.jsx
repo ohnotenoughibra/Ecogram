@@ -98,55 +98,34 @@ const topicInfo = {
 };
 
 export default function SkillBalance({ compact = false }) {
-  const { games } = useApp();
-  const [topicCounts, setTopicCounts] = useState({});
-  const [positionCounts, setPositionCounts] = useState({});
-  const [weakestTopic, setWeakestTopic] = useState(null);
-  const [weakestPosition, setWeakestPosition] = useState(null);
+  const { stats, fetchStats } = useApp();
   const [showDetails, setShowDetails] = useState(false);
   const [viewMode, setViewMode] = useState('topics'); // 'topics' | 'positions'
 
+  // Fetch stats on mount
   useEffect(() => {
-    // Count games by topic
-    const counts = { offensive: 0, defensive: 0, control: 0, transition: 0 };
-    const posCounts = {};
+    fetchStats();
+  }, [fetchStats]);
 
-    games.forEach(game => {
-      if (game.topic && counts.hasOwnProperty(game.topic)) {
-        counts[game.topic]++;
-      }
-      // Count positions
-      if (game.position && game.position !== '') {
-        posCounts[game.position] = (posCounts[game.position] || 0) + 1;
-      }
-    });
+  // Get data from stats
+  const topicCounts = stats?.topicDistribution || { offensive: 0, defensive: 0, control: 0, transition: 0 };
+  const positionCounts = stats?.positionDistribution || {};
+  const totalGamesInLibrary = stats?.totalGames || 0;
+  const gamesWithPositions = stats?.gamesWithPositions || 0;
 
-    setTopicCounts(counts);
-    setPositionCounts(posCounts);
-
-    // Find weakest topic
-    const entries = Object.entries(counts);
-    if (entries.length > 0) {
-      const weakest = entries.reduce((min, [topic, count]) =>
-        count < min.count ? { topic, count } : min
-      , { topic: entries[0][0], count: entries[0][1] });
-      setWeakestTopic(weakest.topic);
-    }
-
-    // Find weakest position (with at least some positions tracked)
-    const posEntries = Object.entries(posCounts);
-    if (posEntries.length > 2) {
-      const weakestPos = posEntries.reduce((min, [pos, count]) =>
-        count < min.count ? { position: pos, count } : min
-      , { position: posEntries[0][0], count: posEntries[0][1] });
-      setWeakestPosition(weakestPos.position);
-    }
-  }, [games]);
-
+  // Calculate totals
   const totalGames = Object.values(topicCounts).reduce((a, b) => a + b, 0);
   const maxCount = Math.max(...Object.values(topicCounts), 1);
-  const maxPositionCount = Math.max(...Object.values(positionCounts), 1);
   const totalPositionGames = Object.values(positionCounts).reduce((a, b) => a + b, 0);
+
+  // Find weakest topic
+  const weakestTopic = useMemo(() => {
+    const entries = Object.entries(topicCounts);
+    if (entries.length === 0 || totalGames === 0) return null;
+    return entries.reduce((min, [topic, count]) =>
+      count < min.count ? { topic, count } : min
+    , { topic: entries[0][0], count: entries[0][1] }).topic;
+  }, [topicCounts, totalGames]);
 
   // Calculate balance score for topics (0-100, 100 being perfectly balanced)
   const average = totalGames / 4;
@@ -241,22 +220,22 @@ export default function SkillBalance({ compact = false }) {
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Games with topics</span>
               <span className={`font-medium ${
-                totalGames / games.length >= 0.5 ? 'text-green-600' :
-                totalGames / games.length >= 0.2 ? 'text-yellow-600' : 'text-red-600'
+                totalGames / totalGamesInLibrary >= 0.5 ? 'text-green-600' :
+                totalGames / totalGamesInLibrary >= 0.2 ? 'text-yellow-600' : 'text-red-600'
               }`}>
-                {totalGames} of {games.length}
+                {totalGames} of {totalGamesInLibrary}
               </span>
             </div>
             <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1.5">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  totalGames / games.length >= 0.5 ? 'bg-green-500' :
-                  totalGames / games.length >= 0.2 ? 'bg-yellow-500' : 'bg-red-500'
+                  totalGames / totalGamesInLibrary >= 0.5 ? 'bg-green-500' :
+                  totalGames / totalGamesInLibrary >= 0.2 ? 'bg-yellow-500' : 'bg-red-500'
                 }`}
-                style={{ width: `${games.length > 0 ? (totalGames / games.length) * 100 : 0}%` }}
+                style={{ width: `${totalGamesInLibrary > 0 ? (totalGames / totalGamesInLibrary) * 100 : 0}%` }}
               />
             </div>
-            {totalGames < games.length * 0.5 && (
+            {totalGames < totalGamesInLibrary * 0.5 && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                 Add topics to more games for better balance tracking
               </p>
@@ -329,22 +308,22 @@ export default function SkillBalance({ compact = false }) {
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Games with positions</span>
               <span className={`font-medium ${
-                totalPositionGames / totalGames >= 0.5 ? 'text-green-600' :
-                totalPositionGames / totalGames >= 0.2 ? 'text-yellow-600' : 'text-red-600'
+                totalPositionGames / totalGamesInLibrary >= 0.5 ? 'text-green-600' :
+                totalPositionGames / totalGamesInLibrary >= 0.2 ? 'text-yellow-600' : 'text-red-600'
               }`}>
-                {totalPositionGames} of {totalGames}
+                {totalPositionGames} of {totalGamesInLibrary}
               </span>
             </div>
             <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1.5">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  totalPositionGames / totalGames >= 0.5 ? 'bg-green-500' :
-                  totalPositionGames / totalGames >= 0.2 ? 'bg-yellow-500' : 'bg-red-500'
+                  totalPositionGames / totalGamesInLibrary >= 0.5 ? 'bg-green-500' :
+                  totalPositionGames / totalGamesInLibrary >= 0.2 ? 'bg-yellow-500' : 'bg-red-500'
                 }`}
-                style={{ width: `${totalGames > 0 ? (totalPositionGames / totalGames) * 100 : 0}%` }}
+                style={{ width: `${totalGamesInLibrary > 0 ? (totalPositionGames / totalGamesInLibrary) * 100 : 0}%` }}
               />
             </div>
-            {totalPositionGames < totalGames * 0.5 && (
+            {totalPositionGames < totalGamesInLibrary * 0.5 && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                 Add positions to more games for better balance tracking
               </p>

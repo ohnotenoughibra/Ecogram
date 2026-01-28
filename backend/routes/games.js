@@ -575,11 +575,28 @@ router.get('/stats', protect, async (req, res) => {
       { $limit: 10 }
     ]);
 
+    // Position distribution
+    const positionDistribution = await Game.aggregate([
+      { $match: { user: userId, position: { $ne: '' } } },
+      { $group: { _id: '$position', count: { $sum: 1 } } }
+    ]);
+
+    // Count games with positions
+    const gamesWithPositions = await Game.countDocuments({
+      user: userId,
+      position: { $ne: '' }
+    });
+
     res.json({
       totalGames,
       favoriteCount,
       usedCount,
+      gamesWithPositions,
       topicDistribution: topicDistribution.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      positionDistribution: positionDistribution.reduce((acc, item) => {
         acc[item._id] = item.count;
         return acc;
       }, {}),
