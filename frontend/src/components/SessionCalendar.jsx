@@ -204,7 +204,8 @@ export default function SessionCalendar({
 
   const handleCreateTopic = async (topicData) => {
     try {
-      if (editingTopic) {
+      // Check if this is editing an existing topic (not a new one with _isNew flag)
+      if (editingTopic && !editingTopic._isNew && editingTopic._id) {
         await api.put(`/topics/${editingTopic._id}`, topicData);
         showToast?.('Topic updated', 'success');
       } else {
