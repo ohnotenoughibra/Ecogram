@@ -25,6 +25,13 @@ export default function GameCard({ game, onEdit, onDelete, selectable = true }) 
   const [loadingSessions, setLoadingSessions] = useState(false);
   const sessionMenuRef = useRef(null);
 
+  // Optimistic UI state
+  const [optimisticFavorite, setOptimisticFavorite] = useState(null);
+  const [isMarkingUsed, setIsMarkingUsed] = useState(false);
+
+  // Use optimistic value if set, otherwise use actual value
+  const isFavorite = optimisticFavorite !== null ? optimisticFavorite : game.favorite;
+
   // Swipe gesture state
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
@@ -74,9 +81,21 @@ export default function GameCard({ game, onEdit, onDelete, selectable = true }) 
     if (Math.abs(swipeOffset) > 50) {
       // Swipe right to favorite, left to unfavorite
       const shouldFavorite = swipeOffset > 0;
-      if (shouldFavorite !== game.favorite) {
-        await updateGame(game._id, { favorite: shouldFavorite });
+      if (shouldFavorite !== isFavorite) {
+        // Optimistically update
+        setOptimisticFavorite(shouldFavorite);
         showToast(shouldFavorite ? 'Added to favorites' : 'Removed from favorites', 'success');
+
+        try {
+          const result = await updateGame(game._id, { favorite: shouldFavorite });
+          if (!result.success) {
+            setOptimisticFavorite(null);
+          } else {
+            setOptimisticFavorite(null);
+          }
+        } catch {
+          setOptimisticFavorite(null);
+        }
       }
     }
     setSwipeOffset(0);
@@ -104,7 +123,24 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
 
   const handleFavoriteToggle = async (e) => {
     e.stopPropagation();
-    await updateGame(game._id, { favorite: !game.favorite });
+    const newValue = !isFavorite;
+
+    // Optimistically update UI
+    setOptimisticFavorite(newValue);
+
+    try {
+      const result = await updateGame(game._id, { favorite: newValue });
+      if (!result.success) {
+        // Revert on failure
+        setOptimisticFavorite(null);
+      } else {
+        // Clear optimistic state once server confirms
+        setOptimisticFavorite(null);
+      }
+    } catch {
+      // Revert on error
+      setOptimisticFavorite(null);
+    }
   };
 
   const handleRatingChange = async (rating) => {
@@ -113,7 +149,10 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
 
   const handleMarkUsed = async (e) => {
     e.stopPropagation();
+    setIsMarkingUsed(true);
     await markGameUsed(game._id);
+    setIsMarkingUsed(false);
+    showToast('Game marked as used', 'success');
   };
 
   const handleDuplicate = async (e) => {
@@ -338,10 +377,11 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
             <button
               onClick={handleFavoriteToggle}
               className={`p-1 rounded-full transition-colors ${
-                game.favorite
+                isFavorite
                   ? 'text-yellow-400 hover:text-yellow-500'
                   : 'text-gray-300 hover:text-yellow-400 dark:text-gray-600'
               }`}
+              title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -527,12 +567,21 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
                   </button>
                   <button
                     onClick={handleMarkUsed}
-                    className="btn-secondary text-sm flex-1 flex items-center justify-center gap-1.5"
+                    disabled={isMarkingUsed}
+                    className="btn-secondary text-sm flex-1 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    title="Mark this game as used in a session"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                      <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
-                    </svg>
-                    Mark Used
+                    {isMarkingUsed ? (
+                      <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                        <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {isMarkingUsed ? 'Marking...' : 'Mark Used'}
                   </button>
                 </div>
 

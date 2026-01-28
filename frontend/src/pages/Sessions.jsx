@@ -42,6 +42,9 @@ export default function Sessions() {
   const [showUseTemplateModal, setShowUseTemplateModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showQuickBuilder, setShowQuickBuilder] = useState(false);
+  const [showDeleteTemplateConfirm, setShowDeleteTemplateConfirm] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
+  const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
 
   useEffect(() => {
     fetchSessions();
@@ -251,15 +254,25 @@ export default function Sessions() {
     }
   };
 
-  const handleDeleteTemplate = async (templateId) => {
-    if (!confirm('Delete this template?')) return;
+  const handleDeleteTemplateClick = (template) => {
+    setTemplateToDelete(template);
+    setShowDeleteTemplateConfirm(true);
+  };
 
+  const handleConfirmDeleteTemplate = async () => {
+    if (!templateToDelete) return;
+
+    setIsDeletingTemplate(true);
     try {
-      await api.delete(`/sessions/templates/${templateId}`);
+      await api.delete(`/sessions/templates/${templateToDelete._id}`);
       showToast('Template deleted', 'success');
       fetchTemplates();
     } catch (error) {
       showToast('Failed to delete template', 'error');
+    } finally {
+      setIsDeletingTemplate(false);
+      setShowDeleteTemplateConfirm(false);
+      setTemplateToDelete(null);
     }
   };
 
@@ -494,8 +507,9 @@ export default function Sessions() {
                           </div>
                         </div>
                         <button
-                          onClick={() => handleDeleteTemplate(template._id)}
+                          onClick={() => handleDeleteTemplateClick(template)}
                           className="btn-icon text-gray-400 hover:text-red-500"
+                          title="Delete template"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
                             <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 000 1.5h.3l.815 8.15A1.5 1.5 0 005.357 15h5.285a1.5 1.5 0 001.493-1.35l.815-8.15h.3a.75.75 0 000-1.5H11v-.75A2.25 2.25 0 008.75 1h-1.5A2.25 2.25 0 005 3.25zm2.25-.75a.75.75 0 00-.75.75V4h3v-.75a.75.75 0 00-.75-.75h-1.5z" clipRule="evenodd" />
@@ -681,6 +695,21 @@ export default function Sessions() {
         message={`Are you sure you want to delete "${sessionToDelete?.name}"? This will not delete the games in the session.`}
         confirmText="Delete"
         type="danger"
+      />
+
+      {/* Delete Template Confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteTemplateConfirm}
+        onClose={() => {
+          setShowDeleteTemplateConfirm(false);
+          setTemplateToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteTemplate}
+        title="Delete Template"
+        message={`Are you sure you want to delete the template "${templateToDelete?.templateName || templateToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        type="danger"
+        loading={isDeletingTemplate}
       />
 
       {/* Smart Session Builder */}

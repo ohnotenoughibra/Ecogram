@@ -52,6 +52,9 @@ export default function Games() {
   const [showSessionSelect, setShowSessionSelect] = useState(false);
   const [showSmartBuilder, setShowSmartBuilder] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [newSessionName, setNewSessionName] = useState('');
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   useEffect(() => {
     fetchGames();
@@ -138,19 +141,29 @@ export default function Games() {
 
   const handleSelectSession = async (sessionId) => {
     if (sessionId === 'new') {
-      const name = prompt('Enter session name:');
-      if (name) {
-        const result = await createSession({
-          name,
-          gameIds: Array.from(selectedGames)
-        });
-        if (result.success) {
-          setShowSessionSelect(false);
-        }
-      }
+      setShowSessionSelect(false);
+      setNewSessionName('');
+      setShowNewSessionModal(true);
     } else {
       await addGamesToSession(sessionId, Array.from(selectedGames));
       setShowSessionSelect(false);
+    }
+  };
+
+  const handleCreateNewSession = async (e) => {
+    e.preventDefault();
+    if (!newSessionName.trim()) return;
+
+    setIsCreatingSession(true);
+    const result = await createSession({
+      name: newSessionName,
+      gameIds: Array.from(selectedGames)
+    });
+    setIsCreatingSession(false);
+
+    if (result.success) {
+      setShowNewSessionModal(false);
+      setNewSessionName('');
     }
   };
 
@@ -333,6 +346,59 @@ export default function Games() {
                   ))}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Session Name Modal */}
+      {showNewSessionModal && (
+        <div className="modal-overlay" onClick={() => setShowNewSessionModal(false)}>
+          <div className="modal-content max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Create New Session
+              </h3>
+              <form onSubmit={handleCreateNewSession}>
+                <div className="mb-4">
+                  <label className="label">Session Name</label>
+                  <input
+                    type="text"
+                    value={newSessionName}
+                    onChange={(e) => setNewSessionName(e.target.value)}
+                    placeholder="e.g., Tuesday Guard Work"
+                    className="input"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  {selectedGames.size} game{selectedGames.size !== 1 ? 's' : ''} will be added to this session
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewSessionModal(false)}
+                    className="btn-secondary flex-1"
+                    disabled={isCreatingSession}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary flex-1 flex items-center justify-center gap-2"
+                    disabled={isCreatingSession || !newSessionName.trim()}
+                  >
+                    {isCreatingSession && (
+                      <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {isCreatingSession ? 'Creating...' : 'Create Session'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

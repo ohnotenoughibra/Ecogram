@@ -134,6 +134,15 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
 
   const hasActiveFilters = filters.topic || filters.search || filters.favorite || filters.position || filters.technique;
 
+  // Count active filters for badge
+  const activeFilterCount = [
+    filters.topic,
+    filters.search,
+    filters.favorite,
+    filters.position,
+    filters.technique
+  ].filter(Boolean).length;
+
   return (
     <div className="space-y-3">
       {/* Search bar */}
@@ -168,12 +177,18 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
 
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`btn-secondary ${isExpanded ? 'bg-primary-100 dark:bg-primary-900/30' : ''}`}
+          className={`btn-secondary relative ${isExpanded ? 'bg-primary-100 dark:bg-primary-900/30' : ''} ${activeFilterCount > 0 ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
+          title={activeFilterCount > 0 ? `${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} active` : 'Filter games'}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
             <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clipRule="evenodd" />
           </svg>
           <span className="hidden sm:inline ml-2">Filters</span>
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-primary-500 rounded-full">
+              {activeFilterCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -345,13 +360,29 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
 
       {/* Active filter chips */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Active filters:</span>
+        <div className="flex flex-wrap items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 mr-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active
+            </span>
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md transition-colors"
+              title="Clear all filters"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
+              </svg>
+              Clear all
+            </button>
+          </div>
+
+          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 hidden sm:block" />
 
           {filters.topic && (
             <span className="chip chip-active">
               {TOPICS.find(t => t.value === filters.topic)?.label}
-              <button onClick={() => handleTopicChange('')} className="ml-1">
+              <button onClick={() => handleTopicChange('')} className="ml-1" title="Remove filter">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
                 </svg>
@@ -362,7 +393,7 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
           {filters.search && (
             <span className="chip chip-active">
               Search: "{filters.search}"
-              <button onClick={() => setSearchValue('')} className="ml-1">
+              <button onClick={() => setSearchValue('')} className="ml-1" title="Remove filter">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
                 </svg>
@@ -373,7 +404,7 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
           {filters.favorite && (
             <span className="chip chip-active">
               Favorites
-              <button onClick={handleFavoriteToggle} className="ml-1">
+              <button onClick={handleFavoriteToggle} className="ml-1" title="Remove filter">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
                 </svg>
@@ -384,7 +415,7 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
           {filters.position && (
             <span className="chip chip-active">
               {getPositionLabel(filters.position)}
-              <button onClick={() => handlePositionChange('')} className="ml-1">
+              <button onClick={() => handlePositionChange('')} className="ml-1" title="Remove filter">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
                 </svg>
@@ -395,20 +426,13 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
           {filters.technique && (
             <span className="chip chip-active">
               {getTechniqueLabel(filters.technique)}
-              <button onClick={() => handleTechniqueChange('')} className="ml-1">
+              <button onClick={() => handleTechniqueChange('')} className="ml-1" title="Remove filter">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
                 </svg>
               </button>
             </span>
           )}
-
-          <button
-            onClick={clearFilters}
-            className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
-          >
-            Clear all
-          </button>
         </div>
       )}
     </div>
