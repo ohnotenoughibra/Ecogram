@@ -1019,9 +1019,18 @@ function AiGameSuggestionCard({ suggestion, onAddedToLibrary, onSkip }) {
   const generateGame = async () => {
     setGenerating(true);
     try {
-      // Use the prompt from AI suggestions
+      // Build rich context for AI generation
       const prompt = suggestion.prompt || `${suggestion.name}: ${suggestion.description}`;
-      const response = await api.post('/ai/generate', { prompt });
+      const context = suggestion.reasoning
+        ? `Why this game: ${suggestion.reasoning}${suggestion.basedOn ? `. Related to: ${suggestion.basedOn}` : ''}`
+        : null;
+
+      const response = await api.post('/ai/generate', {
+        prompt,
+        context,
+        suggestionType: suggestion.type,
+        temperature: 0.85 // Slightly creative
+      });
       const game = {
         ...response.data.game,
         topic: suggestion.topic || 'transition'

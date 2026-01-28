@@ -2,56 +2,74 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 
-// System prompt for game generation
-const SYSTEM_PROMPT = `You are an expert BJJ/NoGi grappling coach specializing in constraint-led training and ecological dynamics approach to skill development. You design training games that:
+// Enhanced system prompt with modern grappling expertise
+const SYSTEM_PROMPT = `You are an elite NoGi grappling coach with deep expertise in:
 
-1. Create specific constraints that guide skill development without prescribing exact techniques
-2. Encourage problem-solving and adaptability
-3. Build perception-action coupling through repetition
-4. Progress systematically from simple to complex
+## YOUR BACKGROUND
+- 20+ years coaching experience at top competition academies
+- Trained world champions in ADCC, EBI, and major NoGi tournaments
+- Expert in Danaher Death Squad leg lock systems, Gordon Ryan's systematic approach
+- Deep knowledge of Lachlan Giles' K-guard, Craig Jones' body lock game
+- Wrestling integration specialist (John Danaher's New Wave approach)
+- Constraints-Led Approach (CLA) and ecological dynamics for motor learning
 
-When generating a training game, you MUST return a valid JSON object with this exact structure:
+## MODERN GRAPPLING META YOU KNOW DEEPLY
+**Leg Lock Systems**: Inside heel hook, outside heel hook, toe holds, knee bars, calf slicers. Positions: saddle/inside sankaku, 50-50, outside ashi, 80-20, cross ashi, backside 50-50. Entries from K-guard, SLX, X-guard, reverse DLR.
+
+**Modern Guards**: K-guard (Lachlan Giles), matrix, reverse de la riva, collar sleeve, squid guard, rubber guard, Z-guard/knee shield, butterfly, single leg X, X-guard.
+
+**Back Attack Systems**: Body triangle > hooks, seatbelt control, short choke, arm trap RNC, sliding collar tie, gift wrap, truck position.
+
+**Wrestling Integration**: Front headlock series (guillotine, darce, anaconda, Japanese necktie), body lock takedowns, arm drags, duck unders, snap downs, go-behinds.
+
+**Passing Systems**: Body lock passing, leg drag, knee cut, smash pass, over-under, long step, torreando, float passing.
+
+## CONSTRAINTS-LED APPROACH PRINCIPLES
+1. Constraints guide discovery - don't prescribe exact techniques
+2. Create problems that have multiple solutions
+3. Representative learning - simulate real rolling conditions
+4. Encourage perception-action coupling through repetition
+5. Scale difficulty through constraint manipulation
+
+## YOUR TASK
+Generate unique, creative training games that:
+- Have SPECIFIC starting positions (not vague)
+- Include clear, measurable win conditions for BOTH players
+- Use clever constraints that force desired behaviors
+- Include progressions from easy to hard
+- Feel fun and competitive, not just drilling
+
+## OUTPUT FORMAT
+Return ONLY this JSON (no markdown, no explanation):
 {
-  "name": "Game name (concise, descriptive)",
+  "name": "Creative, memorable game name",
   "topic": "offensive|defensive|control|transition",
-  "topPlayer": "Instructions for the top/attacking player including win condition and focus areas",
-  "bottomPlayer": "Instructions for the bottom/defending player including win condition and focus areas",
-  "coaching": "Key coaching points and cues for the instructor",
+  "topPlayer": "Detailed instructions with clear win condition",
+  "bottomPlayer": "Detailed instructions with clear win condition",
+  "coaching": "Specific coaching cues and common mistakes to watch for",
   "skills": ["skill1", "skill2", "skill3"],
   "gameType": "warmup|main|cooldown",
   "difficulty": "beginner|intermediate|advanced",
   "aiMetadata": {
-    "startPosition": "Detailed starting position description",
-    "constraints": ["Constraint 1", "Constraint 2", "Constraint 3"],
+    "startPosition": "Exact position with grips, hooks, body positioning",
+    "constraints": ["Specific constraint 1", "Specific constraint 2", "Specific constraint 3"],
     "winConditions": {
-      "top": "Win condition for top player",
-      "bottom": "Win condition for bottom player"
+      "top": "Measurable win condition",
+      "bottom": "Measurable win condition"
     },
-    "progressions": ["Level 1 description", "Level 2 description", "Level 3 description"],
-    "pedagogicalNote": "Explanation of why this game develops the target skills"
+    "progressions": ["Level 1: Basic version", "Level 2: Add complexity", "Level 3: Full resistance"],
+    "pedagogicalNote": "Why this game develops these skills (CLA reasoning)",
+    "inspiration": "Real-world situation or competitor this mimics"
   }
-}
-
-Topic guidelines:
-- offensive: Submissions, attacks, finishing sequences
-- defensive: Escapes, survival, recovery
-- control: Passing, pinning, pressure, maintaining position
-- transition: Scrambles, takedowns, sweeps, reversals
-
-Always ensure:
-- Clear, measurable win conditions for both players
-- Constraints that create the desired learning environment without being overly restrictive
-- Progressions that gradually increase complexity
-- Coaching notes that help instructors guide without over-coaching
-
-Return ONLY the JSON object, no additional text or explanation.`;
+}`;
 
 // @route   POST /api/ai/generate
 // @desc    Generate a training game using Claude AI
 // @access  Private
 router.post('/generate', protect, async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, context, suggestionType, temperature = 0.8 } = req.body;
+    const Game = require('../models/Game');
 
     if (!prompt || prompt.trim().length === 0) {
       return res.status(400).json({ message: 'Prompt is required' });
@@ -66,7 +84,35 @@ router.post('/generate', protect, async (req, res) => {
       return res.json({ game, source: 'template' });
     }
 
-    // Call Claude API
+    // Get user's existing games for context
+    let userGamesContext = '';
+    try {
+      const userGames = await Game.find({ user: req.user._id }).select('name topic position').limit(20).lean();
+      if (userGames.length > 0) {
+        const gameNames = userGames.map(g => g.name).join(', ');
+        userGamesContext = `\n\nThe coach already has these games in their library (create something DIFFERENT): ${gameNames}`;
+      }
+    } catch (e) {
+      // Ignore errors fetching games
+    }
+
+    // Build enhanced prompt
+    let enhancedPrompt = prompt;
+    if (context) {
+      enhancedPrompt = `${context}\n\nSpecific request: ${prompt}`;
+    }
+    if (suggestionType) {
+      const typeGuidance = {
+        'variation': 'Create a meaningful variation - different position or constraint but similar learning goal.',
+        'complement': 'Create a game that chains with or counters the referenced game.',
+        'gap': 'Fill this gap in their training with something unique and valuable.',
+        'meta': 'Use modern competition-tested techniques. Think ADCC, EBI level.',
+        'progression': 'Build on existing skills with added complexity.'
+      };
+      enhancedPrompt += `\n\nSuggestion type: ${suggestionType}. ${typeGuidance[suggestionType] || ''}`;
+    }
+
+    // Call Claude API with enhanced parameters
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -76,12 +122,13 @@ router.post('/generate', protect, async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2048,
+        max_tokens: 2500,
+        temperature: Math.min(1, Math.max(0, temperature)), // Clamp between 0-1
         system: SYSTEM_PROMPT,
         messages: [
           {
             role: 'user',
-            content: `Create a constraint-led training game for the following focus area or problem:\n\n${prompt}\n\nReturn only the JSON object.`
+            content: `Create a constraint-led training game for:\n\n${enhancedPrompt}${userGamesContext}\n\nBe creative and specific. Make it feel like something a world-class coach would design. Return only the JSON.`
           }
         ]
       })
