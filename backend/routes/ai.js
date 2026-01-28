@@ -191,7 +191,7 @@ const GAME_LIBRARY = {
       constraints: ['No heel hooks (control entries only)', 'Reset after each entry or pass', 'Standing allowed'],
       progressions: ['Single entry type', 'Multiple entry options', 'Add finishing (toe holds only for safety)'],
       skills: ['leg locks', 'ashi garami', 'leg entanglement', 'guard passing'],
-      keywords: ['leg lock', 'heel hook', 'ashi', '50/50', 'leg entanglement', 'sankaku']
+      keywords: ['leg lock', 'heel hook', 'ashi', '50/50', 'leg entanglement', 'sankaku', 'honey hole', 'saddle', 'inside sankaku', 'outside ashi', 'calf slicer', 'knee bar', 'toe hold']
     },
     {
       name: 'Kimura Trap System',
@@ -553,13 +553,43 @@ function generateTemplateGame(prompt) {
     difficulty = 'advanced';
   }
 
-  // Generate a custom name based on prompt if it's specific enough
+  // Extract game name from prompt - look for patterns like "variation of: GameName" or "Create a X game"
   let gameName = bestGame.name;
-  if (prompt.length > 10 && prompt.length < 50 && maxScore > 0) {
-    gameName = prompt.charAt(0).toUpperCase() + prompt.slice(1);
-    if (!gameName.toLowerCase().includes('game') && !gameName.toLowerCase().includes('drill')) {
+  let customDescription = null;
+
+  // Check if this is a suggestion-based prompt (has specific patterns)
+  const variationMatch = prompt.match(/variation of[:\s]+["']?([^"'\n.]+)["']?/i);
+  const createMatch = prompt.match(/create (?:a|an) ([^.]+) game/i);
+  const colonMatch = prompt.match(/^([^:]+):/);
+
+  if (variationMatch) {
+    // This is a variation request - use the base game name with modification
+    const baseName = variationMatch[1].trim();
+    gameName = `${baseName} - Competition Variant`;
+    customDescription = `Advanced variation of ${baseName} with added pressure and time constraints.`;
+  } else if (createMatch) {
+    gameName = createMatch[1].trim();
+    if (!gameName.toLowerCase().includes('game')) {
       gameName += ' Game';
     }
+  } else if (colonMatch && prompt.length > 20) {
+    // Format like "Game Name: description"
+    gameName = colonMatch[1].trim();
+  } else if (prompt.length > 10 && prompt.length < 100) {
+    // Use first meaningful part of prompt as name
+    const firstSentence = prompt.split(/[.!?]/)[0].trim();
+    if (firstSentence.length > 5 && firstSentence.length < 60) {
+      gameName = firstSentence.charAt(0).toUpperCase() + firstSentence.slice(1);
+      if (!gameName.toLowerCase().includes('game') && !gameName.toLowerCase().includes('drill')) {
+        gameName += ' Game';
+      }
+    }
+  }
+
+  // Generate custom coaching based on prompt keywords
+  let customCoaching = bestGame.coaching;
+  if (promptLower.includes('advanced') || promptLower.includes('competition')) {
+    customCoaching = `Competition-level focus: ${bestGame.coaching} Add time pressure and chain requirements.`;
   }
 
   return {
@@ -567,7 +597,7 @@ function generateTemplateGame(prompt) {
     topic,
     topPlayer: bestGame.topPlayer,
     bottomPlayer: bestGame.bottomPlayer,
-    coaching: bestGame.coaching,
+    coaching: customCoaching,
     skills: bestGame.skills,
     gameType,
     difficulty,
@@ -575,6 +605,7 @@ function generateTemplateGame(prompt) {
     aiMetadata: {
       startPosition: bestGame.startPosition,
       constraints: bestGame.constraints,
+      description: customDescription || `Training game focused on ${topic} skills.`,
       winConditions: {
         top: bestGame.topPlayer.split('.')[0],
         bottom: bestGame.bottomPlayer.split('.')[0]
