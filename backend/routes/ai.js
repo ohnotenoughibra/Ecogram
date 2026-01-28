@@ -158,7 +158,7 @@ const GAME_LIBRARY = {
       constraints: ['Attacker cannot release seatbelt', 'Defender escapes reset to start', 'No leg attacks allowed'],
       progressions: ['Basic: Both hooks, moderate defense', 'Add body triangle option', 'Start from one hook with hand fight'],
       skills: ['back control', 'RNC', 'hand fighting', 'back escapes'],
-      keywords: ['back', 'rnc', 'choke', 'rear naked', 'strangle']
+      keywords: ['back', 'rnc', 'choke', 'rear naked', 'strangle', 'body triangle', 'seatbelt', 'back control', 'back take', 'hooks', 'short choke', 'arm trap']
     },
     {
       name: 'Guillotine Game',
@@ -169,7 +169,7 @@ const GAME_LIBRARY = {
       constraints: ['Reset after each submission attempt or takedown', '30 second time limit per exchange', 'No pulling guard'],
       progressions: ['Standing only', 'Allow guard pull after headlock', 'Full transition to ground'],
       skills: ['guillotine', 'front headlock', 'takedown defense', 'head position'],
-      keywords: ['guillotine', 'front headlock', 'choke', 'standing']
+      keywords: ['guillotine', 'front headlock', 'choke', 'standing', 'arm in', 'high elbow', 'marcelotine', 'snap down', 'chin strap', 'power guillotine']
     },
     {
       name: 'Armbar Chain Drill',
@@ -202,7 +202,29 @@ const GAME_LIBRARY = {
       constraints: ['Bottom must maintain kimura grip', 'Top cannot disengage to standing', 'Reset if grip is lost'],
       progressions: ['Sweep focus only', 'Add back take option', 'Full system with submissions'],
       skills: ['kimura', 'half guard', 'sweeps', 'back takes'],
-      keywords: ['kimura', 'half guard', 'sweep', 'americana']
+      keywords: ['kimura', 'half guard', 'sweep', 'americana', 'kimura trap', 'tarikoplata', 'double wrist lock']
+    },
+    {
+      name: 'Modern Back Attack System',
+      startPosition: 'Back control with body triangle',
+      topPlayer: 'Systematically attack using arm trap, short choke, and RNC sequences. Win by submission.',
+      bottomPlayer: 'Defend intelligently and work systematic escapes. Win by escaping 3 times.',
+      coaching: 'Attacker: trap the arm before choking, use the body triangle to control hip escape. Defender: protect neck, clear body triangle first.',
+      constraints: ['Attacker uses body triangle', 'Focus on systematic attacks', 'Reset after escape or submission'],
+      progressions: ['Basic body triangle attacks', 'Add arm trap system', 'Full Danaher back attack sequence'],
+      skills: ['back attacks', 'body triangle', 'short choke', 'arm trap', 'back escapes'],
+      keywords: ['back', 'body triangle', 'short choke', 'arm trap', 'straight jacket', 'mata leao', 'rnc', 'danaher', 'back attack system']
+    },
+    {
+      name: 'Darce/Anaconda Flow',
+      startPosition: 'Front headlock position after sprawl',
+      topPlayer: 'Work darce, anaconda, and peruvian necktie entries. Win by submission or 5 clean entries.',
+      bottomPlayer: 'Defend front headlock attacks, work to reguard or single leg. Win by escaping 3 times.',
+      coaching: 'Attacker: head on hip side, lock before squeezing. Defender: posture up, arm inside.',
+      constraints: ['Start from front headlock', 'Reset after submission or escape', 'No guillotine (darce/anaconda only)'],
+      progressions: ['Darce only', 'Add anaconda', 'Full front headlock series'],
+      skills: ['darce', 'anaconda', 'front headlock', 'peruvian necktie'],
+      keywords: ['darce', 'anaconda', 'brabo', 'peruvian necktie', 'front headlock', 'd\'arce', 'arm triangle']
     }
   ],
 
@@ -276,7 +298,7 @@ const GAME_LIBRARY = {
       constraints: ['No jumping passes', 'Top must maintain contact', 'Reset after pass or sweep'],
       progressions: ['Single pass type', 'Chain 2 passes', 'Full passing game'],
       skills: ['guard passing', 'knee cut', 'pressure passing', 'guard retention'],
-      keywords: ['pass', 'passing', 'knee cut', 'pressure', 'over under']
+      keywords: ['pass', 'passing', 'knee cut', 'pressure', 'over under', 'smash pass', 'stack pass', 'torreando', 'bullfighter']
     },
     {
       name: 'Body Lock Passing',
@@ -287,7 +309,7 @@ const GAME_LIBRARY = {
       constraints: ['Top must maintain body lock', 'Bottom cannot stand', 'Reset if body lock is broken'],
       progressions: ['Basic pass', 'Add mount transition', 'Include back take option'],
       skills: ['body lock', 'half guard passing', 'half guard defense', 'pressure'],
-      keywords: ['body lock', 'half guard', 'pass', 'squeeze']
+      keywords: ['body lock', 'half guard', 'pass', 'squeeze', 'gordon ryan', 'body lock pass', 'bear hug', 'body lock system']
     },
     {
       name: 'Pin Transitions Drill',
@@ -335,7 +357,7 @@ const GAME_LIBRARY = {
       constraints: ['No guard pulling', '30 second time limit per exchange', 'Reset after each takedown'],
       progressions: ['Singles and doubles only', 'Add trips', 'Full standup arsenal'],
       skills: ['takedowns', 'wrestling', 'sprawl', 'clinch'],
-      keywords: ['takedown', 'wrestling', 'shot', 'double leg', 'single leg', 'standup']
+      keywords: ['takedown', 'wrestling', 'shot', 'double leg', 'single leg', 'standup', 'level change', 'penetration step', 'collar tie', 'underhook', 'russian tie', '2 on 1', 'arm drag', 'duck under', 'go behind', 'body lock takedown']
     },
     {
       name: 'Sweep or Pass',
@@ -379,7 +401,7 @@ const GAME_LIBRARY = {
       constraints: ['Bottom must use butterfly hooks', 'Top cannot stand fully', 'Reset after sweep or pass'],
       progressions: ['Basic hook sweep', 'Add arm drag', 'Include single leg X entries'],
       skills: ['butterfly guard', 'sweeps', 'guard passing', 'hooks'],
-      keywords: ['butterfly', 'sweep', 'hook', 'arm drag', 'elevate']
+      keywords: ['butterfly', 'sweep', 'hook', 'arm drag', 'elevate', 'marcelo garcia', 'x guard', 'slx entry', 'single leg x']
     },
     {
       name: 'Front Headlock Flow',
@@ -390,7 +412,7 @@ const GAME_LIBRARY = {
       constraints: ['Start from standing', 'Reset after submission attempt or escape', 'No jumping guard'],
       progressions: ['Snap down only', 'Add go-behind', 'Full front headlock series'],
       skills: ['front headlock', 'guillotine', 'darce', 'anaconda', 'wrestling'],
-      keywords: ['front headlock', 'snap', 'guillotine', 'darce', 'anaconda', 'choke']
+      keywords: ['front headlock', 'snap', 'guillotine', 'darce', 'anaconda', 'choke', 'snap down', 'go behind', 'cradle', 'cement mixer', 'drag', 'arm drag']
     },
     {
       name: 'Single Leg X Entry Game',
@@ -401,7 +423,51 @@ const GAME_LIBRARY = {
       constraints: ['No submissions (positional only)', 'Reset after entry or pass', 'Top can stand'],
       progressions: ['Basic entry only', 'Add outside ashi transition', 'Full leg lock flow'],
       skills: ['single leg x', 'ashi garami', 'leg entanglement', 'guard retention'],
-      keywords: ['single leg x', 'slx', 'ashi', 'leg lock', 'heel hook', 'outside ashi']
+      keywords: ['single leg x', 'slx', 'ashi', 'leg lock', 'heel hook', 'outside ashi', 'x-guard', 'irimi ashi']
+    },
+    {
+      name: 'K-Guard Entry System',
+      startPosition: 'Seated guard vs standing passer',
+      topPlayer: 'Pass the K-guard without getting swept or caught in leg entanglements. Win by passing.',
+      bottomPlayer: 'Enter K-guard position, off-balance and sweep or enter leg entanglements. Win by 3 sweeps or entries.',
+      coaching: 'Guard player: control the far leg, use cross grip. Top: stay tight, deny the cross grip.',
+      constraints: ['Guard player must use K-guard', 'Top cannot disengage to distance', 'Reset after sweep or pass'],
+      progressions: ['K-guard entries only', 'Add leg lock entries', 'Full K-guard system'],
+      skills: ['k-guard', 'sweeps', 'leg entanglements', 'guard passing'],
+      keywords: ['k guard', 'k-guard', 'lachlan giles', 'matrix', 'leg entanglement', 'modern guard', 'reverse x']
+    },
+    {
+      name: '50-50 Battle',
+      startPosition: '50-50 position, both players with inside heel hook grip available',
+      topPlayer: 'Win the 50-50 exchange through sweeps, back takes, or positional advancement. First to escape on top or submit.',
+      bottomPlayer: 'Same objective - control the position, attack heel hooks (training safe) or escape on top.',
+      coaching: 'Control the knee line, fight for inside position, use boot defense. The battle is won with hip position.',
+      constraints: ['Heel hooks for positional training only', 'Focus on control and sweeps', 'Reset after escape or sweep'],
+      progressions: ['Positional control only', 'Add sweeping', 'Full 50-50 with light submissions'],
+      skills: ['50-50', 'leg locks', 'heel hook defense', 'sweeps'],
+      keywords: ['50-50', 'fifty fifty', 'heel hook', 'inside heel hook', 'leg lock', 'saddle', 'honey hole']
+    },
+    {
+      name: 'Saddle/Inside Sankaku Game',
+      startPosition: 'Attacker in inside sankaku (saddle/honey hole) with heel exposed',
+      topPlayer: 'Defend the heel hook using boot defense, clearing, and escape. Win by escaping 3 times.',
+      bottomPlayer: 'Maintain saddle control and work heel hook finishes. Win by clean heel hook control (training) or maintaining 60 seconds.',
+      coaching: 'Attacker: control the knee line, keep the triangle tight. Defender: boot defense, dont let them straighten the leg.',
+      constraints: ['Focus on control and defense', 'Heel hook finish is positional control', 'Reset after escape'],
+      progressions: ['Basic saddle control', 'Add heel hook attacks', 'Full saddle system'],
+      skills: ['saddle', 'inside sankaku', 'honey hole', 'heel hook', 'leg lock defense'],
+      keywords: ['saddle', 'honey hole', 'inside sankaku', '411', '4-11', 'heel hook', 'danaher', 'craig jones', 'leg lock']
+    },
+    {
+      name: 'Wrestling Up vs Leg Locks',
+      startPosition: 'Guard player seated, passer standing at close range',
+      topPlayer: 'Avoid leg lock entries while working to pass. Use distance management and leg pummeling.',
+      bottomPlayer: 'Enter leg entanglements from seated guard using shin-to-shin, K-guard, or SLX entries.',
+      coaching: 'Top: knees together, pressure forward, deny grips. Bottom: off-balance first, then enter.',
+      constraints: ['No guard pulling allowed', 'Top must engage at close range', 'Reset after entry or pass'],
+      progressions: ['Single entry type', 'Multiple entry options', 'Add standing leg lock defense'],
+      skills: ['leg lock defense', 'leg lock entries', 'guard passing', 'distance management'],
+      keywords: ['leg lock', 'shin to shin', 'k guard', 'slx', 'imanari', 'rolling entry', 'leg pummeling']
     }
   ],
 
