@@ -236,7 +236,35 @@ export default function SkillBalance({ compact = false }) {
       {/* Topics View */}
       {viewMode === 'topics' && (
         <>
+          {/* Coverage indicator */}
+          <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Games with topics</span>
+              <span className={`font-medium ${
+                totalGames / games.length >= 0.5 ? 'text-green-600' :
+                totalGames / games.length >= 0.2 ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                {totalGames} of {games.length}
+              </span>
+            </div>
+            <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1.5">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  totalGames / games.length >= 0.5 ? 'bg-green-500' :
+                  totalGames / games.length >= 0.2 ? 'bg-yellow-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${games.length > 0 ? (totalGames / games.length) * 100 : 0}%` }}
+              />
+            </div>
+            {totalGames < games.length * 0.5 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Add topics to more games for better balance tracking
+              </p>
+            )}
+          </div>
+
           {/* Balance meter */}
+          {totalGames > 0 && (
           <div className="mb-4">
             <div className="flex justify-between text-sm mb-1">
               <span className="text-gray-600 dark:text-gray-400">Balance Score</span>
@@ -257,6 +285,7 @@ export default function SkillBalance({ compact = false }) {
               />
             </div>
           </div>
+          )}
 
           {/* Topic bars */}
           <div className="space-y-3">
