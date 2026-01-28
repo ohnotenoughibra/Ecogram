@@ -678,6 +678,17 @@ router.post('/import', protect, async (req, res) => {
         coaching = coaching ? `${coaching}\n\nBy: ${gameData.author}` : `By: ${gameData.author}`;
       }
 
+      // Parse techniques - handle both array and string formats
+      let techniques = [];
+      if (Array.isArray(gameData.techniques)) {
+        techniques = gameData.techniques;
+      } else if (typeof gameData.techniques === 'string') {
+        techniques = gameData.techniques
+          .split(/[,\s]+/)
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
+      }
+
       const game = await Game.create({
         user: req.user._id,
         name: gameData.name || 'Imported Game',
@@ -686,6 +697,10 @@ router.post('/import', protect, async (req, res) => {
         bottomPlayer: gameData.bottomPlayer || '',
         coaching: coaching.trim(),
         skills: skills,
+        position: gameData.position || '',
+        techniques: techniques,
+        gameType: gameData.gameType || 'main',
+        difficulty: gameData.difficulty || 'intermediate',
         favorite: gameData.favorite || false,
         rating: gameData.rating || 0
       });
@@ -883,6 +898,22 @@ router.delete('/:id', protect, async (req, res) => {
   } catch (error) {
     console.error('Delete game error:', error);
     res.status(500).json({ message: 'Server error deleting game' });
+  }
+});
+
+// @route   DELETE /api/games/all
+// @desc    Delete all games for user (empty library)
+// @access  Private
+router.delete('/all', protect, async (req, res) => {
+  try {
+    const result = await Game.deleteMany({ user: req.user._id });
+    res.json({
+      message: `Deleted all ${result.deletedCount} games`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Delete all games error:', error);
+    res.status(500).json({ message: 'Server error deleting all games' });
   }
 });
 

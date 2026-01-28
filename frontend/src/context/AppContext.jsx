@@ -359,6 +359,19 @@ export function AppProvider({ children }) {
     }
   }, [showToast]);
 
+  const clearAllGames = useCallback(async () => {
+    try {
+      const response = await api.delete('/games/all');
+      setGames([]);
+      setSelectedGames(new Set());
+      showToast(response.data.message, 'success');
+      return { success: true, deletedCount: response.data.deletedCount };
+    } catch (err) {
+      showToast('Failed to clear library', 'error');
+      return { success: false };
+    }
+  }, [showToast]);
+
   const importGames = useCallback(async (games) => {
     try {
       console.log('Importing games:', games.length);
@@ -426,6 +439,7 @@ export function AppProvider({ children }) {
     // Import/Export
     exportGames,
     importGames,
+    clearAllGames,
 
     // Selection
     selectedGames,

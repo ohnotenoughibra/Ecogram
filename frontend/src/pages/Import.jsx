@@ -9,6 +9,151 @@ const topicKeywords = {
   transition: ['scramble', 'transition', 'sweep', 'reversal', 'movement', 'flow', 'chain']
 };
 
+// Position detection patterns
+const positionPatterns = {
+  'closed-guard': /closed\s*guard|close\s*guard|full\s*guard/i,
+  'open-guard': /open\s*guard|seated\s*guard/i,
+  'half-guard': /half\s*guard|half-?guard|z[\s-]?guard/i,
+  'butterfly-guard': /butterfly|seated\s*butterfly/i,
+  'x-guard': /x[\s-]?guard|single\s*leg\s*x/i,
+  'dlr': /de\s*la\s*riva|dlr|dela\s*riva/i,
+  'rdlr': /reverse\s*de\s*la\s*riva|rdlr|reverse\s*dlr/i,
+  'spider-guard': /spider[\s-]?guard|spider/i,
+  'lasso-guard': /lasso[\s-]?guard|lasso/i,
+  'collar-sleeve': /collar[\s-]?sleeve|collar\s*and\s*sleeve/i,
+  'mount': /\bmount\b|mounted|s[\s-]?mount|low\s*mount|high\s*mount|technical\s*mount/i,
+  'side-control': /side[\s-]?control|side\s*mount|100[\s-]?kilos|kesa[\s-]?gatame|scarf\s*hold/i,
+  'north-south': /north[\s-]?south|n\/s|north\s*south/i,
+  'knee-on-belly': /knee[\s-]?on[\s-]?belly|kob|knee\s*ride/i,
+  'back-control': /back[\s-]?control|back\s*mount|rear[\s-]?mount|back\s*take|taking\s*(the\s*)?back/i,
+  'turtle': /turtle|all[\s-]?fours|quad/i,
+  'front-headlock': /front[\s-]?head[\s-]?lock|fhl|head[\s-]?and[\s-]?arm/i,
+  'standing': /standing|stand[\s-]?up|takedown|wrestling|clinch|grip\s*fight|hand\s*fight/i,
+  'clinch': /clinch|collar\s*tie|underhook\s*battle|over[\s-]?under/i,
+  '50-50': /50[\s-]?50|fifty[\s-]?fifty/i,
+  'saddle': /saddle|honey[\s-]?hole|inside\s*heel/i,
+  'ashi-garami': /ashi[\s-]?garami|ashi|outside\s*ashi|straight\s*ashi/i,
+  'inside-sankaku': /inside[\s-]?sankaku|411|4[\s-]?11/i
+};
+
+// Technique detection patterns
+const techniquePatterns = {
+  'armbar': /armbar|arm[\s-]?bar|juji[\s-]?gatame/i,
+  'triangle': /triangle|sankaku|tri[\s-]?angle/i,
+  'kimura': /kimura|double\s*wrist\s*lock/i,
+  'americana': /americana|ude[\s-]?garami|key[\s-]?lock/i,
+  'omoplata': /omoplata|omo[\s-]?plata/i,
+  'guillotine': /guillotine|standing\s*guillotine/i,
+  'darce': /darce|d'arce|brabo/i,
+  'anaconda': /anaconda|gator\s*roll/i,
+  'rnc': /rnc|rear[\s-]?naked|mata[\s-]?leao/i,
+  'ezekiel': /ezekiel|sode[\s-]?guruma/i,
+  'heel-hook': /heel[\s-]?hook|inside\s*heel|outside\s*heel/i,
+  'knee-bar': /knee[\s-]?bar|kneebar/i,
+  'toe-hold': /toe[\s-]?hold|toehold/i,
+  'ankle-lock': /ankle[\s-]?lock|straight\s*ankle|achilles/i,
+  'scissor-sweep': /scissor[\s-]?sweep/i,
+  'hip-bump': /hip[\s-]?bump|bump[\s-]?sweep/i,
+  'hip-escape': /hip[\s-]?escape|shrimp/i,
+  'bridge': /bridge|upa|bump[\s-]?and[\s-]?roll/i,
+  'knee-cut': /knee[\s-]?cut|knee[\s-]?slice|knee[\s-]?slide/i,
+  'torreando': /torreando|toreando|bullfighter/i,
+  'leg-drag': /leg[\s-]?drag/i,
+  'body-lock-pass': /body[\s-]?lock[\s-]?pass|body[\s-]?lock/i,
+  'single-leg': /single[\s-]?leg/i,
+  'double-leg': /double[\s-]?leg/i,
+  'arm-drag': /arm[\s-]?drag/i,
+  'crossface': /crossface|cross[\s-]?face/i,
+  'underhook': /underhook|under[\s-]?hook/i,
+  'seatbelt': /seatbelt|seat[\s-]?belt/i,
+  'berimbolo': /berimbolo|bolo/i
+};
+
+// Skill to position mapping
+const skillPositionMap = {
+  'guard': 'open-guard',
+  'closed-guard': 'closed-guard',
+  'half-guard': 'half-guard',
+  'butterfly': 'butterfly-guard',
+  'dlr': 'dlr',
+  'spider': 'spider-guard',
+  'lasso': 'lasso-guard',
+  'x-guard': 'x-guard',
+  'mount': 'mount',
+  'side-control': 'side-control',
+  'back': 'back-control',
+  'back-control': 'back-control',
+  'turtle': 'turtle',
+  'standing': 'standing',
+  'takedowns': 'standing',
+  'wrestling': 'standing',
+  'leg-locks': 'ashi-garami',
+  'leglocks': 'ashi-garami'
+};
+
+function analyzeGameText(game) {
+  const parts = [
+    game.name || '',
+    game.topPlayer || '',
+    game.bottomPlayer || '',
+    game.coaching || '',
+    ...(Array.isArray(game.skills) ? game.skills : [])
+  ];
+  return parts.join(' ').toLowerCase();
+}
+
+function detectPosition(game) {
+  const text = analyzeGameText(game);
+
+  // Check patterns
+  for (const [position, pattern] of Object.entries(positionPatterns)) {
+    if (pattern.test(text)) return position;
+  }
+
+  // Check skills
+  const skills = Array.isArray(game.skills) ? game.skills : [];
+  for (const skill of skills) {
+    const normalized = skill.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    if (skillPositionMap[normalized]) return skillPositionMap[normalized];
+    if (skillPositionMap[skill.toLowerCase()]) return skillPositionMap[skill.toLowerCase()];
+  }
+
+  // Contextual inference
+  if (text.includes('guard retention') || text.includes('retain')) return 'open-guard';
+  if (text.includes('pass') && !text.includes('escape')) return 'standing';
+  if (text.includes('escape') && text.includes('mount')) return 'mount';
+  if (text.includes('escape') && text.includes('side')) return 'side-control';
+  if (text.includes('sweep')) return 'closed-guard';
+
+  return '';
+}
+
+function detectTechniques(game) {
+  const text = analyzeGameText(game);
+  const techniques = [];
+
+  for (const [technique, pattern] of Object.entries(techniquePatterns)) {
+    if (pattern.test(text)) techniques.push(technique);
+  }
+
+  return techniques;
+}
+
+function enrichGame(game) {
+  const enriched = { ...game };
+
+  if (!enriched.position) {
+    enriched.position = detectPosition(game);
+  }
+
+  const existingTechniques = enriched.techniques || [];
+  const detectedTechniques = detectTechniques(game);
+  const allTechniques = [...new Set([...existingTechniques, ...detectedTechniques])];
+  enriched.techniques = allTechniques;
+
+  return enriched;
+}
+
 function detectTopic(text) {
   const lower = text.toLowerCase();
   for (const [topic, keywords] of Object.entries(topicKeywords)) {
@@ -148,7 +293,7 @@ function parseTextToGames(text) {
 
 export default function Import() {
   const navigate = useNavigate();
-  const { importGames, showToast } = useApp();
+  const { importGames, showToast, clearAllGames, games } = useApp();
   const fileInputRef = useRef(null);
 
   const [mode, setMode] = useState('text'); // 'text' or 'json'
@@ -156,6 +301,8 @@ export default function Import() {
   const [dragActive, setDragActive] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearConfirmText, setClearConfirmText] = useState('');
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -206,22 +353,32 @@ export default function Import() {
           return;
         }
 
+        // Enrich games with positions and techniques
+        const enrichedGames = gamesArray.map(enrichGame);
+        const enrichedCount = enrichedGames.filter((g, i) =>
+          (g.position && !gamesArray[i].position) ||
+          (g.techniques?.length > (gamesArray[i].techniques?.length || 0))
+        ).length;
+
         setPreviewData({
-          games: gamesArray,
+          games: enrichedGames,
           exportDate: data.exportDate,
-          count: gamesArray.length,
-          source: 'json'
+          count: enrichedGames.length,
+          source: 'json',
+          enrichedCount
         });
       } else {
         // Text file - parse it
-        const games = parseTextToGames(text);
-        if (games.length === 0) {
+        const parsedGames = parseTextToGames(text);
+        if (parsedGames.length === 0) {
           showToast('No games found in file', 'error');
           return;
         }
+        // Enrich games
+        const enrichedGames = parsedGames.map(enrichGame);
         setPreviewData({
-          games,
-          count: games.length,
+          games: enrichedGames,
+          count: enrichedGames.length,
           source: 'text'
         });
       }
@@ -236,15 +393,17 @@ export default function Import() {
       return;
     }
 
-    const games = parseTextToGames(textInput);
-    if (games.length === 0) {
+    const parsedGames = parseTextToGames(textInput);
+    if (parsedGames.length === 0) {
       showToast('Could not parse any games from text', 'error');
       return;
     }
 
+    // Enrich games
+    const enrichedGames = parsedGames.map(enrichGame);
     setPreviewData({
-      games,
-      count: games.length,
+      games: enrichedGames,
+      count: enrichedGames.length,
       source: 'text'
     });
   };
@@ -429,6 +588,19 @@ Skills: mount, submissions, pressure`;
                 </span>
               </div>
 
+              {previewData.enrichedCount > 0 && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-600 dark:text-green-400">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                      Auto-enriched {previewData.enrichedCount} games with positions/techniques
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Game preview list */}
               <div className="max-h-80 overflow-y-auto space-y-3">
                 {previewData.games.map((game, idx) => (
@@ -436,10 +608,15 @@ Skills: mount, submissions, pressure`;
                     key={idx}
                     className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
                   >
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className="badge bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
                         {game.topic || 'General'}
                       </span>
+                      {game.position && (
+                        <span className="badge bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs">
+                          {game.position}
+                        </span>
+                      )}
                       <span className="font-medium text-gray-900 dark:text-white truncate">
                         {game.name}
                       </span>
@@ -454,14 +631,19 @@ Skills: mount, submissions, pressure`;
                         <strong>Bottom:</strong> {game.bottomPlayer.substring(0, 80)}{game.bottomPlayer.length > 80 ? '...' : ''}
                       </p>
                     )}
-                    {game.skills && (
+                    {(game.skills || game.techniques?.length > 0) && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {(Array.isArray(game.skills)
                           ? game.skills
-                          : game.skills.split(/[#,\s]+/).filter(s => s.trim())
-                        ).slice(0, 5).map((skill, i) => (
+                          : (game.skills || '').split(/[#,\s]+/).filter(s => s.trim())
+                        ).slice(0, 3).map((skill, i) => (
                           <span key={i} className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">
                             #{skill.replace(/^#/, '')}
+                          </span>
+                        ))}
+                        {game.techniques?.slice(0, 2).map((tech, i) => (
+                          <span key={`t-${i}`} className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
+                            {tech}
                           </span>
                         ))}
                       </div>
@@ -500,6 +682,72 @@ Skills: mount, submissions, pressure`;
           </div>
         </div>
       )}
+
+      {/* Empty Library Section */}
+      <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          Clear Library
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Remove all games from your library to start fresh or before reimporting.
+          {games.length > 0 && (
+            <span className="text-gray-700 dark:text-gray-300 font-medium"> You currently have {games.length} games.</span>
+          )}
+        </p>
+
+        {!showClearConfirm ? (
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            className="btn-danger"
+            disabled={games.length === 0}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
+              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+            </svg>
+            Empty Library
+          </button>
+        ) : (
+          <div className="card p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+            <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+              This will permanently delete all {games.length} games. Type <strong>DELETE</strong> to confirm.
+            </p>
+            <input
+              type="text"
+              value={clearConfirmText}
+              onChange={(e) => setClearConfirmText(e.target.value)}
+              placeholder="Type DELETE to confirm"
+              className="input mb-3"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowClearConfirm(false);
+                  setClearConfirmText('');
+                }}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (clearConfirmText === 'DELETE') {
+                    const result = await clearAllGames();
+                    if (result.success) {
+                      setShowClearConfirm(false);
+                      setClearConfirmText('');
+                    }
+                  }
+                }}
+                disabled={clearConfirmText !== 'DELETE'}
+                className="btn-danger flex-1"
+              >
+                Delete All Games
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
