@@ -295,6 +295,33 @@ export default function SkillBalance({ compact = false }) {
       {/* Positions View */}
       {viewMode === 'positions' && (
         <>
+          {/* Coverage indicator */}
+          <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Games with positions</span>
+              <span className={`font-medium ${
+                totalPositionGames / totalGames >= 0.5 ? 'text-green-600' :
+                totalPositionGames / totalGames >= 0.2 ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                {totalPositionGames} of {totalGames}
+              </span>
+            </div>
+            <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1.5">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  totalPositionGames / totalGames >= 0.5 ? 'bg-green-500' :
+                  totalPositionGames / totalGames >= 0.2 ? 'bg-yellow-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${totalGames > 0 ? (totalPositionGames / totalGames) * 100 : 0}%` }}
+              />
+            </div>
+            {totalPositionGames < totalGames * 0.5 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Add positions to more games for better balance tracking
+              </p>
+            )}
+          </div>
+
           {/* Position category counts */}
           {(() => {
             const categoryCounts = Object.entries(positionCounts).reduce((acc, [pos, count]) => {
