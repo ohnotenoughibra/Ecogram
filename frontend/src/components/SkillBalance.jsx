@@ -520,7 +520,14 @@ export default function SkillBalance({ showSuggestions = true, compact = false }
                     excludedIds.current.add(suggestion.name.toLowerCase());
                     excludedIds.current.add(suggestion.id);
                     // Remove from current suggestions
-                    setAiSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
+                    setAiSuggestions(prev => {
+                      const remaining = prev.filter(s => s.id !== suggestion.id);
+                      // Auto-fetch new suggestions when running low
+                      if (remaining.length === 0) {
+                        setTimeout(() => fetchAiSuggestions(), 300);
+                      }
+                      return remaining;
+                    });
                   }}
                 />
               ))}

@@ -2388,186 +2388,163 @@ function determineSuggestionTypes(analysis, requestedType) {
 }
 
 // Helper: Generate smart template suggestions when no API key
-function generateSmartTemplateSuggestions(analysis, games, excludeIds) {
+function generateSmartTemplateSuggestions(analysis, games, excludeIds = []) {
   const suggestions = [];
   const existingNames = games.map(g => g.name.toLowerCase());
+  const excludeSet = new Set(excludeIds.map(id => String(id).toLowerCase()));
 
-  // 1. Gap-based suggestion
+  // Helper to check if suggestion should be excluded
+  const isExcluded = (name) => {
+    const nameLower = name.toLowerCase();
+    return excludeSet.has(nameLower) ||
+           existingNames.some(n => n.includes(nameLower.split(' ')[0])) ||
+           Array.from(excludeSet).some(ex => nameLower.includes(ex) || ex.includes(nameLower.split(' ')[0]));
+  };
+
+  // Shuffle helper
+  const shuffleArray = (arr) => {
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Large pool of suggestions organized by type
+  const allSuggestions = {
+    legLocks: shuffleArray([
+      { name: 'Ashi Garami Entry Game', description: 'Develop leg lock entries from various guard positions', prompt: 'Create a leg lock entry game focused on achieving ashi garami control from open guard', topic: 'offensive' },
+      { name: 'Heel Hook Control Game', description: 'Modern leg lock game focusing on inside sankaku and saddle control', prompt: 'Create a leg lock game emphasizing position before submission with heel hook finishes', topic: 'offensive' },
+      { name: '50-50 Battle', description: 'Equal opportunity leg lock game from 50-50 position', prompt: 'Create a 50-50 leg lock game where both players hunt heel hooks simultaneously', topic: 'offensive' },
+      { name: 'Saddle Entry System', description: 'Work entries into inside sankaku from multiple positions', prompt: 'Create a game focused on achieving saddle/inside sankaku from guard and top', topic: 'transition' },
+      { name: 'Leg Lock Defense Drill', description: 'Escape leg entanglements before submissions lock in', prompt: 'Create a defensive leg lock game focused on boot defense and extraction', topic: 'defensive' },
+      { name: 'K-Guard to Leg Attacks', description: 'Use K-guard to off-balance and enter leg entanglements', prompt: 'Create a K-guard game transitioning to saddle and ashi positions', topic: 'transition' }
+    ]),
+    standing: shuffleArray([
+      { name: 'Wrestling Tie-Up Battle', description: 'Develop clinch control and takedown entries', prompt: 'Create a wrestling game focused on establishing dominant ties and level changes', topic: 'transition' },
+      { name: 'Front Headlock Series', description: 'Snap downs, go-behinds, and choke threats', prompt: 'Create a front headlock game with guillotine, darce, and anaconda options', topic: 'offensive' },
+      { name: 'Body Lock Takedowns', description: 'Wrestling game focused on body lock control and trips', prompt: 'Create a takedown game using body lock to throw and trip', topic: 'transition' },
+      { name: 'Arm Drag to Back', description: 'Arm drag entries to back takes from standing', prompt: 'Create a standing game using arm drags to take the back', topic: 'transition' },
+      { name: 'Sprawl & Counter', description: 'Defend takedowns and counter-attack', prompt: 'Create a wrestling game focusing on sprawls and counter offense', topic: 'defensive' }
+    ]),
+    guard: shuffleArray([
+      { name: 'Guard Sweep Wars', description: 'Develop sweep timing from various guards', prompt: 'Create a guard game where bottom player hunts sweeps vs top maintains base', topic: 'transition' },
+      { name: 'Guard Retention Flow', description: 'Maintain and recover guard under pressure', prompt: 'Create a guard retention game with continuous recovery required', topic: 'defensive' },
+      { name: 'Closed Guard Attack Chain', description: 'Chain submissions from closed guard', prompt: 'Create a closed guard game chaining armbar-triangle-omoplata', topic: 'offensive' },
+      { name: 'De La Riva Sweep System', description: 'DLR sweeps and back takes', prompt: 'Create a DLR guard game with sweep and back take options', topic: 'transition' },
+      { name: 'Half Guard Battle', description: 'Both players work half guard attacks and passes', prompt: 'Create a half guard game with sweeps vs passes', topic: 'transition' }
+    ]),
+    top: shuffleArray([
+      { name: 'Pin Transition Drill', description: 'Flow between dominant positions with control', prompt: 'Create a top position game cycling through side control, mount, back, knee on belly', topic: 'control' },
+      { name: 'Body Lock Passing Game', description: 'Modern pressure passing with body lock control', prompt: 'Create a passing game using body lock pressure to pass guard', topic: 'control' },
+      { name: 'Mount Attack Series', description: 'Submissions and transitions from mount', prompt: 'Create a mount game focusing on submissions and back takes', topic: 'offensive' },
+      { name: 'Side Control Escape vs Hold', description: 'Top maintains, bottom escapes', prompt: 'Create a side control game with escape objectives and control time', topic: 'control' },
+      { name: 'Knee Cut Passing', description: 'Systematic knee cut passing variations', prompt: 'Create a passing game focused on knee cut entries and finishes', topic: 'control' }
+    ]),
+    back: shuffleArray([
+      { name: 'Back Attack System', description: 'Body triangle control with RNC and arm attacks', prompt: 'Create a back attack game with body triangle control and finishes', topic: 'offensive' },
+      { name: 'Back Escape Challenge', description: 'Escape back control before submission', prompt: 'Create a back escape game with time pressure', topic: 'defensive' },
+      { name: 'Back Take Entries', description: 'Multiple entries to back control', prompt: 'Create a game focused on achieving back control from various positions', topic: 'transition' }
+    ]),
+    meta: shuffleArray([
+      { name: 'Modern Back Attack Flow', description: 'Body triangle, seat belt, short choke variations', prompt: 'Create a modern back attack game with body triangle and short choke options', topic: 'offensive' },
+      { name: 'Matrix Guard System', description: 'Use matrix/K-guard for sweeps and leg entries', prompt: 'Create a matrix guard game with sweep and leg attack options', topic: 'transition' },
+      { name: 'Darce/Anaconda Flow', description: 'Front headlock to D\'arce and anaconda transitions', prompt: 'Create a front headlock game flowing between darce and anaconda', topic: 'offensive' },
+      { name: 'Wrestling Up Game', description: 'Stand up from bottom against leg lockers', prompt: 'Create a game focused on wrestling up vs leg lock entries', topic: 'defensive' },
+      { name: 'Imanari Roll Entries', description: 'Flying entries to leg entanglements', prompt: 'Create a game using Imanari rolls to enter leg lock positions', topic: 'transition' }
+    ]),
+    topics: {
+      offensive: shuffleArray([
+        { name: 'Submission Hunt Game', description: 'Continuous submission attempts and chains', prompt: 'Create an offensive game where attacker chains submissions with limited position holds', topic: 'offensive' },
+        { name: 'Finish or Reset', description: 'Must submit within time limit or reset', prompt: 'Create an offensive game with 30-second submission time limits', topic: 'offensive' },
+        { name: 'First Attack Wins', description: 'Race to first clean submission attempt', prompt: 'Create a game where first clean submission attack scores', topic: 'offensive' }
+      ]),
+      defensive: shuffleArray([
+        { name: 'Survival & Escape Rounds', description: 'Timed survival from bad positions', prompt: 'Create a defensive game starting from bad positions with escape objectives', topic: 'defensive' },
+        { name: 'Guard Recovery Specialist', description: 'Recover guard from any passed position', prompt: 'Create a game focused on recovering guard from side control and mount', topic: 'defensive' },
+        { name: 'Submission Defense Only', description: 'Defend all submissions for time', prompt: 'Create a pure defensive game against continuous attacks', topic: 'defensive' }
+      ]),
+      control: shuffleArray([
+        { name: 'Pressure Maintenance Game', description: 'Maintain control and advance positions', prompt: 'Create a control game focused on maintaining and advancing dominant positions', topic: 'control' },
+        { name: 'Pin Timer Challenge', description: 'Score points for pin duration', prompt: 'Create a game scoring points for time in dominant positions', topic: 'control' },
+        { name: 'Position Ladder', description: 'Progress through positions systematically', prompt: 'Create a control game advancing from side control to mount to back', topic: 'control' }
+      ]),
+      transition: shuffleArray([
+        { name: 'Scramble Points Game', description: 'Win scrambles for points', prompt: 'Create a transition game with point scoring for winning scrambles', topic: 'transition' },
+        { name: 'Counter Attack Game', description: 'Defend then immediately attack', prompt: 'Create a game where defender must counter-attack within 3 seconds', topic: 'transition' },
+        { name: 'Flow Roll Objectives', description: 'Flowing rolls with position targets', prompt: 'Create a flow game hitting specific position checkpoints', topic: 'transition' }
+      ])
+    }
+  };
+
+  // Try gap-based suggestions first
   if (analysis.gaps.positions.length > 0) {
-    const gap = analysis.gaps.positions[0];
-    const gapSuggestions = {
-      legLocks: {
-        name: 'Ashi Garami Entry Game',
-        description: 'Develop leg lock entries from various guard positions with progressive resistance',
-        prompt: 'Create a leg lock entry game focused on achieving ashi garami control from open guard',
-        topic: 'offensive'
-      },
-      standing: {
-        name: 'Wrestling Tie-Up Battle',
-        description: 'Develop clinch control and takedown entries through grip fighting',
-        prompt: 'Create a wrestling game focused on establishing dominant ties and level changes',
-        topic: 'transition'
-      },
-      turtle: {
-        name: 'Turtle Attack & Defense',
-        description: 'Both players work turtle position - attacks from top, recoveries from bottom',
-        prompt: 'Create a turtle position game with back take attempts vs guard recovery',
-        topic: 'transition'
-      },
-      guard: {
-        name: 'Guard Sweep Wars',
-        description: 'Develop sweep timing and execution from various guard positions',
-        prompt: 'Create a guard game where bottom player hunts sweeps vs top player maintains base',
-        topic: 'transition'
-      },
-      top: {
-        name: 'Pin Transition Drill',
-        description: 'Flow between dominant positions while maintaining pressure and control',
-        prompt: 'Create a top position game cycling through side control, mount, back, and knee on belly',
-        topic: 'control'
+    for (const gap of analysis.gaps.positions) {
+      const pool = allSuggestions[gap.position] || [];
+      for (const s of pool) {
+        if (!isExcluded(s.name) && suggestions.length < 3) {
+          suggestions.push({ type: 'gap', position: gap.position, reasoning: `Your library needs more ${gap.position} games`, ...s });
+          break;
+        }
       }
-    };
-
-    if (gapSuggestions[gap.position]) {
-      suggestions.push({
-        type: 'gap',
-        position: gap.position,
-        reasoning: `Your library has only ${gap.count} ${gap.position} games`,
-        ...gapSuggestions[gap.position]
-      });
     }
   }
 
-  // 2. Meta technique suggestion
-  if (analysis.gaps.techniques.length > 0) {
-    const gap = analysis.gaps.techniques[0];
-    const metaSuggestions = {
-      legLocks: {
-        name: 'Heel Hook Control Game',
-        description: 'Modern leg lock game focusing on inside sankaku and saddle control before attacking',
-        prompt: 'Create a leg lock game emphasizing position before submission with heel hook finishes',
-        topic: 'offensive'
-      },
-      modernGuards: {
-        name: 'K-Guard Entry Drill',
-        description: 'Develop modern guard entries and sweeps using K-guard and matrix concepts',
-        prompt: 'Create a guard game using K-guard and matrix positions to off-balance and sweep',
-        topic: 'transition'
-      },
-      wrestling: {
-        name: 'Front Headlock Series',
-        description: 'Wrestling-based game developing snap downs, go-behinds, and guillotine threats',
-        prompt: 'Create a front headlock game with guillotine, darce, and anaconda options',
-        topic: 'offensive'
-      },
-      backAttacks: {
-        name: 'Back Attack System',
-        description: 'Comprehensive back control game with body triangle, collar control, and finishes',
-        prompt: 'Create a back attack game with body triangle control and RNC/arm attack options',
-        topic: 'offensive'
-      },
-      modernPassing: {
-        name: 'Body Lock Passing Game',
-        description: 'Modern pressure passing using body lock control to systematically pass guard',
-        prompt: 'Create a passing game using body lock pressure to pass half guard and open guard',
-        topic: 'control'
+  // Add meta technique suggestions
+  if (suggestions.length < 3) {
+    for (const s of allSuggestions.meta) {
+      if (!isExcluded(s.name) && suggestions.length < 3) {
+        suggestions.push({ type: 'meta', reasoning: 'Modern grappling technique not in your library', ...s });
       }
-    };
-
-    if (metaSuggestions[gap.category] && !existingNames.some(n => n.includes(gap.category.toLowerCase()))) {
-      suggestions.push({
-        type: 'meta',
-        position: gap.category,
-        reasoning: `No ${gap.category} techniques in your library`,
-        ...metaSuggestions[gap.category]
-      });
     }
   }
 
-  // 3. Topic balance suggestion
-  if (analysis.gaps.topics.length > 0) {
-    const gap = analysis.gaps.topics[0];
-    const topicSuggestions = {
-      offensive: {
-        name: 'Submission Hunt Game',
-        description: 'Develop attacking mindset with continuous submission attempts and chains',
-        prompt: 'Create an offensive game where attacker chains submissions with limited position holds'
-      },
-      defensive: {
-        name: 'Survival & Escape Rounds',
-        description: 'Build defensive skills through timed survival and systematic escapes',
-        prompt: 'Create a defensive game starting from bad positions with escape objectives'
-      },
-      control: {
-        name: 'Pressure Maintenance Game',
-        description: 'Develop top control through systematic pressure and position advancement',
-        prompt: 'Create a control game focused on maintaining and advancing dominant positions'
-      },
-      transition: {
-        name: 'Scramble Points Game',
-        description: 'Develop scramble awareness and speed with competitive position battles',
-        prompt: 'Create a transition game with point scoring for winning scrambles'
+  // Add topic balance suggestions
+  if (analysis.gaps.topics.length > 0 && suggestions.length < 3) {
+    for (const gap of analysis.gaps.topics) {
+      const pool = allSuggestions.topics[gap.topic] || [];
+      for (const s of pool) {
+        if (!isExcluded(s.name) && suggestions.length < 3) {
+          suggestions.push({ type: 'gap', reasoning: `Only ${gap.count} ${gap.topic} games (need more balance)`, ...s });
+          break;
+        }
       }
-    };
-
-    if (topicSuggestions[gap.topic]) {
-      suggestions.push({
-        type: 'gap',
-        topic: gap.topic,
-        reasoning: `Only ${gap.count} ${gap.topic} games (need more balance)`,
-        ...topicSuggestions[gap.topic]
-      });
     }
   }
 
-  // 4. Variation of popular game (if we have usage data)
+  // Add variation of frequent games
   if (analysis.frequentGames.length > 0 && suggestions.length < 3) {
-    const popular = analysis.frequentGames[0];
-    suggestions.push({
-      type: 'variation',
-      name: `${popular.name} - Advanced Version`,
-      description: `Competition-level variation of your most-used game with added pressure and time constraints`,
-      prompt: `Create an advanced/competition variation of: ${popular.name}. Add time pressure, degraded starting positions, and chain attack requirements.`,
-      reasoning: `Based on your frequently used game "${popular.name}"`,
-      basedOn: popular.name,
-      topic: popular.topic || 'transition'
-    });
+    for (const popular of analysis.frequentGames) {
+      const variationName = `${popular.name} - Competition Variant`;
+      if (!isExcluded(variationName)) {
+        suggestions.push({
+          type: 'variation',
+          name: variationName,
+          description: `Advanced variation of ${popular.name} with added pressure`,
+          prompt: `Create a competition variation of: ${popular.name}. Add time pressure and chain requirements.`,
+          reasoning: `Based on your game "${popular.name}"`,
+          basedOn: popular.name,
+          topic: popular.topic || 'transition'
+        });
+        break;
+      }
+    }
   }
 
-  // Fill remaining slots with general suggestions
-  const generalSuggestions = [
-    {
-      type: 'complement',
-      name: 'Counter Attack Game',
-      description: 'Develop counter-attacking skills by defending then immediately attacking',
-      prompt: 'Create a game where defender must counter-attack within 3 seconds of successful defense',
-      reasoning: 'Develops the connection between defense and offense',
-      topic: 'transition'
-    },
-    {
-      type: 'progression',
-      name: 'Competition Simulation',
-      description: 'Full competitive rounds with point scoring and time limits',
-      prompt: 'Create a competition simulation game with ADCC-style scoring and time pressure',
-      reasoning: 'Tests skills under competitive pressure',
-      topic: 'transition'
-    },
-    {
-      type: 'gap',
-      name: 'Guard Recovery Specialist',
-      description: 'Develop guard recovery from every bad position',
-      prompt: 'Create a game focused on recovering guard from passed positions',
-      reasoning: 'Essential skill often undertrained',
-      topic: 'defensive'
-    }
-  ];
+  // Fill remaining with random from all pools
+  if (suggestions.length < 3) {
+    const allPools = [...allSuggestions.legLocks, ...allSuggestions.standing, ...allSuggestions.guard,
+                      ...allSuggestions.top, ...allSuggestions.back, ...allSuggestions.meta];
+    const shuffledAll = shuffleArray(allPools);
 
-  while (suggestions.length < 3) {
-    const next = generalSuggestions[suggestions.length];
-    if (next && !existingNames.some(n => n.toLowerCase().includes(next.name.toLowerCase().split(' ')[0]))) {
-      suggestions.push(next);
-    } else {
-      break;
+    for (const s of shuffledAll) {
+      if (!isExcluded(s.name) && suggestions.length < 3) {
+        const alreadyHas = suggestions.some(existing => existing.name === s.name);
+        if (!alreadyHas) {
+          suggestions.push({ type: 'complement', reasoning: 'Expands your training variety', ...s });
+        }
+      }
     }
   }
 
