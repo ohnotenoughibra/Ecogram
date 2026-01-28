@@ -191,19 +191,20 @@ function GameCard({ game, size = 'medium' }) {
   );
 }
 
-export default function PrintableGameCards({ isOpen, onClose, games: propGames, title = 'Game Cards' }) {
+export default function PrintableGameCards({ isOpen, onClose, games: propGames, title = 'Game Cards', singleMode = false }) {
   const { games: allGames, selectedGames } = useApp();
   const printRef = useRef(null);
-  const [cardSize, setCardSize] = useState('medium');
-  const [cardsPerRow, setCardsPerRow] = useState(2);
+  const [cardSize, setCardSize] = useState(singleMode ? 'large' : 'medium');
+  const [cardsPerRow, setCardsPerRow] = useState(singleMode ? 1 : 2);
   const [includeDescription, setIncludeDescription] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
 
   // Use provided games, or selected games, or all games
-  const gamesToPrint = propGames ||
+  // In single mode, only use propGames (should be a single game array)
+  const gamesToPrint = singleMode ? (propGames || []).slice(0, 1) : (propGames ||
     (selectedGames.size > 0
       ? allGames.filter(g => selectedGames.has(g._id))
-      : allGames);
+      : allGames));
 
   const handlePrint = () => {
     setIsPrinting(true);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import SessionItem from '../components/SessionItem';
 import SessionCalendar from '../components/SessionCalendar';
@@ -11,6 +11,7 @@ import api from '../utils/api';
 
 export default function Sessions() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     sessions,
@@ -46,9 +47,15 @@ export default function Sessions() {
   const [templateToDelete, setTemplateToDelete] = useState(null);
   const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
 
+  // Topic management state
+  const [trainingTopics, setTrainingTopics] = useState([]);
+  const [showTopicModal, setShowTopicModal] = useState(false);
+  const [editingTopic, setEditingTopic] = useState(null);
+
   useEffect(() => {
     fetchSessions();
     fetchTemplates();
+    fetchTopics();
   }, []);
 
   // Handle ?new=true query parameter from QuickActions
@@ -64,12 +71,122 @@ export default function Sessions() {
     }
   }, [searchParams, setSearchParams]);
 
+  // Handle smart playlist navigation - create session from selected games
+  useEffect(() => {
+    const handleSmartPlaylist = async () => {
+      if (location.state?.smartPlaylist && location.state?.gameIds) {
+        const { smartPlaylist, gameIds } = location.state;
+        // Clear the state to prevent re-triggering
+        window.history.replaceState({}, document.title);
+
+        try {
+          // Create a session with the selected games
+          const playlistNames = {
+            'not-trained-30': 'Not Trained Recently',
+            'never-used': 'Never Used Games',
+            'high-difficulty': 'Advanced Challenge',
+            'beginner-friendly': 'Beginner Friendly',
+            'top-rated': 'Top Performers',
+            'most-used': 'Favorites',
+            'recently-added': 'Recently Added',
+            'warmup-games': 'Warmup Collection',
+            'favorites-stale': 'Forgotten Favorites',
+            'leg-lock-focus': 'Leg Lock Focus'
+          };
+
+          const sessionName = playlistNames[smartPlaylist] || 'Smart Playlist Session';
+          const response = await api.post('/sessions', {
+            name: `${sessionName} - ${new Date().toLocaleDateString()}`,
+            gameIds: gameIds
+          });
+
+          await fetchSessions();
+          showToast(`Session created with ${gameIds.length} games!`, 'success');
+
+          // Navigate to the new session
+          navigate(`/session/${response.data._id}`);
+        } catch (error) {
+          console.error('Failed to create session from playlist:', error);
+          showToast('Failed to create session from playlist', 'error');
+        }
+      }
+    };
+
+    handleSmartPlaylist();
+  }, [location.state]);
+
   const fetchTemplates = async () => {
     try {
       const response = await api.get('/sessions/templates/all');
       setTemplates(response.data);
     } catch (error) {
       console.error('Failed to fetch templates:', error);
+    }
+  };
+
+  const fetchTopics = async () => {
+    try {
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString();
+
+      const response = await api.get('/topics', {
+        params: { startDate, endDate, active: true }
+      });
+      setTrainingTopics(response.data);
+    } catch (err) {
+      console.error('Failed to fetch topics:', err);
+    }
+  };
+
+  // Get current topic
+  const currentTopic = useMemo(() => {
+    const today = new Date();
+    return trainingTopics.find(topic => {
+      const start = new Date(topic.startDate);
+      const end = new Date(topic.endDate);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return today >= start && today <= end;
+    });
+  }, [trainingTopics]);
+
+  // Calculate topic balance for calendar
+  const topicBalance = useMemo(() => {
+    const counts = { offensive: 0, defensive: 0, control: 0, transition: 0 };
+    trainingTopics.forEach(topic => {
+      if (counts.hasOwnProperty(topic.category)) {
+        counts[topic.category]++;
+      }
+    });
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    return { counts, total };
+  }, [trainingTopics]);
+
+  const handleCreateTopic = async (topicData) => {
+    try {
+      if (editingTopic && !editingTopic._isNew) {
+        await api.put(`/topics/${editingTopic._id}`, topicData);
+        showToast('Topic updated', 'success');
+      } else {
+        await api.post('/topics', topicData);
+        showToast('Topic created', 'success');
+      }
+      fetchTopics();
+      setShowTopicModal(false);
+      setEditingTopic(null);
+    } catch (err) {
+      showToast('Failed to save topic', 'error');
+    }
+  };
+
+  const handleDeleteTopic = async (topicId) => {
+    try {
+      await api.delete(`/topics/${topicId}`);
+      showToast('Topic deleted', 'success');
+      fetchTopics();
+    } catch (err) {
+      showToast('Failed to delete topic', 'error');
     }
   };
 
@@ -419,22 +536,6 @@ export default function Sessions() {
       {/* Content */}
       {sessionsLoading && sessions.length === 0 ? (
         <Loading text="Loading sessions..." />
-      ) : sessions.length === 0 ? (
-        <div className="text-center py-12">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-          </svg>
-          <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No sessions yet</h3>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">
-            Create a session to organize your training games.
-          </p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary mt-4"
-          >
-            Create your first session
-          </button>
-        </div>
       ) : viewMode === 'calendar' ? (
         <SessionCalendar
           sessions={sessions}
@@ -442,9 +543,168 @@ export default function Sessions() {
           onEditSession={handleEditSession}
           onDeleteSession={handleDeleteClick}
           onStartSession={handleStartSession}
+          showToast={showToast}
         />
       ) : (
         <>
+          {/* Current Topic & Topic Balance Section */}
+          {filterTab === 'all' && (
+            <div className="mb-6 space-y-4">
+              {/* Current Topic Banner */}
+              {currentTopic ? (
+                <div
+                  className={`p-4 rounded-xl border-2 ${
+                    currentTopic.category === 'offensive' ? 'bg-red-100 dark:bg-red-900/20 border-red-300 dark:border-red-700' :
+                    currentTopic.category === 'defensive' ? 'bg-blue-100 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' :
+                    currentTopic.category === 'control' ? 'bg-purple-100 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700' :
+                    currentTopic.category === 'transition' ? 'bg-green-100 dark:bg-green-900/20 border-green-300 dark:border-green-700' :
+                    'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                  }`}
+                  style={currentTopic.color ? { borderLeftWidth: '6px', borderLeftColor: currentTopic.color } : {}}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        {currentTopic.color && (
+                          <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: currentTopic.color }} />
+                        )}
+                        <span className={`text-xs font-medium uppercase ${
+                          currentTopic.category === 'offensive' ? 'text-red-700 dark:text-red-400' :
+                          currentTopic.category === 'defensive' ? 'text-blue-700 dark:text-blue-400' :
+                          currentTopic.category === 'control' ? 'text-purple-700 dark:text-purple-400' :
+                          currentTopic.category === 'transition' ? 'text-green-700 dark:text-green-400' :
+                          'text-gray-700 dark:text-gray-400'
+                        }`}>
+                          Current Focus
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {Math.ceil((new Date(currentTopic.endDate) - new Date()) / (1000 * 60 * 60 * 24))} days remaining
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-1">{currentTopic.name}</h3>
+                      {currentTopic.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{currentTopic.description}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => { setEditingTopic(currentTopic); setShowTopicModal(true); }}
+                      className="btn-secondary text-sm"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  {currentTopic.goals && currentTopic.goals.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {currentTopic.goals.map((goal, idx) => (
+                        <span key={idx} className="text-xs px-2 py-1 bg-white/50 dark:bg-black/20 rounded-full">{goal}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setEditingTopic(null); setShowTopicModal(true); }}
+                  className="w-full p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm hover:border-primary-400 hover:text-primary-500 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path d="M8.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" />
+                  </svg>
+                  Set a training topic to focus your sessions
+                </button>
+              )}
+
+              {/* Topic Balance Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-primary-500">
+                      <path fillRule="evenodd" d="M10 2a.75.75 0 01.75.75v.258a33.186 33.186 0 016.668.83.75.75 0 01-.336 1.461 31.28 31.28 0 00-1.103-.232l1.702 7.545a.75.75 0 01-.387.832A4.981 4.981 0 0115 14c-.825 0-1.606-.2-2.294-.556a.75.75 0 01-.387-.832l1.77-7.849a31.743 31.743 0 00-3.339-.254v11.505l6.418 1.069a.75.75 0 11-.246 1.48l-6.172-1.029a.75.75 0 01-.378-.146l-.016.006-.016-.006a.75.75 0 01-.378.146l-6.172 1.03a.75.75 0 01-.246-1.481L10 16.014V5.509a31.743 31.743 0 00-3.339.254l1.77 7.85a.75.75 0 01-.387.83A4.981 4.981 0 015 14c-.825 0-1.606-.2-2.294-.556a.75.75 0 01-.387-.832l1.702-7.545a31.28 31.28 0 00-1.103.232.75.75 0 11-.336-1.462 33.186 33.186 0 016.668-.829V2.75A.75.75 0 0110 2z" clipRule="evenodd" />
+                    </svg>
+                    Topic Balance
+                  </h3>
+                  <button
+                    onClick={() => { setEditingTopic(null); setShowTopicModal(true); }}
+                    className="text-sm text-primary-500 hover:text-primary-600 flex items-center gap-1"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                      <path d="M8.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" />
+                    </svg>
+                    Add Topic
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Diversify your training by balancing topics across your calendar
+                </p>
+                {topicBalance.total > 0 ? (
+                  <div className="space-y-2">
+                    {[
+                      { key: 'offensive', label: 'Offensive', color: 'bg-red-500', icon: '⚔️' },
+                      { key: 'defensive', label: 'Defensive', color: 'bg-blue-500', icon: '🛡️' },
+                      { key: 'control', label: 'Control', color: 'bg-purple-500', icon: '🎯' },
+                      { key: 'transition', label: 'Transition', color: 'bg-green-500', icon: '🔄' }
+                    ].map(t => {
+                      const count = topicBalance.counts[t.key] || 0;
+                      const percentage = topicBalance.total > 0 ? (count / topicBalance.total) * 100 : 0;
+                      const isLow = count === 0 || (count < topicBalance.total / 4 * 0.5);
+                      return (
+                        <div key={t.key}>
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="flex items-center gap-1.5">
+                              <span>{t.icon}</span>
+                              <span className="font-medium text-gray-700 dark:text-gray-300">{t.label}</span>
+                              {isLow && topicBalance.total > 2 && (
+                                <span className="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">
+                                  Needs focus
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-gray-500">{count} topic{count !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div className={`h-full ${t.color} rounded-full transition-all duration-500`} style={{ width: `${percentage}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                    <p>No training topics scheduled yet</p>
+                    <p className="text-xs mt-1">Add topics to track your training focus over time</p>
+                  </div>
+                )}
+                {/* Active Topics List */}
+                {trainingTopics.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Active & Upcoming Topics</p>
+                    <div className="flex flex-wrap gap-2">
+                      {trainingTopics.slice(0, 5).map(topic => (
+                        <button
+                          key={topic._id}
+                          onClick={() => { setEditingTopic(topic); setShowTopicModal(true); }}
+                          className={`text-xs px-2 py-1 rounded-full border transition-colors hover:shadow-sm ${
+                            topic.category === 'offensive' ? 'bg-red-100 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-700 dark:text-red-400' :
+                            topic.category === 'defensive' ? 'bg-blue-100 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400' :
+                            topic.category === 'control' ? 'bg-purple-100 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-400' :
+                            topic.category === 'transition' ? 'bg-green-100 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400' :
+                            'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-400'
+                          }`}
+                          style={topic.color ? { borderColor: topic.color } : {}}
+                        >
+                          {topic.color && <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: topic.color }} />}
+                          {topic.name}
+                        </button>
+                      ))}
+                      {trainingTopics.length > 5 && (
+                        <span className="text-xs text-gray-400 py-1">+{trainingTopics.length - 5} more</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Smart Insights */}
           {filterTab === 'all' && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -564,6 +824,22 @@ export default function Sessions() {
                   onSaveAsTemplate={handleSaveAsTemplate}
                 />
               ))}
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="text-center py-12">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No sessions yet</h3>
+              <p className="mt-1 text-gray-500 dark:text-gray-400">
+                Create a session to organize your training games.
+              </p>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="btn-primary mt-4"
+              >
+                Create your first session
+              </button>
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
@@ -866,6 +1142,173 @@ export default function Sessions() {
           </div>
         </div>
       )}
+
+      {/* Topic Modal */}
+      {showTopicModal && (
+        <TopicModal
+          topic={editingTopic}
+          onClose={() => { setShowTopicModal(false); setEditingTopic(null); }}
+          onSave={handleCreateTopic}
+          onDelete={editingTopic && !editingTopic._isNew ? () => handleDeleteTopic(editingTopic._id) : null}
+        />
+      )}
+    </div>
+  );
+}
+
+// Topic Modal Component
+function TopicModal({ topic, onClose, onSave, onDelete }) {
+  const isEditing = topic && !topic._isNew;
+  const [name, setName] = useState(isEditing ? topic.name : '');
+  const [description, setDescription] = useState(isEditing ? topic.description || '' : '');
+  const [category, setCategory] = useState(isEditing ? topic.category : 'custom');
+  const [color, setColor] = useState(isEditing ? topic.color || '' : '');
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [startDate, setStartDate] = useState(
+    topic?.startDate ? new Date(topic.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+  );
+  const [endDate, setEndDate] = useState(
+    topic?.endDate ? new Date(topic.endDate).toISOString().split('T')[0] : new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
+  const [goals, setGoals] = useState(isEditing && topic.goals ? topic.goals.join(', ') : '');
+
+  const categories = [
+    { value: 'offensive', label: 'Offensive', color: 'bg-red-500' },
+    { value: 'defensive', label: 'Defensive', color: 'bg-blue-500' },
+    { value: 'control', label: 'Control', color: 'bg-purple-500' },
+    { value: 'transition', label: 'Transition', color: 'bg-green-500' },
+    { value: 'competition', label: 'Competition', color: 'bg-orange-500' },
+    { value: 'fundamentals', label: 'Fundamentals', color: 'bg-teal-500' },
+    { value: 'custom', label: 'Custom', color: 'bg-gray-500' }
+  ];
+
+  const colorOptions = [
+    { name: 'Red', value: '#ef4444' }, { name: 'Orange', value: '#f97316' },
+    { name: 'Amber', value: '#f59e0b' }, { name: 'Green', value: '#22c55e' },
+    { name: 'Teal', value: '#14b8a6' }, { name: 'Blue', value: '#3b82f6' },
+    { name: 'Indigo', value: '#6366f1' }, { name: 'Purple', value: '#a855f7' },
+    { name: 'Pink', value: '#ec4899' }, { name: 'Gray', value: '#6b7280' }
+  ];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({
+      name, description, category, color: color || null, startDate, endDate,
+      goals: goals.split(',').map(g => g.trim()).filter(Boolean)
+    });
+  };
+
+  const setDuration = (weeks) => {
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + (weeks * 7) - 1);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {isEditing ? 'Edit Training Topic' : 'New Training Topic'}
+            </h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="label">Topic Name</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Guard Retention Focus" className="input" required />
+            </div>
+
+            <div>
+              <label className="label">Category</label>
+              <div className="grid grid-cols-2 gap-2">
+                {categories.map(cat => (
+                  <button key={cat.value} type="button" onClick={() => setCategory(cat.value)}
+                    className={`flex items-center gap-2 p-2 rounded-lg border text-sm text-left transition-colors ${category === cat.value ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                    <span className={`w-3 h-3 rounded-full ${cat.color}`} />
+                    <span className="truncate">{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="label">Custom Color (optional)</label>
+              <button type="button" onClick={() => setShowColorPicker(!showColorPicker)}
+                className="w-full flex items-center gap-3 p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                {color ? (
+                  <><span className="w-6 h-6 rounded-full border-2 border-white shadow" style={{ backgroundColor: color }} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{colorOptions.find(c => c.value === color)?.name || 'Custom'}</span></>
+                ) : (
+                  <><span className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600" />
+                    <span className="text-sm text-gray-500">Choose color</span></>
+                )}
+              </button>
+              {showColorPicker && (
+                <div className="mt-2 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                  <div className="grid grid-cols-5 gap-2">
+                    {colorOptions.map(c => (
+                      <button key={c.value} type="button" onClick={() => { setColor(c.value); setShowColorPicker(false); }}
+                        className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${color === c.value ? 'ring-2 ring-offset-2 ring-primary-500' : ''}`}
+                        style={{ backgroundColor: c.value }} title={c.name} />
+                    ))}
+                  </div>
+                  {color && <button type="button" onClick={() => { setColor(''); setShowColorPicker(false); }} className="text-xs text-gray-500 hover:text-red-500 mt-2">Clear color</button>}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="label">Description (optional)</label>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What's the focus?" rows={2} className="input resize-none" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="label">Start Date</label><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="input" required /></div>
+              <div><label className="label">End Date</label><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="input" min={startDate} required /></div>
+            </div>
+
+            <div className="flex gap-2">
+              {[2, 3, 4].map(w => (
+                <button key={w} type="button" onClick={() => setDuration(w)} className="chip text-xs">{w} weeks</button>
+              ))}
+            </div>
+
+            <div>
+              <label className="label">Goals (comma-separated, optional)</label>
+              <input type="text" value={goals} onChange={(e) => setGoals(e.target.value)} placeholder="e.g., Improve hip escapes, Work on frames" className="input" />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              {onDelete && <button type="button" onClick={() => setShowDeleteConfirm(true)} className="btn-danger text-sm">Delete</button>}
+              <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+              <button type="submit" className="btn-primary flex-1">{isEditing ? 'Save' : 'Create Topic'}</button>
+            </div>
+          </form>
+
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/50" onClick={() => setShowDeleteConfirm(false)} />
+              <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-2xl max-w-sm w-full p-6">
+                <h3 className="text-lg font-semibold text-center text-gray-900 dark:text-white mb-2">Delete Topic</h3>
+                <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Are you sure you want to delete "{name || topic?.name}"?</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl">Cancel</button>
+                  <button onClick={() => { onDelete(); onClose(); }} className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl">Delete</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

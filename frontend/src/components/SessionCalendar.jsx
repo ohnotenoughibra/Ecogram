@@ -156,6 +156,24 @@ export default function SessionCalendar({
     return getTopicForDate(today);
   }, [trainingTopics]);
 
+  // Calculate topic balance for diversification encouragement
+  const topicBalance = useMemo(() => {
+    const counts = { offensive: 0, defensive: 0, control: 0, transition: 0, competition: 0, fundamentals: 0 };
+    trainingTopics.forEach(topic => {
+      if (counts.hasOwnProperty(topic.category)) {
+        counts[topic.category]++;
+      }
+    });
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    const mainCategories = ['offensive', 'defensive', 'control', 'transition'];
+    const mainCounts = mainCategories.map(c => counts[c]);
+    const average = total > 0 ? total / mainCategories.length : 0;
+    const variance = mainCounts.reduce((sum, count) => sum + Math.pow(count - average, 2), 0) / mainCategories.length;
+    const balanceScore = total > 0 ? Math.max(0, 100 - Math.sqrt(variance) * 20) : 0;
+    const weakestCategory = mainCategories.reduce((min, cat) => counts[cat] < counts[min] ? cat : min, mainCategories[0]);
+    return { counts, total, balanceScore, weakestCategory };
+  }, [trainingTopics]);
+
   const navigateMonth = (delta) => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1));
   };
@@ -272,6 +290,80 @@ export default function SessionCalendar({
           )}
         </div>
       )}
+
+      {/* Topic Balance Card - Encourage diversification */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-primary-500">
+              <path fillRule="evenodd" d="M10 2a.75.75 0 01.75.75v.258a33.186 33.186 0 016.668.83.75.75 0 01-.336 1.461 31.28 31.28 0 00-1.103-.232l1.702 7.545a.75.75 0 01-.387.832A4.981 4.981 0 0115 14c-.825 0-1.606-.2-2.294-.556a.75.75 0 01-.387-.832l1.77-7.849a31.743 31.743 0 00-3.339-.254v11.505l6.418 1.069a.75.75 0 11-.246 1.48l-6.172-1.029a.75.75 0 01-.378-.146l-.016.006-.016-.006a.75.75 0 01-.378.146l-6.172 1.03a.75.75 0 01-.246-1.481L10 16.014V5.509a31.743 31.743 0 00-3.339.254l1.77 7.85a.75.75 0 01-.387.83A4.981 4.981 0 015 14c-.825 0-1.606-.2-2.294-.556a.75.75 0 01-.387-.832l1.702-7.545a31.28 31.28 0 00-1.103.232.75.75 0 11-.336-1.462 33.186 33.186 0 016.668-.829V2.75A.75.75 0 0110 2z" clipRule="evenodd" />
+            </svg>
+            Topic Balance
+          </h3>
+          {topicBalance.total > 0 && (
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+              topicBalance.balanceScore >= 70 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+              topicBalance.balanceScore >= 40 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+              'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+            }`}>
+              {Math.round(topicBalance.balanceScore)}% Balanced
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Diversify your training by scheduling topics across different categories
+        </p>
+        {topicBalance.total > 0 ? (
+          <div className="space-y-2">
+            {[
+              { key: 'offensive', label: 'Offensive', color: 'bg-red-500', icon: '⚔️' },
+              { key: 'defensive', label: 'Defensive', color: 'bg-blue-500', icon: '🛡️' },
+              { key: 'control', label: 'Control', color: 'bg-purple-500', icon: '🎯' },
+              { key: 'transition', label: 'Transition', color: 'bg-green-500', icon: '🔄' }
+            ].map(t => {
+              const count = topicBalance.counts[t.key] || 0;
+              const maxCount = Math.max(...Object.values(topicBalance.counts).filter((_, i) => i < 4), 1);
+              const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+              const isWeakest = t.key === topicBalance.weakestCategory && topicBalance.total > 2 && count < topicBalance.total / 4;
+              return (
+                <div key={t.key}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <span>{t.icon}</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{t.label}</span>
+                      {isWeakest && (
+                        <span className="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">
+                          Needs focus
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-gray-500">{count} topic{count !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className={`h-full ${t.color} rounded-full transition-all duration-500`} style={{ width: `${percentage}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+            {/* Suggestion for weak areas */}
+            {topicBalance.weakestCategory && topicBalance.counts[topicBalance.weakestCategory] === 0 && topicBalance.total > 1 && (
+              <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800">
+                <p className="text-xs text-orange-700 dark:text-orange-400 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M8.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clipRule="evenodd" />
+                  </svg>
+                  Consider adding a <strong className="capitalize">{topicBalance.weakestCategory}</strong> topic to balance your training
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+            <p>No training topics scheduled yet</p>
+            <p className="text-xs mt-1">Add topics to track your training focus over time</p>
+          </div>
+        )}
+      </div>
 
       {/* Calendar Card */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
