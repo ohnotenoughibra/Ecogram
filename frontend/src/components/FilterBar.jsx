@@ -18,7 +18,17 @@ const sortOptions = [
   { value: 'usageCount', label: 'Usage Count' }
 ];
 
-export default function FilterBar({ onSearch }) {
+// Quick position chips for common positions
+const quickPositions = [
+  { value: 'closed-guard', label: 'Closed Guard', icon: '🛡️' },
+  { value: 'half-guard', label: 'Half Guard', icon: '½' },
+  { value: 'mount', label: 'Mount', icon: '⬆️' },
+  { value: 'side-control', label: 'Side Control', icon: '➡️' },
+  { value: 'back-control', label: 'Back', icon: '🔙' },
+  { value: 'standing', label: 'Standing', icon: '🧍' },
+];
+
+export default function FilterBar({ onSearch, showQuickPositions = true }) {
   const { filters, setFilters } = useApp();
   const [searchValue, setSearchValue] = useState(filters.search || '');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -135,6 +145,26 @@ export default function FilterBar({ onSearch }) {
           <span className="hidden sm:inline ml-2">Filters</span>
         </button>
       </div>
+
+      {/* Quick Position Chips - visible by default */}
+      {showQuickPositions && (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          {quickPositions.map(pos => (
+            <button
+              key={pos.value}
+              onClick={() => handlePositionChange(filters.position === pos.value ? '' : pos.value)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                filters.position === pos.value
+                  ? 'bg-primary-500 text-white shadow-md scale-105'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              <span className="text-base">{pos.icon}</span>
+              <span>{pos.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Expanded filters */}
       {isExpanded && (

@@ -105,6 +105,118 @@ router.get('/recent', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/games/game-of-the-day
+// @desc    Get a suggested game for today based on training patterns
+// @access  Private
+router.get('/game-of-the-day', protect, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get all user's games
+    const allGames = await Game.find({ user: userId }).lean();
+
+    if (allGames.length === 0) {
+      return res.json({ game: null, reason: 'no_games' });
+    }
+
+    // Use the day of year + user ID to create a consistent daily seed
+    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+    const userIdSum = userId.toString().split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    const dailySeed = (dayOfYear + userIdSum) % allGames.length;
+
+    // Priority scoring for games
+    const scoredGames = allGames.map(game => {
+      let score = 0;
+      let reasons = [];
+
+      // Favorite games get a boost
+      if (game.favorite) {
+        score += 20;
+        reasons.push('favorite');
+      }
+
+      // High effectiveness games get a boost
+      if (game.averageEffectiveness >= 4) {
+        score += 15;
+        reasons.push('highly_effective');
+      }
+
+      // Games not used recently get priority
+      if (!game.lastUsed) {
+        score += 30;
+        reasons.push('never_used');
+      } else {
+        const daysSinceUsed = Math.floor((today - new Date(game.lastUsed)) / (1000 * 60 * 60 * 24));
+        if (daysSinceUsed >= 14) {
+          score += 25;
+          reasons.push('not_used_recently');
+        } else if (daysSinceUsed >= 7) {
+          score += 15;
+          reasons.push('due_for_review');
+        }
+      }
+
+      // Underrepresented topics get a boost
+      const topicCounts = { offensive: 0, defensive: 0, control: 0, transition: 0 };
+      allGames.forEach(g => {
+        if (g.topic && g.lastUsed) topicCounts[g.topic]++;
+      });
+      const minTopic = Object.keys(topicCounts).reduce((min, t) =>
+        topicCounts[t] < topicCounts[min] ? t : min
+      );
+      if (game.topic === minTopic) {
+        score += 10;
+        reasons.push('balance_training');
+      }
+
+      return { ...game, score, reasons };
+    });
+
+    // Sort by score and add some randomness using daily seed
+    scoredGames.sort((a, b) => b.score - a.score);
+
+    // Get top 10 scored games, then pick based on daily seed
+    const topGames = scoredGames.slice(0, Math.min(10, scoredGames.length));
+    const selectedIndex = dailySeed % topGames.length;
+    const selectedGame = topGames[selectedIndex];
+
+    // Generate a reason message
+    let reasonMessage = 'Great game to practice today!';
+    if (selectedGame.reasons.includes('never_used')) {
+      reasonMessage = "You've never tried this game — give it a shot!";
+    } else if (selectedGame.reasons.includes('highly_effective')) {
+      reasonMessage = 'This game has been highly effective for you.';
+    } else if (selectedGame.reasons.includes('not_used_recently')) {
+      reasonMessage = "It's been a while since you used this one.";
+    } else if (selectedGame.reasons.includes('favorite')) {
+      reasonMessage = 'One of your favorites!';
+    } else if (selectedGame.reasons.includes('balance_training')) {
+      reasonMessage = 'Good for balancing your training focus.';
+    }
+
+    res.json({
+      game: {
+        _id: selectedGame._id,
+        name: selectedGame.name,
+        topic: selectedGame.topic,
+        position: selectedGame.position,
+        favorite: selectedGame.favorite,
+        rating: selectedGame.rating,
+        averageEffectiveness: selectedGame.averageEffectiveness,
+        lastUsed: selectedGame.lastUsed,
+        usageCount: selectedGame.usageCount
+      },
+      reason: reasonMessage,
+      date: today.toISOString().split('T')[0]
+    });
+  } catch (error) {
+    console.error('Get game of the day error:', error);
+    res.status(500).json({ message: 'Server error getting game of the day' });
+  }
+});
+
 // @route   GET /api/games/recommendations
 // @desc    Get adaptive training recommendations based on user's training patterns
 // @access  Private

@@ -14,6 +14,7 @@ import { WhatsNewBanner } from '../components/FeatureTip';
 import SkillBalance from '../components/SkillBalance';
 import EmptyState from '../components/EmptyState';
 import TrainingRecommendations from '../components/TrainingRecommendations';
+import GameOfTheDay from '../components/GameOfTheDay';
 
 export default function Games() {
   const {
@@ -202,6 +203,9 @@ export default function Games() {
           fetchGames({ page: 1, ...newFilters });
         }}
       />
+
+      {/* Game of the Day - Daily suggested game */}
+      {games.length > 0 && <GameOfTheDay />}
 
       {/* Skill Balance - show only when user has games */}
       {games.length > 0 && localStorage.getItem('showBalanceTips') !== 'false' && (

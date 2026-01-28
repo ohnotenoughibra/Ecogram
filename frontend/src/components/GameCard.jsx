@@ -25,7 +25,47 @@ export default function GameCard({ game, onEdit, onDelete, selectable = true }) 
   const [loadingSessions, setLoadingSessions] = useState(false);
   const sessionMenuRef = useRef(null);
 
+  // Swipe gesture state
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const cardRef = useRef(null);
+
   const isSelected = selectedGames.has(game._id);
+
+  // Swipe handlers
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    setIsSwiping(false);
+  };
+
+  const handleTouchMove = (e) => {
+    const deltaX = e.touches[0].clientX - touchStartX.current;
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+
+    // Only swipe if horizontal movement is greater than vertical
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      setIsSwiping(true);
+      // Limit swipe distance
+      const clampedOffset = Math.max(-80, Math.min(80, deltaX));
+      setSwipeOffset(clampedOffset);
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (Math.abs(swipeOffset) > 50) {
+      // Swipe right to favorite, left to unfavorite
+      const shouldFavorite = swipeOffset > 0;
+      if (shouldFavorite !== game.favorite) {
+        await updateGame(game._id, { favorite: shouldFavorite });
+        showToast(shouldFavorite ? 'Added to favorites' : 'Removed from favorites', 'success');
+      }
+    }
+    setSwipeOffset(0);
+    setIsSwiping(false);
+  };
 
   const copyToClipboard = useCallback((e) => {
     e.stopPropagation();
@@ -129,9 +169,48 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
 
   return (
     <div
-      className={`card card-hover p-4 cursor-pointer relative group ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
-      onClick={() => setIsExpanded(!isExpanded)}
+      ref={cardRef}
+      className={`card card-hover p-4 cursor-pointer relative group overflow-hidden ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
+      onClick={() => !isSwiping && setIsExpanded(!isExpanded)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        transform: `translateX(${swipeOffset}px)`,
+        transition: isSwiping ? 'none' : 'transform 0.2s ease-out'
+      }}
     >
+      {/* Swipe action indicators */}
+      {swipeOffset !== 0 && (
+        <>
+          {/* Favorite indicator (right swipe) */}
+          <div
+            className={`absolute left-0 top-0 bottom-0 w-20 flex items-center justify-center transition-opacity ${
+              swipeOffset > 30 ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ transform: 'translateX(-100%)' }}
+          >
+            <div className="bg-yellow-400 rounded-full p-3">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-white">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
+          </div>
+          {/* Unfavorite indicator (left swipe) */}
+          <div
+            className={`absolute right-0 top-0 bottom-0 w-20 flex items-center justify-center transition-opacity ${
+              swipeOffset < -30 ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ transform: 'translateX(100%)' }}
+          >
+            <div className="bg-gray-400 rounded-full p-3">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-white">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
+          </div>
+        </>
+      )}
       {/* Quick Actions - visible on hover when collapsed */}
       {!isExpanded && (
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-surface-dark rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-1">
