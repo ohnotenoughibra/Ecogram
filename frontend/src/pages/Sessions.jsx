@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import SessionItem from '../components/SessionItem';
 import SessionCalendar from '../components/SessionCalendar';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import Loading from '../components/Loading';
 import SmartSessionBuilder from '../components/SmartSessionBuilder';
 import QuickClassBuilder from '../components/QuickClassBuilder';
@@ -666,7 +666,7 @@ export default function Sessions() {
       )}
 
       {/* Delete Confirmation */}
-      <ConfirmModal
+      <ConfirmDialog
         isOpen={showDeleteConfirm}
         onClose={() => {
           setShowDeleteConfirm(false);
@@ -676,7 +676,7 @@ export default function Sessions() {
         title="Delete Session"
         message={`Are you sure you want to delete "${sessionToDelete?.name}"? This will not delete the games in the session.`}
         confirmText="Delete"
-        danger
+        type="danger"
       />
 
       {/* Smart Session Builder */}

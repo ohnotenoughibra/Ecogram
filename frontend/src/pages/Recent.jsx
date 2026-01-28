@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import GameCard from '../components/GameCard';
 import GameModal from '../components/GameModal';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import Loading from '../components/Loading';
 
 export default function Recent() {
@@ -128,7 +128,7 @@ export default function Recent() {
       />
 
       {/* Delete Confirmation */}
-      <ConfirmModal
+      <ConfirmDialog
         isOpen={showDeleteConfirm}
         onClose={() => {
           setShowDeleteConfirm(false);
@@ -138,7 +138,7 @@ export default function Recent() {
         title="Delete Game"
         message={`Are you sure you want to delete "${gameToDelete?.name}"? This action cannot be undone.`}
         confirmText="Delete"
-        danger
+        type="danger"
       />
     </div>
   );

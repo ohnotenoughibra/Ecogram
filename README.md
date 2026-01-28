@@ -70,7 +70,7 @@ ecogames/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── BulkActionBar.jsx
-│   │   │   ├── ConfirmModal.jsx
+│   │   │   ├── ConfirmDialog.jsx
 │   │   │   ├── FilterBar.jsx
 │   │   │   ├── GameCard.jsx
 │   │   │   ├── GameModal.jsx

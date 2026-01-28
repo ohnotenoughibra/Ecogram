@@ -1,12 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { resetOnboarding } from '../components/Onboarding';
 import ConfirmDialog from '../components/ConfirmDialog';
 
+// Toggle switch component for cleaner code
+function Toggle({ enabled, onChange, label, description }) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800 last:border-0">
+      <div>
+        <p className="text-gray-900 dark:text-white font-medium">{label}</p>
+        {description && (
+          <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
+        )}
+      </div>
+      <button
+        onClick={() => onChange(!enabled)}
+        className={`relative w-12 h-6 rounded-full transition-colors ${
+          enabled ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
+        }`}
+        role="switch"
+        aria-checked={enabled}
+      >
+        <span
+          className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+            enabled ? 'left-7' : 'left-1'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
 export default function Profile() {
+  const navigate = useNavigate();
   const { user, updatePassword, updatePreferences, logout } = useAuth();
-  const { darkMode, setDarkMode, showToast, games, sessions } = useApp();
+  const { darkMode, setDarkMode, showToast } = useApp();
 
   // Password change state
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -16,14 +46,34 @@ export default function Profile() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
-  // Preferences state
+  // App preferences (synced to backend)
   const [timerSound, setTimerSound] = useState(user?.preferences?.timerSound ?? true);
   const [defaultTimer, setDefaultTimer] = useState(user?.preferences?.defaultTimerDuration ?? 300);
-  const [showBalanceTips, setShowBalanceTips] = useState(
-    localStorage.getItem('showBalanceTips') !== 'false'
-  );
+
+  // Display preferences (synced to backend)
+  const [showQuickAccess, setShowQuickAccess] = useState(user?.preferences?.showQuickAccess ?? true);
+  const [showRecommendations, setShowRecommendations] = useState(user?.preferences?.showRecommendations ?? true);
+  const [showGameOfDay, setShowGameOfDay] = useState(user?.preferences?.showGameOfDay ?? true);
+  const [showSkillBalance, setShowSkillBalance] = useState(user?.preferences?.showSkillBalance ?? true);
+  const [showPositionChips, setShowPositionChips] = useState(user?.preferences?.showPositionChips ?? true);
+  const [compactMode, setCompactMode] = useState(user?.preferences?.compactMode ?? false);
+
+  // Dialog states
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
-  const [showConfirmClearData, setShowConfirmClearData] = useState(false);
+
+  // Update local state when user data loads
+  useEffect(() => {
+    if (user?.preferences) {
+      setTimerSound(user.preferences.timerSound ?? true);
+      setDefaultTimer(user.preferences.defaultTimerDuration ?? 300);
+      setShowQuickAccess(user.preferences.showQuickAccess ?? true);
+      setShowRecommendations(user.preferences.showRecommendations ?? true);
+      setShowGameOfDay(user.preferences.showGameOfDay ?? true);
+      setShowSkillBalance(user.preferences.showSkillBalance ?? true);
+      setShowPositionChips(user.preferences.showPositionChips ?? true);
+      setCompactMode(user.preferences.compactMode ?? false);
+    }
+  }, [user]);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -58,7 +108,7 @@ export default function Profile() {
     const prefs = { [key]: value };
     const result = await updatePreferences(prefs);
     if (result.success) {
-      showToast('Preferences saved', 'success');
+      showToast('Settings saved', 'success');
     }
   };
 
@@ -81,96 +131,140 @@ export default function Profile() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your account settings</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400">Manage your account and preferences</p>
         </div>
 
         {/* User Info Card */}
         <div className="card p-6 mb-6">
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
               <span className="text-primary-600 dark:text-primary-400 font-bold text-2xl">
                 {user?.username?.[0]?.toUpperCase() || 'U'}
               </span>
             </div>
-            <div>
+            <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {user?.username}
               </h2>
               <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Member since {user?.createdAt ? formatDate(user.createdAt) : 'N/A'}
+              </p>
             </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-              <span className="text-gray-500 dark:text-gray-400">Username</span>
-              <span className="text-gray-900 dark:text-white font-medium">{user?.username}</span>
-            </div>
-            <div className="flex justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-              <span className="text-gray-500 dark:text-gray-400">Email</span>
-              <span className="text-gray-900 dark:text-white font-medium">{user?.email}</span>
-            </div>
-            <div className="flex justify-between py-3">
-              <span className="text-gray-500 dark:text-gray-400">Member since</span>
-              <span className="text-gray-900 dark:text-white font-medium">
-                {user?.createdAt ? formatDate(user.createdAt) : 'N/A'}
-              </span>
-            </div>
+            <button
+              onClick={() => navigate('/stats')}
+              className="btn-secondary text-sm"
+            >
+              View Stats
+            </button>
           </div>
         </div>
 
-        {/* Preferences Card */}
+        {/* Display Settings Card */}
+        <div className="card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Display Settings
+            </h3>
+            <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+              Games Page
+            </span>
+          </div>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Customize what appears on your Games page
+          </p>
+
+          <div className="space-y-1">
+            <Toggle
+              enabled={showQuickAccess}
+              onChange={(val) => {
+                setShowQuickAccess(val);
+                handlePreferenceSave('showQuickAccess', val);
+              }}
+              label="Quick Access"
+              description="Show favorites, recent games, and upcoming sessions"
+            />
+
+            <Toggle
+              enabled={showRecommendations}
+              onChange={(val) => {
+                setShowRecommendations(val);
+                handlePreferenceSave('showRecommendations', val);
+              }}
+              label="Training Recommendations"
+              description="Smart tips based on your training patterns"
+            />
+
+            <Toggle
+              enabled={showGameOfDay}
+              onChange={(val) => {
+                setShowGameOfDay(val);
+                handlePreferenceSave('showGameOfDay', val);
+              }}
+              label="Game of the Day"
+              description="Daily suggested game to practice"
+            />
+
+            <Toggle
+              enabled={showSkillBalance}
+              onChange={(val) => {
+                setShowSkillBalance(val);
+                handlePreferenceSave('showSkillBalance', val);
+              }}
+              label="Skill Balance"
+              description="Training balance visualization"
+            />
+
+            <Toggle
+              enabled={showPositionChips}
+              onChange={(val) => {
+                setShowPositionChips(val);
+                handlePreferenceSave('showPositionChips', val);
+              }}
+              label="Position Quick Filters"
+              description="One-tap position filter buttons"
+            />
+
+            <Toggle
+              enabled={compactMode}
+              onChange={(val) => {
+                setCompactMode(val);
+                handlePreferenceSave('compactMode', val);
+              }}
+              label="Compact Mode"
+              description="Minimize dashboard sections for faster access to games"
+            />
+          </div>
+        </div>
+
+        {/* App Preferences Card */}
         <div className="card p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Preferences
+            App Preferences
           </h3>
 
-          <div className="space-y-4">
-            {/* Dark Mode */}
-            <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-              <div>
-                <p className="text-gray-900 dark:text-white font-medium">Dark Mode</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Use dark theme</p>
-              </div>
-              <button
-                onClick={() => {
-                  setDarkMode(!darkMode);
-                  handlePreferenceSave('darkMode', !darkMode);
-                }}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
-                  darkMode ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    darkMode ? 'left-7' : 'left-1'
-                  }`}
-                />
-              </button>
-            </div>
+          <div className="space-y-1">
+            <Toggle
+              enabled={darkMode}
+              onChange={(val) => {
+                setDarkMode(val);
+                handlePreferenceSave('darkMode', val);
+              }}
+              label="Dark Mode"
+              description="Use dark theme"
+            />
 
-            {/* Timer Sound */}
-            <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-              <div>
-                <p className="text-gray-900 dark:text-white font-medium">Timer Sound</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Play sound when timer ends</p>
-              </div>
-              <button
-                onClick={() => {
-                  setTimerSound(!timerSound);
-                  handlePreferenceSave('timerSound', !timerSound);
-                }}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
-                  timerSound ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    timerSound ? 'left-7' : 'left-1'
-                  }`}
-                />
-              </button>
-            </div>
+            <Toggle
+              enabled={timerSound}
+              onChange={(val) => {
+                setTimerSound(val);
+                handlePreferenceSave('timerSound', val);
+              }}
+              label="Timer Sound"
+              description="Play sound when timer ends"
+            />
 
             {/* Default Timer Duration */}
             <div className="flex items-center justify-between py-3">
@@ -285,40 +379,14 @@ export default function Profile() {
           )}
         </div>
 
-        {/* Training Preferences Card */}
+        {/* Help & Tips Card */}
         <div className="card p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Training Preferences
+            Help & Tips
           </h3>
 
           <div className="space-y-4">
-            {/* Balance Tips */}
-            <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-              <div>
-                <p className="text-gray-900 dark:text-white font-medium">Balance Suggestions</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Show training balance tips</p>
-              </div>
-              <button
-                onClick={() => {
-                  const newValue = !showBalanceTips;
-                  setShowBalanceTips(newValue);
-                  localStorage.setItem('showBalanceTips', newValue.toString());
-                  showToast(newValue ? 'Balance tips enabled' : 'Balance tips hidden', 'success');
-                }}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
-                  showBalanceTips ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    showBalanceTips ? 'left-7' : 'left-1'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Reset Tutorial */}
-            <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between py-2">
               <div>
                 <p className="text-gray-900 dark:text-white font-medium">Tutorial</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">See the welcome tutorial again</p>
@@ -334,8 +402,7 @@ export default function Profile() {
               </button>
             </div>
 
-            {/* Clear Tips */}
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between py-2">
               <div>
                 <p className="text-gray-900 dark:text-white font-medium">Feature Tips</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Show all feature tips again</p>
@@ -344,68 +411,16 @@ export default function Profile() {
                 onClick={() => {
                   localStorage.removeItem('dismissedTips');
                   localStorage.removeItem('lastSeenVersion');
-                  showToast('Tips reset - they will appear again', 'success');
+                  localStorage.removeItem('dismissedRecommendations');
+                  localStorage.removeItem('gotd_dismissed');
+                  showToast('All tips reset', 'success');
                 }}
                 className="btn-secondary text-sm py-1.5 px-3"
               >
-                Reset
+                Reset All
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Stats Card */}
-        <div className="card p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Your Library
-          </h3>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg text-center">
-              <p className="text-3xl font-bold text-primary-600 dark:text-primary-400">
-                {games?.length || 0}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Games</p>
-            </div>
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
-              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                {sessions?.length || 0}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Sessions</p>
-            </div>
-          </div>
-
-          {/* Topic Distribution */}
-          {games?.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Topic Distribution</p>
-              <div className="flex gap-2">
-                {['offensive', 'defensive', 'control', 'transition'].map(topic => {
-                  const count = games.filter(g => g.topic === topic).length;
-                  const colors = {
-                    offensive: 'bg-red-500',
-                    defensive: 'bg-blue-500',
-                    control: 'bg-purple-500',
-                    transition: 'bg-green-500'
-                  };
-                  return (
-                    <div
-                      key={topic}
-                      className={`flex-1 h-2 rounded-full ${colors[topic]}`}
-                      style={{ opacity: count ? Math.max(0.3, count / Math.max(...['offensive', 'defensive', 'control', 'transition'].map(t => games.filter(g => g.topic === t).length), 1)) : 0.2 }}
-                      title={`${topic}: ${count} games`}
-                    />
-                  );
-                })}
-              </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Off</span>
-                <span>Def</span>
-                <span>Ctrl</span>
-                <span>Trans</span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* About Card */}
@@ -419,37 +434,30 @@ export default function Profile() {
               <strong className="text-gray-900 dark:text-white">Constraints-Led Approach (CLA)</strong><br />
               Ecogram uses ecological dynamics principles to help you design effective training games.
               Instead of drilling techniques in isolation, games create constraints that guide natural
-              learning through problem-solving in context.
+              learning through problem-solving.
             </p>
-            <p>
-              <strong className="text-gray-900 dark:text-white">Balanced Training</strong><br />
-              The four pillars (Offensive, Defensive, Control, Transition) ensure well-rounded
-              skill development. The app suggests games to fill gaps in your training.
-            </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 pt-2 border-t border-gray-100 dark:border-gray-800">
               Version 2.0 | Built for NoGi practitioners
             </p>
           </div>
         </div>
 
-        {/* Danger Zone */}
-        <div className="card p-6 border-red-200 dark:border-red-900/50">
-          <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">
-            Account Actions
+        {/* Account Actions */}
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Account
           </h3>
 
-          <div className="space-y-3">
-            <button
-              onClick={() => setShowConfirmLogout(true)}
-              className="w-full btn-secondary text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
-                <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clipRule="evenodd" />
-                <path fillRule="evenodd" d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-.943a.75.75 0 10-1.004-1.114l-2.5 2.25a.75.75 0 000 1.114l2.5 2.25a.75.75 0 101.004-1.114l-1.048-.943h9.546A.75.75 0 0019 10z" clipRule="evenodd" />
-              </svg>
-              Sign Out
-            </button>
-          </div>
+          <button
+            onClick={() => setShowConfirmLogout(true)}
+            className="w-full btn-secondary text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
+              <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clipRule="evenodd" />
+              <path fillRule="evenodd" d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-.943a.75.75 0 10-1.004-1.114l-2.5 2.25a.75.75 0 000 1.114l2.5 2.25a.75.75 0 101.004-1.114l-1.048-.943h9.546A.75.75 0 0019 10z" clipRule="evenodd" />
+            </svg>
+            Sign Out
+          </button>
         </div>
 
         {/* Confirm Logout Dialog */}
@@ -461,7 +469,7 @@ export default function Profile() {
             setShowConfirmLogout(false);
           }}
           title="Sign Out"
-          message="Are you sure you want to sign out? You'll need to log in again to access your games and sessions."
+          message="Are you sure you want to sign out?"
           confirmText="Sign Out"
           type="warning"
         />

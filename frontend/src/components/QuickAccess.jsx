@@ -1,14 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { TOPIC_COLORS, getTopicColor } from '../utils/constants';
 import api from '../utils/api';
-
-const topicColors = {
-  offensive: 'bg-red-500',
-  defensive: 'bg-blue-500',
-  control: 'bg-purple-500',
-  transition: 'bg-green-500'
-};
 
 export default function QuickAccess({ onSmartBuild }) {
   const navigate = useNavigate();
@@ -200,7 +194,7 @@ export default function QuickAccess({ onSmartBuild }) {
                     key={game._id}
                     className="flex items-center gap-2 text-sm"
                   >
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${topicColors[game.topic] || 'bg-gray-400'}`} />
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getTopicColor(game.topic)}`} />
                     <span className="truncate text-gray-700 dark:text-gray-300">{game.name}</span>
                   </div>
                 ))}
@@ -231,7 +225,7 @@ export default function QuickAccess({ onSmartBuild }) {
                     key={game._id}
                     className="flex items-center gap-2 text-sm"
                   >
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${topicColors[game.topic] || 'bg-gray-400'}`} />
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getTopicColor(game.topic)}`} />
                     <span className="truncate text-gray-700 dark:text-gray-300">{game.name}</span>
                   </div>
                 ))}

@@ -1,14 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { getTopicColor } from '../utils/constants';
 import api from '../utils/api';
-
-const topicColors = {
-  offensive: 'bg-red-500',
-  defensive: 'bg-blue-500',
-  control: 'bg-purple-500',
-  transition: 'bg-green-500'
-};
 
 export default function SessionItem({ session, onEdit, onDelete, onShare, onSessionUpdate, onSaveAsTemplate }) {
   const navigate = useNavigate();
@@ -180,7 +174,7 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
               {session.games.slice(0, 6).map((g, idx) => (
                 <span
                   key={idx}
-                  className={`w-2 h-2 rounded-full ${topicColors[g.game?.topic] || 'bg-gray-400'}`}
+                  className={`w-2 h-2 rounded-full ${getTopicColor(g.game?.topic)}`}
                   title={g.game?.name}
                 />
               ))}
@@ -274,7 +268,7 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
                         </button>
                       </div>
                     )}
-                    <span className={`w-2 h-2 rounded-full ${topicColors[g.game?.topic] || 'bg-gray-400'}`} />
+                    <span className={`w-2 h-2 rounded-full ${getTopicColor(g.game?.topic)}`} />
                     <span className={`flex-1 text-sm ${g.completed ? 'line-through' : ''}`}>
                       {g.game?.name || 'Unknown game'}
                     </span>
@@ -460,7 +454,7 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
                       onClick={() => handleAddGame(game._id)}
                       className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
                     >
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${topicColors[game.topic] || 'bg-gray-400'}`} />
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getTopicColor(game.topic)}`} />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm text-gray-900 dark:text-white truncate">
                           {game.name}

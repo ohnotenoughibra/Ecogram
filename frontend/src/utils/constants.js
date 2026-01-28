@@ -129,6 +129,37 @@ export const getTechniqueLabel = (value) => {
   return tech ? tech.label : value;
 };
 
+// Topic categories for games
+export const TOPICS = [
+  { value: '', label: 'All Topics' },
+  { value: 'offensive', label: 'Offensive', color: 'bg-red-500' },
+  { value: 'defensive', label: 'Defensive', color: 'bg-blue-500' },
+  { value: 'control', label: 'Control', color: 'bg-purple-500' },
+  { value: 'transition', label: 'Transition', color: 'bg-green-500' }
+];
+
+// Topic colors for visual coding (solid colors for general use)
+export const TOPIC_COLORS = {
+  offensive: 'bg-red-500',
+  defensive: 'bg-blue-500',
+  control: 'bg-purple-500',
+  transition: 'bg-green-500'
+};
+
+// Topic labels
+export const TOPIC_LABELS = {
+  offensive: 'Offensive',
+  defensive: 'Defensive',
+  control: 'Control',
+  transition: 'Transition'
+};
+
+// Get topic label
+export const getTopicLabel = (value) => TOPIC_LABELS[value] || value;
+
+// Get topic color
+export const getTopicColor = (value) => TOPIC_COLORS[value] || 'bg-gray-400';
+
 // Position colors for visual coding
 export const POSITION_COLORS = {
   'closed-guard': 'bg-blue-500',

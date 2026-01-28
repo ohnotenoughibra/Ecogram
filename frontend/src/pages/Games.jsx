@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import GameCard from '../components/GameCard';
 import GameModal from '../components/GameModal';
 import FilterBar from '../components/FilterBar';
 import BulkActionBar from '../components/BulkActionBar';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import Loading from '../components/Loading';
 import QuickAccess from '../components/QuickAccess';
 import SmartSessionBuilder from '../components/SmartSessionBuilder';
@@ -17,6 +18,7 @@ import TrainingRecommendations from '../components/TrainingRecommendations';
 import GameOfTheDay from '../components/GameOfTheDay';
 
 export default function Games() {
+  const { user } = useAuth();
   const {
     games,
     gamesLoading,
@@ -32,6 +34,15 @@ export default function Games() {
     createSession,
     setFilters
   } = useApp();
+
+  // User display preferences with sensible defaults
+  const prefs = user?.preferences || {};
+  const showQuickAccess = prefs.showQuickAccess !== false;
+  const showRecommendations = prefs.showRecommendations !== false;
+  const showGameOfDay = prefs.showGameOfDay !== false;
+  const showSkillBalance = prefs.showSkillBalance !== false;
+  const showPositionChips = prefs.showPositionChips !== false;
+  const compactMode = prefs.compactMode === true;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [showGameModal, setShowGameModal] = useState(false);
@@ -192,31 +203,35 @@ export default function Games() {
         </div>
       </div>
 
-      {/* Quick Access Section */}
-      <QuickAccess onSmartBuild={() => setShowSmartBuilder(true)} />
+      {/* Quick Access Section - toggleable via user preferences */}
+      {showQuickAccess && (
+        <QuickAccess onSmartBuild={() => setShowSmartBuilder(true)} compact={compactMode} />
+      )}
 
       {/* Training Recommendations - Smart tips based on training patterns */}
-      <TrainingRecommendations
-        compact={true}
-        onFilterChange={(newFilters) => {
-          setFilters(prev => ({ ...prev, ...newFilters }));
-          fetchGames({ page: 1, ...newFilters });
-        }}
-      />
+      {showRecommendations && (
+        <TrainingRecommendations
+          compact={compactMode}
+          onFilterChange={(newFilters) => {
+            setFilters(prev => ({ ...prev, ...newFilters }));
+            fetchGames({ page: 1, ...newFilters });
+          }}
+        />
+      )}
 
       {/* Game of the Day - Daily suggested game */}
-      {games.length > 0 && <GameOfTheDay />}
+      {showGameOfDay && games.length > 0 && <GameOfTheDay compact={compactMode} />}
 
-      {/* Skill Balance - show only when user has games */}
-      {games.length > 0 && localStorage.getItem('showBalanceTips') !== 'false' && (
+      {/* Skill Balance - show only when user has games and preference is enabled */}
+      {showSkillBalance && games.length > 0 && (
         <div className="mb-6">
-          <SkillBalance />
+          <SkillBalance compact={compactMode} />
         </div>
       )}
 
       {/* Filters */}
       <div className="mb-6">
-        <FilterBar onSearch={handleSearch} />
+        <FilterBar onSearch={handleSearch} showQuickPositions={showPositionChips} />
       </div>
 
       {/* Games List */}
@@ -268,7 +283,7 @@ export default function Games() {
       />
 
       {/* Delete Confirmation */}
-      <ConfirmModal
+      <ConfirmDialog
         isOpen={showDeleteConfirm}
         onClose={() => {
           setShowDeleteConfirm(false);
@@ -278,7 +293,7 @@ export default function Games() {
         title="Delete Game"
         message={`Are you sure you want to delete "${gameToDelete?.name}"? This action cannot be undone.`}
         confirmText="Delete"
-        danger
+        type="danger"
       />
 
       {/* Session Select Modal */}

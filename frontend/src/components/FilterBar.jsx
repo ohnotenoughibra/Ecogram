@@ -1,14 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { POSITIONS, TECHNIQUES, getPositionLabel, getTechniqueLabel } from '../utils/constants';
-
-const topics = [
-  { value: '', label: 'All Topics' },
-  { value: 'offensive', label: 'Offensive', color: 'bg-red-500' },
-  { value: 'defensive', label: 'Defensive', color: 'bg-blue-500' },
-  { value: 'control', label: 'Control', color: 'bg-purple-500' },
-  { value: 'transition', label: 'Transition', color: 'bg-green-500' }
-];
+import { POSITIONS, TECHNIQUES, TOPICS, getPositionLabel, getTechniqueLabel } from '../utils/constants';
 
 const sortOptions = [
   { value: 'createdAt', label: 'Date Created' },
@@ -173,7 +165,7 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
           <div>
             <label className="label">Topic</label>
             <div className="flex flex-wrap gap-2">
-              {topics.map(topic => (
+              {TOPICS.map(topic => (
                 <button
                   key={topic.value}
                   onClick={() => handleTopicChange(topic.value)}
@@ -319,7 +311,7 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
 
           {filters.topic && (
             <span className="chip chip-active">
-              {topics.find(t => t.value === filters.topic)?.label}
+              {TOPICS.find(t => t.value === filters.topic)?.label}
               <button onClick={() => handleTopicChange('')} className="ml-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />

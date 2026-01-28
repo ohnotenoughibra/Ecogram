@@ -35,7 +35,15 @@ const userSchema = new mongoose.Schema({
   preferences: {
     darkMode: { type: Boolean, default: false },
     timerSound: { type: Boolean, default: true },
-    defaultTimerDuration: { type: Number, default: 300 }
+    defaultTimerDuration: { type: Number, default: 300 },
+    // Display preferences for Games page
+    showQuickAccess: { type: Boolean, default: true },
+    showRecommendations: { type: Boolean, default: true },
+    showGameOfDay: { type: Boolean, default: true },
+    showSkillBalance: { type: Boolean, default: true },
+    showPositionChips: { type: Boolean, default: true },
+    // Compact mode for experienced users
+    compactMode: { type: Boolean, default: false }
   },
   resetPasswordToken: {
     type: String,
