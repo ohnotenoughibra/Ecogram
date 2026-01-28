@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import GameCard from '../components/GameCard';
 import GameModal from '../components/GameModal';
@@ -6,12 +7,15 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import Loading from '../components/Loading';
 
 export default function Favorites() {
+  const navigate = useNavigate();
   const {
     games,
     gamesLoading,
     fetchGames,
     updateGame,
     deleteGame,
+    createSession,
+    showToast,
     filters,
     setFilters
   } = useApp();
@@ -20,6 +24,33 @@ export default function Favorites() {
   const [editingGame, setEditingGame] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [gameToDelete, setGameToDelete] = useState(null);
+  const [creatingSession, setCreatingSession] = useState(false);
+
+  // Calculate favorites early so it can be used in handlers
+  const favoriteGames = games.filter(g => g.favorite);
+
+  // Create session from all favorites
+  const handleCreateSessionFromFavorites = async () => {
+    const favoriteIds = favoriteGames.map(g => g._id);
+    if (favoriteIds.length === 0) {
+      showToast('No favorites to add', 'info');
+      return;
+    }
+
+    setCreatingSession(true);
+    try {
+      const session = await createSession({
+        name: `Favorites Session - ${new Date().toLocaleDateString()}`,
+        gameIds: favoriteIds
+      });
+      showToast(`Session created with ${favoriteIds.length} games!`, 'success');
+      navigate(`/session/${session._id}`);
+    } catch (err) {
+      showToast('Failed to create session', 'error');
+    } finally {
+      setCreatingSession(false);
+    }
+  };
 
   useEffect(() => {
     // Set favorite filter and fetch
@@ -57,21 +88,33 @@ export default function Favorites() {
     }
   };
 
-  const favoriteGames = games.filter(g => g.favorite);
-
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-yellow-400">
-            <path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" clipRule="evenodd" />
-          </svg>
-          Favorites
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Your starred games for quick access
-        </p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-yellow-400">
+              <path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" clipRule="evenodd" />
+            </svg>
+            Favorites
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Your starred games for quick access
+          </p>
+        </div>
+        {favoriteGames.length > 0 && (
+          <button
+            onClick={handleCreateSessionFromFavorites}
+            disabled={creatingSession}
+            className="btn-primary flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+              <path d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h12.5c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0016.25 5h-4.836a.25.25 0 01-.177-.073L9.823 3.513A1.75 1.75 0 008.586 3H3.75zM3.75 9A1.75 1.75 0 002 10.75v4.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0018 15.25v-4.5A1.75 1.75 0 0016.25 9H3.75z" />
+            </svg>
+            {creatingSession ? 'Creating...' : 'Create Session'}
+          </button>
+        )}
       </div>
 
       {/* Games List */}

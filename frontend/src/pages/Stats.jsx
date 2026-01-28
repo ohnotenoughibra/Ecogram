@@ -204,6 +204,73 @@ export default function Stats() {
         </p>
       </div>
 
+      {/* Training Streak Banner */}
+      {trainingStreak > 0 && (
+        <div className={`mb-6 p-4 rounded-xl flex items-center justify-between ${
+          trainingStreak >= 7
+            ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
+            : trainingStreak >= 3
+              ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white'
+              : 'bg-gradient-to-r from-blue-500 to-primary-500 text-white'
+        }`}>
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🔥</span>
+            <div>
+              <p className="font-bold text-lg">{trainingStreak} Day Streak!</p>
+              <p className="text-sm opacity-90">
+                {trainingStreak >= 7 ? "You're on fire! Incredible consistency!" :
+                 trainingStreak >= 3 ? "Keep it going! Great progress!" :
+                 "Nice start! Build your momentum!"}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-1">
+            {[...Array(Math.min(trainingStreak, 7))].map((_, i) => (
+              <div
+                key={i}
+                className="w-6 h-6 rounded-full bg-white/30 flex items-center justify-center text-xs font-bold"
+              >
+                {i + 1}
+              </div>
+            ))}
+            {trainingStreak > 7 && (
+              <span className="text-sm ml-1 opacity-90">+{trainingStreak - 7}</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Quick Stats with Trends */}
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className="card p-3 text-center">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalGames}</p>
+          <p className="text-xs text-gray-500">Total Games</p>
+        </div>
+        <div className="card p-3 text-center">
+          <div className="flex items-center justify-center gap-1">
+            <p className="text-2xl font-bold text-green-500">{recentlyUsedGames.length}</p>
+            {weeklyUsage.length >= 2 && weeklyUsage[3]?.count > weeklyUsage[2]?.count && (
+              <span className="text-green-500 text-sm">↑</span>
+            )}
+            {weeklyUsage.length >= 2 && weeklyUsage[3]?.count < weeklyUsage[2]?.count && (
+              <span className="text-red-500 text-sm">↓</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500">Last 30 Days</p>
+        </div>
+        <div className="card p-3 text-center">
+          <div className="flex items-center justify-center gap-1">
+            <p className="text-2xl font-bold text-yellow-500">{avgEffectiveness || '—'}</p>
+            <span className="text-yellow-500 text-sm">★</span>
+          </div>
+          <p className="text-xs text-gray-500">Avg Effectiveness</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-2xl font-bold text-orange-500">{trainingStreak}</p>
+          <p className="text-xs text-gray-500">Day Streak</p>
+        </div>
+      </div>
+
       {/* Tabs - Enhanced with icons and indicators */}
       <div ref={tabsRef} className="flex gap-1 mb-6 overflow-x-auto pb-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
         {[

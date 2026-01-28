@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { getTopicColor } from '../utils/constants';
@@ -12,7 +12,18 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
   const [showAddGame, setShowAddGame] = useState(false);
   const [availableGames, setAvailableGames] = useState([]);
   const [gameSearch, setGameSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loadingGames, setLoadingGames] = useState(false);
+  const searchTimeout = useRef(null);
+
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setDebouncedSearch(gameSearch);
+    }, 300);
+    return () => clearTimeout(searchTimeout.current);
+  }, [gameSearch]);
 
   // Fetch available games when add game modal opens
   useEffect(() => {
@@ -104,16 +115,27 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
     }
   };
 
-  // Filter games that are not already in the session
+  // Filter games that are not already in the session (use debounced search)
   const sessionGameIds = new Set(session.games?.map(g => g.game?._id || g.game) || []);
   const filteredGames = availableGames.filter(g =>
     !sessionGameIds.has(g._id) &&
-    g.name.toLowerCase().includes(gameSearch.toLowerCase())
+    g.name.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const handleFavoriteToggle = async (e) => {
     e.stopPropagation();
     await updateSession(session._id, { favorite: !session.favorite });
+  };
+
+  const handleDuplicateSession = async (e) => {
+    e.stopPropagation();
+    try {
+      const response = await api.post(`/sessions/${session._id}/duplicate`);
+      showToast('Session duplicated!', 'success');
+      if (onSessionUpdate) onSessionUpdate(response.data);
+    } catch (err) {
+      showToast('Failed to duplicate session', 'error');
+    }
   };
 
   const handleStartSession = (e) => {
@@ -371,6 +393,16 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
                 </svg>
               </button>
             )}
+            <button
+              onClick={handleDuplicateSession}
+              className="btn-secondary text-sm"
+              title="Duplicate Session"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+              </svg>
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();

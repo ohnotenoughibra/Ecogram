@@ -173,9 +173,13 @@ export default function Sessions() {
     }
   };
 
+  const [copied, setCopied] = useState(false);
+
   const copyShareUrl = () => {
     navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
     showToast('Link copied to clipboard', 'success');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSessionUpdate = (updatedSession) => {
@@ -635,9 +639,9 @@ export default function Sessions() {
                     />
                     <button
                       onClick={copyShareUrl}
-                      className="btn-primary"
+                      className={`btn-primary min-w-[70px] ${copied ? 'bg-green-500 hover:bg-green-600' : ''}`}
                     >
-                      Copy
+                      {copied ? '✓ Copied' : 'Copy'}
                     </button>
                   </div>
                   <p className="text-xs text-gray-400">

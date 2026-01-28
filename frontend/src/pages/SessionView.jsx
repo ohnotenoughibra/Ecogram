@@ -283,7 +283,12 @@ export default function SessionView() {
 
   const nextGame = () => {
     if (currentGameIndex < session.games.length - 1) {
-      setCurrentGameIndex(prev => prev + 1);
+      // Skip to next uncompleted game if current is completed
+      let nextIndex = currentGameIndex + 1;
+      while (nextIndex < session.games.length && session.games[nextIndex]?.completed) {
+        nextIndex++;
+      }
+      setCurrentGameIndex(nextIndex < session.games.length ? nextIndex : currentGameIndex + 1);
     }
   };
 
@@ -292,6 +297,38 @@ export default function SessionView() {
       setCurrentGameIndex(prev => prev - 1);
     }
   };
+
+  // Mark all games as complete
+  const handleMarkAllComplete = async () => {
+    const uncompletedGames = session.games.filter(g => !g.completed);
+    if (uncompletedGames.length === 0) {
+      showToast('All games already completed!', 'info');
+      return;
+    }
+
+    try {
+      // Mark all uncompleted games as complete
+      for (const g of uncompletedGames) {
+        await api.put(`/sessions/${id}/games/${g.game._id}/complete`);
+        await markGameUsed(g.game._id);
+      }
+
+      // Update local state
+      setSession(prev => ({
+        ...prev,
+        games: prev.games.map(g => ({ ...g, completed: true }))
+      }));
+
+      showToast(`${uncompletedGames.length} games marked complete!`, 'success');
+    } catch (error) {
+      showToast('Failed to mark all complete', 'error');
+    }
+  };
+
+  // Calculate progress
+  const completedCount = session?.games?.filter(g => g.completed).length || 0;
+  const totalGames = session?.games?.length || 0;
+  const progressPercentage = totalGames > 0 ? Math.round((completedCount / totalGames) * 100) : 0;
 
   if (loading) {
     return <Loading text="Loading session..." />;
@@ -306,7 +343,6 @@ export default function SessionView() {
   }
 
   const currentGame = session.games[currentGameIndex]?.game;
-  const completedCount = session.games.filter(g => g.completed).length;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
@@ -367,12 +403,33 @@ export default function SessionView() {
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar with Mark All Complete */}
       <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <span className={`text-sm font-medium ${progressPercentage === 100 ? 'text-green-600' : 'text-gray-600 dark:text-gray-400'}`}>
+              {progressPercentage}% Complete
+            </span>
+            {progressPercentage === 100 && (
+              <span className="text-green-500 text-sm">✓ All done!</span>
+            )}
+          </div>
+          {completedCount < totalGames && (
+            <button
+              onClick={handleMarkAllComplete}
+              className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+              </svg>
+              Mark All Complete
+            </button>
+          )}
+        </div>
         <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
             className="h-full bg-green-500 transition-all duration-300"
-            style={{ width: `${(completedCount / session.games.length) * 100}%` }}
+            style={{ width: `${progressPercentage}%` }}
           />
         </div>
       </div>

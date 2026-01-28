@@ -65,9 +65,32 @@ export default function Practice() {
   const audioRef = useRef(null);
   const intervalRef = useRef(null);
 
-  // Session history - track games played this practice session
-  const [sessionHistory, setSessionHistory] = useState([]);
-  const [skippedGames, setSkippedGames] = useState(new Set());
+  // Session history - track games played this practice session (persisted in sessionStorage)
+  const [sessionHistory, setSessionHistory] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('practiceSessionHistory');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [skippedGames, setSkippedGames] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('practiceSkippedGames');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  // Persist session history to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('practiceSessionHistory', JSON.stringify(sessionHistory));
+  }, [sessionHistory]);
+
+  useEffect(() => {
+    sessionStorage.setItem('practiceSkippedGames', JSON.stringify([...skippedGames]));
+  }, [skippedGames]);
 
   // Get filtered games (excluding skipped ones)
   const filteredGames = games.filter(game => {

@@ -20,11 +20,65 @@ const quickPositions = [
   { value: 'standing', label: 'Standing', icon: '🧍' },
 ];
 
+// Filter presets for quick common scenarios
+const filterPresets = [
+  {
+    id: 'guard-work',
+    label: 'Guard Work',
+    icon: '🛡️',
+    filters: { position: 'closed-guard', topic: '' },
+    positions: ['closed-guard', 'half-guard', 'open-guard', 'butterfly-guard']
+  },
+  {
+    id: 'submissions',
+    label: 'Submissions',
+    icon: '⚔️',
+    filters: { topic: 'offensive', position: '' }
+  },
+  {
+    id: 'escapes',
+    label: 'Escapes',
+    icon: '🏃',
+    filters: { topic: 'defensive', position: '' }
+  },
+  {
+    id: 'passing',
+    label: 'Passing',
+    icon: '🎯',
+    filters: { topic: 'control', position: '' }
+  },
+  {
+    id: 'takedowns',
+    label: 'Takedowns',
+    icon: '🤼',
+    filters: { position: 'standing', topic: '' }
+  },
+];
+
 export default function FilterBar({ onSearch, showQuickPositions = true }) {
   const { filters, setFilters } = useApp();
   const [searchValue, setSearchValue] = useState(filters.search || '');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [activePreset, setActivePreset] = useState(null);
   const searchTimeout = useRef(null);
+
+  // Track recently used positions
+  const [recentPositions, setRecentPositions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('recentPositions');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Save recent position when position filter changes
+  const trackRecentPosition = (position) => {
+    if (!position) return;
+    const updated = [position, ...recentPositions.filter(p => p !== position)].slice(0, 3);
+    setRecentPositions(updated);
+    localStorage.setItem('recentPositions', JSON.stringify(updated));
+  };
 
   // Debounced search
   useEffect(() => {
@@ -71,6 +125,20 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
 
   const handlePositionChange = (position) => {
     setFilters(prev => ({ ...prev, position }));
+    if (position) trackRecentPosition(position);
+    setActivePreset(null);
+    if (onSearch) onSearch();
+  };
+
+  const applyPreset = (preset) => {
+    if (activePreset === preset.id) {
+      // Clear preset
+      setActivePreset(null);
+      setFilters(prev => ({ ...prev, topic: '', position: '' }));
+    } else {
+      setActivePreset(preset.id);
+      setFilters(prev => ({ ...prev, ...preset.filters }));
+    }
     if (onSearch) onSearch();
   };
 
@@ -137,6 +205,49 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
           <span className="hidden sm:inline ml-2">Filters</span>
         </button>
       </div>
+
+      {/* Filter Presets - Quick scenarios */}
+      {showQuickPositions && (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          {filterPresets.map(preset => (
+            <button
+              key={preset.id}
+              onClick={() => applyPreset(preset)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                activePreset === preset.id
+                  ? 'bg-primary-500 text-white shadow-md scale-105'
+                  : 'bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-700 text-gray-700 dark:text-gray-300 hover:from-gray-200 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-600 border border-gray-200 dark:border-gray-600'
+              }`}
+            >
+              <span className="text-base">{preset.icon}</span>
+              <span>{preset.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Recent Positions (if any) */}
+      {showQuickPositions && recentPositions.length > 0 && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-gray-400">Recent:</span>
+          {recentPositions.map(pos => {
+            const posInfo = quickPositions.find(p => p.value === pos) || { value: pos, label: pos, icon: '📍' };
+            return (
+              <button
+                key={pos}
+                onClick={() => handlePositionChange(filters.position === pos ? '' : pos)}
+                className={`px-2 py-1 rounded text-xs transition-colors ${
+                  filters.position === pos
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                {posInfo.icon} {posInfo.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Quick Position Chips - visible by default */}
       {showQuickPositions && (
