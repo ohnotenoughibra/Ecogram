@@ -9,6 +9,9 @@ const shortcuts = [
   { key: 'Esc', description: 'Close modal/dialog', context: 'Global' },
   { key: 'Space', description: 'Start/Pause timer', context: 'Timer' },
   { key: 'R', description: 'Reset timer', context: 'Timer' },
+  { key: 'Ctrl+G', description: 'Go to Games library', context: 'Navigation' },
+  { key: 'Ctrl+E', description: 'Go to Sessions', context: 'Navigation' },
+  { key: 'Ctrl+P', description: 'Go to Practice mode', context: 'Navigation' },
 ];
 
 export default function KeyboardShortcuts({ isOpen, onClose }) {
@@ -60,9 +63,24 @@ export default function KeyboardShortcuts({ isOpen, onClose }) {
                     {shortcut.context}
                   </p>
                 </div>
-                <kbd className="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600">
-                  {shortcut.key}
-                </kbd>
+                <div className="flex items-center gap-1">
+                  {shortcut.key.includes('+') ? (
+                    shortcut.key.split('+').map((k, i) => (
+                      <span key={i} className="flex items-center">
+                        <kbd className="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600">
+                          {k === 'Ctrl' ? (navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl') : k}
+                        </kbd>
+                        {i < shortcut.key.split('+').length - 1 && (
+                          <span className="mx-0.5 text-gray-400">+</span>
+                        )}
+                      </span>
+                    ))
+                  ) : (
+                    <kbd className="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600">
+                      {shortcut.key}
+                    </kbd>
+                  )}
+                </div>
               </div>
             ))}
           </div>

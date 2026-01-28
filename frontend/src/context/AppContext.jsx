@@ -134,7 +134,10 @@ export function AppProvider({ children }) {
     }
   }, [showToast]);
 
-  const deleteGame = useCallback(async (id) => {
+  const deleteGame = useCallback(async (id, skipUndo = false) => {
+    // Store the game before deletion for potential undo
+    const deletedGame = games.find(g => g._id === id);
+
     try {
       await api.delete(`/games/${id}`);
       setGames(prev => prev.filter(g => g._id !== id));
@@ -143,13 +146,32 @@ export function AppProvider({ children }) {
         next.delete(id);
         return next;
       });
-      showToast('Game deleted', 'success');
+
+      // Show toast with undo action
+      if (!skipUndo && deletedGame) {
+        showToast('Game deleted', 'success', 5000, {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              // Re-create the game with original data
+              const { _id, createdAt, updatedAt, usageCount, lastUsed, effectivenessRatings, averageEffectiveness, ...gameData } = deletedGame;
+              const response = await api.post('/games', gameData);
+              setGames(prev => [response.data, ...prev]);
+              showToast('Game restored', 'success');
+            } catch (err) {
+              showToast('Failed to restore game', 'error');
+            }
+          }
+        });
+      } else {
+        showToast('Game deleted', 'success');
+      }
       return { success: true };
     } catch (err) {
       showToast('Failed to delete game', 'error');
       return { success: false };
     }
-  }, [showToast]);
+  }, [games, showToast]);
 
   const markGameUsed = useCallback(async (id) => {
     try {
@@ -252,17 +274,44 @@ export function AppProvider({ children }) {
     }
   }, [showToast]);
 
-  const deleteSession = useCallback(async (id) => {
+  const deleteSession = useCallback(async (id, skipUndo = false) => {
+    // Store the session before deletion for potential undo
+    const deletedSession = sessions.find(s => s._id === id);
+
     try {
       await api.delete(`/sessions/${id}`);
       setSessions(prev => prev.filter(s => s._id !== id));
-      showToast('Session deleted', 'success');
+
+      // Show toast with undo action
+      if (!skipUndo && deletedSession) {
+        showToast('Session deleted', 'success', 5000, {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              // Re-create the session with original data
+              const { _id, createdAt, updatedAt, ...sessionData } = deletedSession;
+              // Extract game IDs from games array
+              const gameIds = sessionData.games?.map(g => g.game?._id || g.game || g) || [];
+              const response = await api.post('/sessions', {
+                name: sessionData.name,
+                gameIds
+              });
+              setSessions(prev => [response.data, ...prev]);
+              showToast('Session restored', 'success');
+            } catch (err) {
+              showToast('Failed to restore session', 'error');
+            }
+          }
+        });
+      } else {
+        showToast('Session deleted', 'success');
+      }
       return { success: true };
     } catch (err) {
       showToast('Failed to delete session', 'error');
       return { success: false };
     }
-  }, [showToast]);
+  }, [sessions, showToast]);
 
   const addGamesToSession = useCallback(async (sessionId, gameIds) => {
     try {

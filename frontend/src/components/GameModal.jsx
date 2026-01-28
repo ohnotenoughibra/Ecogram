@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ALL_POSITIONS, POSITIONS, ALL_TECHNIQUES, TECHNIQUES, getPositionLabel } from '../utils/constants';
 import DrillChainManager from './DrillChainManager';
+
+const DRAFT_KEY = 'gameModalDraft';
 
 const topics = [
   { value: 'offensive', label: 'Offensive / Submissions', color: 'bg-red-500' },
@@ -42,9 +44,55 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
   const [techniqueInput, setTechniqueInput] = useState('');
   const [errors, setErrors] = useState({});
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const saveTimeoutRef = useRef(null);
+
+  // Auto-save draft to localStorage (debounced)
+  const saveDraft = useCallback((data) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      // Only save draft for new games, not edits
+      if (!game && data.name) {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+        setDraftSaved(true);
+        setTimeout(() => setDraftSaved(false), 2000);
+      }
+    }, 1000);
+  }, [game]);
+
+  // Clear draft
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem(DRAFT_KEY);
+    setHasDraft(false);
+  }, []);
+
+  // Load draft on mount
+  const loadDraft = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        setFormData(draft);
+        setHasDraft(true);
+        if (draft.gameType !== 'main' || draft.difficulty !== 'intermediate' || draft.videoUrl) {
+          setShowAdvanced(true);
+        }
+        return true;
+      }
+    } catch (e) {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+    return false;
+  }, []);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     if (game) {
+      // Editing existing game
       setFormData({
         name: game.name || '',
         topic: game.topic || 'transition',
@@ -60,33 +108,54 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
         skills: game.skills || [],
         linkedGames: game.linkedGames || { previous: null, next: null }
       });
+      setHasDraft(false);
       // Show advanced if non-default values
       if (game.gameType !== 'main' || game.difficulty !== 'intermediate' || game.videoUrl) {
         setShowAdvanced(true);
       }
     } else {
-      setFormData({
-        name: '',
-        topic: 'transition',
-        position: '',
-        techniques: [],
-        gameType: 'main',
-        difficulty: 'intermediate',
-        topPlayer: '',
-        bottomPlayer: '',
-        coaching: '',
-        personalNotes: '',
-        videoUrl: '',
-        skills: [],
-        linkedGames: { previous: null, next: null }
-      });
-      setShowAdvanced(false);
+      // Creating new game - try to load draft first
+      const draftLoaded = loadDraft();
+      if (!draftLoaded) {
+        setFormData({
+          name: '',
+          topic: 'transition',
+          position: '',
+          techniques: [],
+          gameType: 'main',
+          difficulty: 'intermediate',
+          topPlayer: '',
+          bottomPlayer: '',
+          coaching: '',
+          personalNotes: '',
+          videoUrl: '',
+          skills: [],
+          linkedGames: { previous: null, next: null }
+        });
+        setShowAdvanced(false);
+      }
     }
     setErrors({});
     setSkillInput('');
     setTechniqueInput('');
     setShowTechniqueSelect(false);
-  }, [game, isOpen]);
+  }, [game, isOpen, loadDraft]);
+
+  // Auto-save draft when form data changes (only for new games)
+  useEffect(() => {
+    if (isOpen && !game) {
+      saveDraft(formData);
+    }
+  }, [formData, isOpen, game, saveDraft]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleAddCustomTechnique = (e) => {
     e?.preventDefault();
@@ -153,8 +222,29 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
+      clearDraft(); // Clear draft on successful save
       onSave(formData);
     }
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setFormData({
+      name: '',
+      topic: 'transition',
+      position: '',
+      techniques: [],
+      gameType: 'main',
+      difficulty: 'intermediate',
+      topPlayer: '',
+      bottomPlayer: '',
+      coaching: '',
+      personalNotes: '',
+      videoUrl: '',
+      skills: [],
+      linkedGames: { previous: null, next: null }
+    });
+    setShowAdvanced(false);
   };
 
   if (!isOpen) return null;
@@ -164,9 +254,37 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              {game ? 'Edit Game' : 'Create New Game'}
-            </h2>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {game ? 'Edit Game' : 'Create New Game'}
+              </h2>
+              {/* Draft indicator */}
+              {!game && hasDraft && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                      <path d="M13.791 2.086a.75.75 0 00-1.16-.166L8.54 5.49l-.001.01c-.9 1.08-2.1 1.7-3.299 2.108a11.02 11.02 0 00-2.039.738.75.75 0 00.006 1.263c.74.413 1.517.73 2.197.972.644.226 1.19.397 1.555.51.038.012.068.022.09.029.34.093.62.26.768.463A.504.504 0 008 11.7l.002.002a.75.75 0 001.27-.453c.114-.48.134-1.175.133-1.773a.75.75 0 01.05-.263 5.53 5.53 0 01.254-.424c.3-.44.583-.794.79-1.006l4.103-4.126a.75.75 0 00-.011-1.071l-.8-.75z" />
+                    </svg>
+                    Draft restored
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDiscardDraft}
+                    className="text-xs text-gray-500 hover:text-red-500 underline"
+                  >
+                    Discard
+                  </button>
+                </div>
+              )}
+              {draftSaved && !game && (
+                <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 mt-1 animate-fade-in">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                    <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+                  </svg>
+                  Draft saved
+                </span>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="btn-icon text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -219,12 +337,37 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
             {/* Position */}
             <div>
               <label className="label">Starting Position</label>
+              {/* Quick position chips */}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {[
+                  { value: 'closed-guard', label: 'Closed Guard' },
+                  { value: 'half-guard', label: 'Half Guard' },
+                  { value: 'mount', label: 'Mount' },
+                  { value: 'side-control', label: 'Side Control' },
+                  { value: 'back', label: 'Back' },
+                  { value: 'standing', label: 'Standing' },
+                ].map(pos => (
+                  <button
+                    key={pos.value}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, position: pos.value }))}
+                    className={`px-2.5 py-1 text-xs rounded-full border transition-all ${
+                      formData.position === pos.value
+                        ? 'bg-primary-500 text-white border-primary-500'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700'
+                    }`}
+                  >
+                    {pos.label}
+                  </button>
+                ))}
+              </div>
+              {/* Full position dropdown */}
               <select
                 value={formData.position}
                 onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
                 className="input"
               >
-                <option value="">Select position...</option>
+                <option value="">More positions...</option>
                 <optgroup label="Guard">
                   {POSITIONS.guard.map(p => (
                     <option key={p.value} value={p.value}>{p.label}</option>

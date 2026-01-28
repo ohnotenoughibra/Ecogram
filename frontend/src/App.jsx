@@ -88,13 +88,37 @@ function MainLayout({ children }) {
         return;
       }
 
+      const isMod = e.ctrlKey || e.metaKey;
+
+      // Navigation shortcuts with Ctrl/Cmd
+      if (isMod) {
+        switch (e.key.toLowerCase()) {
+          case 'g':
+            e.preventDefault();
+            window.location.href = '/';
+            break;
+          case 'e':
+            e.preventDefault();
+            window.location.href = '/sessions';
+            break;
+          case 'p':
+            e.preventDefault();
+            window.location.href = '/practice';
+            break;
+          default:
+            break;
+        }
+        return;
+      }
+
+      // Non-modifier shortcuts
       // N - New game (handled in Games page)
       // A - AI Designer
-      if (e.key === 'a' && !e.ctrlKey && !e.metaKey) {
+      if (e.key === 'a') {
         window.location.href = '/ai';
       }
       // S - Search (focus search input)
-      if (e.key === 's' && !e.ctrlKey && !e.metaKey) {
+      if (e.key === 's') {
         const searchInput = document.querySelector('input[type="text"][placeholder*="Search"]');
         if (searchInput) {
           e.preventDefault();
@@ -102,7 +126,7 @@ function MainLayout({ children }) {
         }
       }
       // T - Toggle timer
-      if (e.key === 't' && !e.ctrlKey && !e.metaKey) {
+      if (e.key === 't') {
         setShowTimer(prev => !prev);
       }
       // ? - Show shortcuts help

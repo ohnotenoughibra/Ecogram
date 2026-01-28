@@ -34,6 +34,22 @@ export default function GameCard({ game, onEdit, onDelete, selectable = true }) 
 
   const isSelected = selectedGames.has(game._id);
 
+  // Calculate freshness indicator
+  const getFreshnessIndicator = () => {
+    if (!game.lastUsed) {
+      return { label: 'New', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: 'sparkle' };
+    }
+    const daysSinceUsed = Math.floor((Date.now() - new Date(game.lastUsed).getTime()) / (1000 * 60 * 60 * 24));
+    if (daysSinceUsed <= 7) {
+      return { label: 'Recent', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: 'check' };
+    }
+    if (daysSinceUsed <= 30) {
+      return { label: `${daysSinceUsed}d ago`, color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400', icon: null };
+    }
+    return { label: 'Stale', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: 'clock' };
+  };
+  const freshness = getFreshnessIndicator();
+
   // Swipe handlers
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
@@ -293,9 +309,30 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
                   </span>
                 )}
               </div>
-              <span className={`badge ${topicColors[game.topic]} mt-1`}>
-                {topicLabels[game.topic]}
-              </span>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span className={`badge ${topicColors[game.topic]}`}>
+                  {topicLabels[game.topic]}
+                </span>
+                {/* Freshness indicator */}
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${freshness.color}`}>
+                  {freshness.icon === 'sparkle' && (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                      <path d="M7.628 1.099a.75.75 0 01.744 0l1.97 1.127 2.229.224a.75.75 0 01.603.603l.224 2.229 1.127 1.97a.75.75 0 010 .744l-1.127 1.97-.224 2.229a.75.75 0 01-.603.603l-2.229.224-1.97 1.127a.75.75 0 01-.744 0l-1.97-1.127-2.229-.224a.75.75 0 01-.603-.603l-.224-2.229L1.475 8.87a.75.75 0 010-.744l1.127-1.97.224-2.229a.75.75 0 01.603-.603l2.229-.224L7.628 1.1z" />
+                    </svg>
+                  )}
+                  {freshness.icon === 'check' && (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                      <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  {freshness.icon === 'clock' && (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                      <path fillRule="evenodd" d="M1 8a7 7 0 1114 0A7 7 0 011 8zm7.75-4.25a.75.75 0 00-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5h-2.5v-3.5z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  {freshness.label}
+                </span>
+              </div>
             </div>
 
             <button

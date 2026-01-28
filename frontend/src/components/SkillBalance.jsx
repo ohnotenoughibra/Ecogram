@@ -295,91 +295,74 @@ export default function SkillBalance({ compact = false }) {
       {/* Positions View */}
       {viewMode === 'positions' && (
         <>
-          {/* Position Balance meter */}
-          <div className="mb-4">
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600 dark:text-gray-400">Position Coverage</span>
-              <span className={`font-medium ${
-                positionBalanceScore >= 70 ? 'text-green-600' :
-                positionBalanceScore >= 40 ? 'text-yellow-600' : 'text-red-600'
-              }`}>
-                {positionCount} positions
-              </span>
-            </div>
-            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  positionBalanceScore >= 70 ? 'bg-green-500' :
-                  positionBalanceScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}
-                style={{ width: `${Math.min(positionBalanceScore, 100)}%` }}
-              />
-            </div>
-          </div>
+          {/* Position category counts */}
+          {(() => {
+            const categoryCounts = Object.entries(positionCounts).reduce((acc, [pos, count]) => {
+              const cat = getPositionCategory(pos);
+              acc[cat] = (acc[cat] || 0) + count;
+              return acc;
+            }, {});
+            const maxCategoryCount = Math.max(...Object.values(categoryCounts), 1);
+            const categoryOrder = ['guard', 'top', 'back', 'standing', 'leglock'];
+            const categoryLabels = {
+              guard: { label: 'Guard', icon: '🛡️', desc: 'Bottom positions' },
+              top: { label: 'Top Control', icon: '⬆️', desc: 'Dominant pins' },
+              back: { label: 'Back/Turtle', icon: '🔙', desc: 'Back attacks' },
+              standing: { label: 'Standing', icon: '🧍', desc: 'Takedowns' },
+              leglock: { label: 'Leg Locks', icon: '🦵', desc: 'Leg entanglements' }
+            };
 
-          {/* Position bars */}
-          {sortedPositions.length > 0 ? (
-            <div className="space-y-2">
-              {sortedPositions.map(([position, count]) => {
-                const percentage = maxPositionCount > 0 ? (count / maxPositionCount) * 100 : 0;
-                const category = getPositionCategory(position);
-                const colorStyle = positionColors[category];
-                const isWeakest = position === weakestPosition && totalPositionGames > 0;
+            // Find weakest category
+            const weakestCat = categoryOrder.reduce((min, cat) => {
+              const count = categoryCounts[cat] || 0;
+              return count < (categoryCounts[min] || Infinity) ? cat : min;
+            }, categoryOrder[0]);
 
-                return (
-                  <div key={position}>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="flex items-center gap-2">
-                        <span className={`font-medium ${colorStyle.textColor}`}>
-                          {positionLabels[position] || position}
+            return Object.keys(categoryCounts).length > 0 ? (
+              <div className="space-y-3">
+                {categoryOrder.map(cat => {
+                  const count = categoryCounts[cat] || 0;
+                  const percentage = maxCategoryCount > 0 ? (count / maxCategoryCount) * 100 : 0;
+                  const colorStyle = positionColors[cat];
+                  const catInfo = categoryLabels[cat];
+                  const isWeakest = cat === weakestCat && totalPositionGames > 3;
+
+                  return (
+                    <div key={cat}>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="flex items-center gap-2">
+                          <span className="text-base">{catInfo.icon}</span>
+                          <span className={`font-medium ${colorStyle.textColor}`}>{catInfo.label}</span>
+                          {isWeakest && count === 0 && (
+                            <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">
+                              Missing
+                            </span>
+                          )}
+                          {isWeakest && count > 0 && (
+                            <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">
+                              Needs focus
+                            </span>
+                          )}
                         </span>
-                        {isWeakest && (
-                          <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">
-                            Needs focus
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-gray-500 text-xs">{count} games</span>
+                        <span className="text-gray-500">{count} games</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${colorStyle.color} rounded-full transition-all duration-700 ease-out`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${colorStyle.color} rounded-full transition-all duration-700 ease-out`}
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-              <p>No position data yet</p>
-              <p className="text-xs mt-1">Add positions to your games to see balance</p>
-            </div>
-          )}
-
-          {/* Position Category Summary */}
-          {sortedPositions.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">By Category</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(
-                  Object.entries(positionCounts).reduce((acc, [pos, count]) => {
-                    const cat = getPositionCategory(pos);
-                    acc[cat] = (acc[cat] || 0) + count;
-                    return acc;
-                  }, {})
-                ).map(([category, count]) => (
-                  <span
-                    key={category}
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${positionColors[category].lightColor} ${positionColors[category].textColor}`}
-                  >
-                    {category.charAt(0).toUpperCase() + category.slice(1)}: {count}
-                  </span>
-                ))}
+                  );
+                })}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                <p>No position data yet</p>
+                <p className="text-xs mt-1">Add positions to your games to see balance</p>
+              </div>
+            );
+          })()}
         </>
       )}
 
@@ -404,27 +387,29 @@ export default function SkillBalance({ compact = false }) {
           ) : (
             <>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                <strong>Position Coverage:</strong> Training across different positions ensures you're
-                prepared for all situations. Focus on positions where you have fewer games.
+                <strong>Position Coverage:</strong> Training across different position categories ensures you're
+                prepared for all situations. Focus on categories where you have fewer games.
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className={`p-2 rounded-lg ${positionColors.guard.lightColor}`}>
-                  <p className={`text-xs font-medium ${positionColors.guard.textColor}`}>Guard</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Bottom positions, sweeps, submissions</p>
+              {/* Show individual positions breakdown */}
+              {sortedPositions.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 mb-2">Individual Positions:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sortedPositions.map(([position, count]) => {
+                      const category = getPositionCategory(position);
+                      const colorStyle = positionColors[category];
+                      return (
+                        <span
+                          key={position}
+                          className={`px-2 py-1 rounded text-xs ${colorStyle.lightColor} ${colorStyle.textColor}`}
+                        >
+                          {positionLabels[position] || position}: {count}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className={`p-2 rounded-lg ${positionColors.top.lightColor}`}>
-                  <p className={`text-xs font-medium ${positionColors.top.textColor}`}>Top Control</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Pins, pressure, passing</p>
-                </div>
-                <div className={`p-2 rounded-lg ${positionColors.back.lightColor}`}>
-                  <p className={`text-xs font-medium ${positionColors.back.textColor}`}>Back/Turtle</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Back attacks, turtle work</p>
-                </div>
-                <div className={`p-2 rounded-lg ${positionColors.standing.lightColor}`}>
-                  <p className={`text-xs font-medium ${positionColors.standing.textColor}`}>Standing</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Takedowns, clinch work</p>
-                </div>
-              </div>
+              )}
             </>
           )}
         </div>
