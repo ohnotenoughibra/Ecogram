@@ -124,10 +124,11 @@ function MainLayout({ children }) {
       {/* Bottom navigation for mobile */}
       <BottomNav />
 
-      {/* Floating timer button - hidden on mobile (Practice page has integrated timer) */}
+      {/* Floating timer button - hidden on mobile (Practice page has integrated timer)
+          Positioned on LEFT to avoid overlap with QuickActions FAB on the right */}
       <button
         onClick={() => setShowTimer(true)}
-        className="fab hidden lg:flex"
+        className="fixed left-4 sm:left-6 bottom-6 w-14 h-14 bg-gray-600 hover:bg-gray-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hidden lg:flex items-center justify-center z-40"
         title="Open Timer (T)"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6">
