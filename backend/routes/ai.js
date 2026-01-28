@@ -2598,8 +2598,44 @@ function generateSmartTemplateSuggestions(analysis, games, excludeIds = []) {
   return suggestions.slice(0, 3);
 }
 
+// Knowledge base from prominent modern grapplers
+const GRAPPLER_KNOWLEDGE = {
+  'Gordon Ryan': {
+    specialty: 'Systematic passing, body lock, pressure top game',
+    solutions: {
+      'no_pressure': 'Focus on connection - chest to chest, hip to hip. Make them carry your weight. Body lock tightly.',
+      'passing_stalled': 'Headquarters position is key. Control one leg, threaten knee cut and leg drag. Chain passes.',
+      'mount_escapes': 'Low mount with grapevines. Keep hips heavy. Hands on mat for base.'
+    }
+  },
+  'John Danaher': {
+    specialty: 'Systems approach, leg locks, back attacks, front headlock',
+    solutions: {
+      'cant_finish': 'Break down the defense. Attack the defense, not just the submission. Build chains.',
+      'single_attack': 'Every attack needs 2-3 follow-up options. Armbar to triangle to omoplata.',
+      'loses_back': 'Chest-to-back connection is primary. Body triangle for control. Trap arm before choke.'
+    }
+  },
+  'Lachlan Giles': {
+    specialty: 'K-guard, leg locks, guard retention, detailed instruction',
+    solutions: {
+      'guard_passed': 'Hip movement is everything. Never flat. Always create angles. Feet and hands as frames.',
+      'stuck_bottom': 'K-guard: control far leg with cross grip, off-balance, then attack.',
+      'leg_lock_panic': 'Boot defense first. Hide heel. Create rotation. Its a system, not a scramble.'
+    }
+  },
+  'Craig Jones': {
+    specialty: 'Body lock game, wrestling integration, leg locks',
+    solutions: {
+      'takedown_defense': 'Sprawl hard, get front headlock. Go behind or attack the neck.',
+      'scramble_loses': 'Never stop moving. Underhooks are life. The person who keeps going wins.',
+      'guard_pull_only': 'Learn wrestling: snap downs, arm drags, go-behinds. Guard pull is a tool, not a crutch.'
+    }
+  }
+};
+
 // @route   POST /api/ai/analyze-problem
-// @desc    Analyze a coaching problem and suggest targeted games
+// @desc    Analyze a coaching problem and suggest targeted games with expert solutions
 // @access  Private
 router.post('/analyze-problem', protect, async (req, res) => {
   try {
@@ -2616,55 +2652,108 @@ router.post('/analyze-problem', protect, async (req, res) => {
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
-    // Problem-specific game templates for fallback
+    // Problem-specific game templates with expert-inspired solutions
     const problemTemplates = {
       guard_passed: [
-        { name: 'Guard Retention Survival', description: 'Maintain guard for time against aggressive passing', prompt: 'Create a guard retention game with progressive resistance levels', topic: 'defensive', matchScore: 95 },
-        { name: 'Hip Movement Drill', description: 'Focus on hip escapes and angle creation', prompt: 'Create a guard game focused on hip movement and re-guarding', topic: 'defensive', matchScore: 90 },
-        { name: 'Frame Recovery Game', description: 'Recover frames under pressure', prompt: 'Create a game where guard player must maintain frames vs passer', topic: 'defensive', matchScore: 85 }
+        { name: 'Lachlan Giles Guard Retention', description: 'Hip movement focus - never flat, always creating angles (Lachlan Giles method)', prompt: 'Create a guard retention game focused on hip movement, framing, and angle creation. Inspired by Lachlan Giles approach.', topic: 'defensive', matchScore: 95, expert: 'Lachlan Giles' },
+        { name: 'Frame Recovery Drill', description: 'Re-establish frames under pressure before moving', prompt: 'Create a game where guard player must maintain frames vs aggressive passer', topic: 'defensive', matchScore: 90 },
+        { name: 'K-Guard Entry Game', description: 'Use K-guard to threaten sweeps and stop passes', prompt: 'Create a K-guard game where bottom player enters K-guard to sweep or attack', topic: 'defensive', matchScore: 85, expert: 'Lachlan Giles' }
       ],
       cant_finish: [
-        { name: 'Finish or Reset', description: 'Must submit within time limit', prompt: 'Create an offensive game with 30-second submission windows', topic: 'offensive', matchScore: 95 },
-        { name: 'Submission Chain Drill', description: 'Chain attacks when first is defended', prompt: 'Create a game requiring 3-attack chains before reset', topic: 'offensive', matchScore: 90 },
-        { name: 'Position to Submission', description: 'Control before attacking', prompt: 'Create a game requiring position control before submission attempts', topic: 'offensive', matchScore: 85 }
+        { name: 'Danaher Submission Chains', description: 'Chain 3 attacks before reset (Danaher systems approach)', prompt: 'Create a submission chain drill requiring armbar to triangle to omoplata transitions', topic: 'offensive', matchScore: 95, expert: 'John Danaher' },
+        { name: 'Control Before Attack', description: 'Establish dominant control, then attack systematically', prompt: 'Create a game requiring position control for 5 seconds before submission attempts', topic: 'offensive', matchScore: 90, expert: 'John Danaher' },
+        { name: 'Finish or Reset Challenge', description: 'Must submit within 30 second windows', prompt: 'Create an offensive game with timed submission windows that reset on defense', topic: 'offensive', matchScore: 85 }
       ],
       stuck_bottom: [
-        { name: 'Sweep or Stand', description: 'Must escape bottom within time', prompt: 'Create a game where bottom player must sweep or stand up in 30 seconds', topic: 'transition', matchScore: 95 },
-        { name: 'Guard Offense Game', description: 'Points for sweep attempts and off-balancing', prompt: 'Create a guard game scoring sweeps and submission attempts', topic: 'transition', matchScore: 90 },
-        { name: 'Hip Bump Challenge', description: 'Use hip movement to create sweeps', prompt: 'Create a closed guard game focused on hip bump and scissor sweep entries', topic: 'transition', matchScore: 85 }
+        { name: 'K-Guard Sweep System', description: 'Use K-guard to control far leg and sweep (Lachlan Giles)', prompt: 'Create a K-guard game focusing on far leg control and sweep entries', topic: 'transition', matchScore: 95, expert: 'Lachlan Giles' },
+        { name: 'Butterfly Hook Sweeps', description: 'Off-balance then sweep - timing over strength', prompt: 'Create a butterfly guard game with arm drags and hook sweeps', topic: 'transition', matchScore: 90, expert: 'Marcelo Garcia' },
+        { name: 'Sweep or Stand Game', description: 'Must escape bottom within time constraint', prompt: 'Create a game where bottom player must sweep or stand up in 30 seconds', topic: 'transition', matchScore: 85 }
       ],
       loses_back: [
-        { name: 'Back Control Maintenance', description: 'Keep back for time against escapes', prompt: 'Create a back control game with points for time in position', topic: 'control', matchScore: 95 },
-        { name: 'Seatbelt Battle', description: 'Maintain seatbelt grip under pressure', prompt: 'Create a back control game focused on grip retention', topic: 'control', matchScore: 90 },
-        { name: 'Hook Recovery Drill', description: 'Recover hooks when defended', prompt: 'Create a game where back attacker must maintain or recover hooks', topic: 'control', matchScore: 85 }
+        { name: 'Danaher Back System', description: 'Chest-to-back connection with body triangle (Danaher method)', prompt: 'Create a back control game using body triangle and arm trap before attacking', topic: 'control', matchScore: 95, expert: 'John Danaher' },
+        { name: 'Seatbelt Retention Battle', description: 'Maintain seatbelt grip under escape attempts', prompt: 'Create a back control game focused on maintaining seatbelt against fighting', topic: 'control', matchScore: 90 },
+        { name: 'Hook Recovery Drill', description: 'Recover hooks when cleared, transition to body triangle', prompt: 'Create a game where back attacker must recover hooks or transition to body triangle', topic: 'control', matchScore: 85, expert: 'Gordon Ryan' }
       ],
       leg_lock_panic: [
-        { name: 'Leg Lock Survival', description: 'Escape leg entanglements safely', prompt: 'Create a defensive leg lock game focused on boot and rotation escapes', topic: 'defensive', matchScore: 95 },
-        { name: 'Ashi Escape Drill', description: 'Systematic escapes from ashi garami', prompt: 'Create a game escaping various leg lock positions', topic: 'defensive', matchScore: 90 },
-        { name: 'Leg Lock Awareness', description: 'Recognize and prevent entries', prompt: 'Create a passing game where passer must avoid leg entanglements', topic: 'control', matchScore: 85 }
+        { name: 'Boot Defense System', description: 'Systematic leg lock defense - boot, hide heel, rotate (Lachlan Giles)', prompt: 'Create a defensive leg lock game using boot defense and rotation escapes', topic: 'defensive', matchScore: 95, expert: 'Lachlan Giles' },
+        { name: 'Ashi Awareness Drill', description: 'Recognize and prevent leg lock entries while passing', prompt: 'Create a passing game where passer must avoid leg entanglements', topic: 'control', matchScore: 90 },
+        { name: 'Saddle Escape Game', description: 'Escape inside sankaku systematically', prompt: 'Create a game escaping saddle/inside sankaku position with proper technique', topic: 'defensive', matchScore: 85, expert: 'Lachlan Giles' }
+      ],
+      takedown_defense: [
+        { name: 'Craig Jones Front Headlock', description: 'Sprawl to front headlock - attack or go behind', prompt: 'Create a takedown defense game: sprawl, front headlock, then guillotine or go behind', topic: 'defensive', matchScore: 95, expert: 'Craig Jones' },
+        { name: 'Underhook Battle Standing', description: 'Win the underhook fight for takedown control', prompt: 'Create a standing game focusing on winning underhooks for offensive wrestling', topic: 'transition', matchScore: 90 },
+        { name: 'Snap Down Defense', description: 'Defend snap downs and front headlock attempts', prompt: 'Create a game defending snap downs with posture and hand fighting', topic: 'defensive', matchScore: 85 }
+      ],
+      scramble_loses: [
+        { name: 'Craig Jones Scramble Wars', description: 'Never stop moving - underhooks win scrambles', prompt: 'Create scramble rounds where both players fight for dominant position from knees', topic: 'transition', matchScore: 95, expert: 'Craig Jones' },
+        { name: 'Continuous Motion Drill', description: 'Keep moving under pressure - cardio plus technique', prompt: 'Create a game with constant movement requirement and position changes', topic: 'transition', matchScore: 90 },
+        { name: 'Underhook Recovery Game', description: 'Pummel and fight for underhooks non-stop', prompt: 'Create a pummeling game where underhook control scores points', topic: 'transition', matchScore: 85 }
+      ],
+      no_pressure: [
+        { name: 'Gordon Ryan Body Lock', description: 'Body lock pressure - make them carry your weight', prompt: 'Create a body lock passing game: squeeze tight, walk hips around, stay patient', topic: 'control', matchScore: 95, expert: 'Gordon Ryan' },
+        { name: 'Chest Connection Drill', description: 'Maintain chest-to-chest contact through transitions', prompt: 'Create a passing game requiring constant chest connection to opponent', topic: 'control', matchScore: 90, expert: 'Gordon Ryan' },
+        { name: 'Heavy Hips Game', description: 'Focus on hip pressure in side control and mount', prompt: 'Create a pin retention game with emphasis on hip heaviness', topic: 'control', matchScore: 85 }
+      ],
+      passing_stalled: [
+        { name: 'Headquarters Chain Passing', description: 'Control one leg, chain knee cut and leg drag (Gordon Ryan)', prompt: 'Create a headquarters passing game with knee cut to leg drag chains', topic: 'control', matchScore: 95, expert: 'Gordon Ryan' },
+        { name: 'Pass Decision Tree', description: 'Systematic passing - A, B, C options from each position', prompt: 'Create a passing game with required technique chains based on defense', topic: 'control', matchScore: 90, expert: 'Gordon Ryan' },
+        { name: 'Long Step Pressure Pass', description: 'Use body lock and long step to complete passes', prompt: 'Create a body lock passing game with long step and backstep options', topic: 'control', matchScore: 85 }
+      ],
+      leg_lock_entries: [
+        { name: 'Inside Sankaku Entry System', description: 'Enter saddle from K-guard, SLX, and matrix', prompt: 'Create a leg lock entry game focusing on inside sankaku entries from multiple positions', topic: 'offensive', matchScore: 95, expert: 'Craig Jones' },
+        { name: 'SLX to Ashi Flow', description: 'Single leg X transitions to various ashi positions', prompt: 'Create a leg entanglement game with SLX entries and ashi transitions', topic: 'offensive', matchScore: 90, expert: 'Lachlan Giles' },
+        { name: 'Matrix Position Drill', description: 'Use matrix to threaten sweeps and leg locks', prompt: 'Create a matrix guard game with sweep and leg lock entries', topic: 'offensive', matchScore: 85, expert: 'Lachlan Giles' }
+      ],
+      single_attack: [
+        { name: 'Danaher Attack Hierarchy', description: 'Build systematic attack chains from each position', prompt: 'Create a positional game requiring 3-attack chains when primary attack is defended', topic: 'offensive', matchScore: 95, expert: 'John Danaher' },
+        { name: 'Submission Web Drill', description: 'Every defense creates a new attack opportunity', prompt: 'Create a submission game where defense triggers transition to next attack', topic: 'offensive', matchScore: 90, expert: 'John Danaher' },
+        { name: 'Position-Attack Cycle', description: 'Cycle through positions building attack options', prompt: 'Create a game cycling through positions, requiring attack attempts from each', topic: 'offensive', matchScore: 85 }
       ],
       default: [
-        { name: 'Targeted Positional Round', description: 'Focused training on problem area', prompt: `Create a training game addressing: ${problem}`, topic: 'transition', matchScore: 80 },
+        { name: 'Targeted Positional Round', description: 'Focused training on specific problem area', prompt: `Create a training game addressing: ${problem}`, topic: 'transition', matchScore: 80 },
         { name: 'Problem-Focused Drill', description: 'Constraints designed for improvement', prompt: `Create a game with constraints that solve: ${problem}`, topic: 'transition', matchScore: 75 },
         { name: 'Skill Builder Game', description: 'Progressive skill development', prompt: `Create a progressive training game for: ${problem}`, topic: 'transition', matchScore: 70 }
       ]
     };
 
+    // Find relevant expert for the problem
+    const getExpertForProblem = (cat) => {
+      const expertMap = {
+        guard_passed: 'Lachlan Giles',
+        cant_finish: 'John Danaher',
+        stuck_bottom: 'Lachlan Giles',
+        loses_back: 'John Danaher',
+        leg_lock_panic: 'Lachlan Giles',
+        takedown_defense: 'Craig Jones',
+        scramble_loses: 'Craig Jones',
+        no_pressure: 'Gordon Ryan',
+        passing_stalled: 'Gordon Ryan',
+        leg_lock_entries: 'Craig Jones',
+        single_attack: 'John Danaher'
+      };
+      return expertMap[cat] || 'John Danaher';
+    };
+
     if (!apiKey) {
-      // Template-based fallback
+      // Template-based fallback with expert knowledge
       const templates = problemTemplates[category] || problemTemplates.default;
+      const expert = getExpertForProblem(category);
+      const expertKnowledge = GRAPPLER_KNOWLEDGE[expert];
+
       return res.json({
         analysis: {
-          rootCause: 'Based on your description, this appears to be a common training challenge.',
+          rootCause: expertKnowledge?.solutions[category] || 'Based on your description, this appears to be a common training challenge.',
           keySkills: ['awareness', 'timing', 'positioning'],
-          claApproach: 'Use constraints that force students to solve this problem repeatedly under varying conditions.'
+          claApproach: 'Use constraints that force students to solve this problem repeatedly under varying conditions.',
+          expert: expert,
+          expertInsight: expertKnowledge?.specialty || 'Systematic approach to problem solving'
         },
         games: templates.filter(g => !existingGameNames.includes(g.name.toLowerCase())),
         source: 'template'
       });
     }
 
-    // Call Claude for intelligent analysis
+    // Call Claude for intelligent analysis with expert knowledge
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -2676,30 +2765,40 @@ router.post('/analyze-problem', protect, async (req, res) => {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2500,
         temperature: 0.7,
-        system: `You are an expert NoGi grappling coach and motor learning specialist. A coach describes a problem they're seeing with their students. Your job is to:
+        system: `You are an expert NoGi grappling coach with deep knowledge of modern grappling systems from:
 
-1. Analyze the ROOT CAUSE of the problem (not just symptoms)
-2. Identify KEY SKILLS that need development
-3. Suggest a CLA-BASED approach (constraints that guide discovery)
-4. Recommend 3 SPECIFIC training games that address the issue
+**Gordon Ryan**: Systematic passing, body lock game, pressure top game. "Make them carry your weight. Systematize everything."
+**John Danaher**: Enter The System methodology, leg locks, back attacks, submission chains. "Control before submission. Build attack hierarchies."
+**Lachlan Giles**: K-guard, leg lock defense, guard retention. "Hip movement is everything. Boot defense first."
+**Craig Jones**: Wrestling integration, body lock takedowns, scramble ability. "Underhooks win scrambles. Never stop moving."
+**Marcelo Garcia**: X-guard, butterfly, arm drags to back. "Simplicity over complexity. Arm drag constantly."
+**Mikey Musumeci**: Butterfly guard, timing over strength. "Constant motion creates opportunities."
 
-Be specific and practical. These are real coaching problems.
+A coach describes a problem. Analyze it using these experts' methodologies:
+
+1. ROOT CAUSE analysis (what's really happening)
+2. KEY SKILLS that need development
+3. CLA-BASED approach (constraints that guide discovery)
+4. 3 SPECIFIC training games inspired by these experts
 
 Return ONLY this JSON:
 {
   "analysis": {
-    "rootCause": "The underlying issue causing this problem",
+    "rootCause": "The underlying issue",
     "keySkills": ["skill1", "skill2", "skill3"],
-    "claApproach": "How to use constraints to address this"
+    "claApproach": "How to use constraints",
+    "expert": "Most relevant expert for this problem",
+    "expertInsight": "Specific insight from that expert"
   },
   "games": [
     {
-      "name": "Specific game name",
-      "description": "What the game does and why it helps",
-      "prompt": "Detailed prompt to generate the full game",
+      "name": "Game name (can reference expert)",
+      "description": "What it does and expert reasoning",
+      "prompt": "Detailed prompt to generate full game",
       "topic": "offensive|defensive|control|transition",
       "matchScore": 85-99,
-      "reasoning": "Why this game specifically addresses the problem"
+      "reasoning": "Why this addresses the problem",
+      "expert": "Expert who inspires this approach"
     }
   ]
 }`,
@@ -2708,7 +2807,7 @@ Return ONLY this JSON:
             role: 'user',
             content: `My students have this problem: "${problem}"${position ? ` (mainly in ${position})` : ''}${category ? ` (${category} related)` : ''}
 
-Analyze the root cause and suggest 3 training games that will help them improve. Be specific - I need games I can actually run in class.`
+Analyze using knowledge from Gordon Ryan, John Danaher, Lachlan Giles, Craig Jones and other modern grapplers. Suggest 3 training games that incorporate their methodologies. Be specific - I need games I can run in class.`
           }
         ]
       })
@@ -2760,6 +2859,197 @@ Analyze the root cause and suggest 3 training games that will help them improve.
   } catch (error) {
     console.error('Problem analysis error:', error);
     res.status(500).json({ message: 'Failed to analyze problem', error: error.message });
+  }
+});
+
+// @route   POST /api/ai/bulk-parse
+// @desc    Parse game descriptions from any format (text, JSON, etc.) using AI
+// @access  Private
+router.post('/bulk-parse', protect, async (req, res) => {
+  try {
+    const { input } = req.body;
+
+    if (!input || input.trim().length === 0) {
+      return res.status(400).json({ message: 'Input text is required' });
+    }
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    // Fallback: Try to parse as JSON first, then extract from text
+    const parseFallback = (text) => {
+      const games = [];
+
+      // Try JSON parse
+      try {
+        const jsonData = JSON.parse(text);
+        if (Array.isArray(jsonData)) {
+          return jsonData.map(item => ({
+            name: item.name || item.title || 'Unnamed Game',
+            description: item.description || item.desc || item.details || '',
+            topic: item.topic || item.category || 'transition',
+            difficulty: item.difficulty || item.level || 'intermediate',
+            prompt: `${item.name || item.title}: ${item.description || item.topPlayer || ''}`
+          }));
+        } else if (jsonData.name || jsonData.games) {
+          const items = jsonData.games || [jsonData];
+          return items.map(item => ({
+            name: item.name || 'Unnamed Game',
+            description: item.description || '',
+            topic: item.topic || 'transition',
+            difficulty: item.difficulty || 'intermediate',
+            prompt: `${item.name}: ${item.description || ''}`
+          }));
+        }
+      } catch (e) {
+        // Not JSON, continue with text parsing
+      }
+
+      // Text-based parsing - split by newlines and common separators
+      const lines = text.split(/\n|;|\|/).map(l => l.trim()).filter(l => l.length > 5);
+
+      for (const line of lines) {
+        // Match patterns like "Name - Description" or "Name: Description"
+        const match = line.match(/^([^-:]+)[-:]\s*(.*)$/);
+        if (match) {
+          games.push({
+            name: match[1].trim(),
+            description: match[2].trim(),
+            topic: detectTopic(line),
+            difficulty: detectDifficulty(line),
+            prompt: line
+          });
+        } else if (line.length > 10) {
+          // Use the whole line as a prompt
+          const words = line.split(' ').slice(0, 5).join(' ');
+          games.push({
+            name: words.length > 3 ? words : 'Training Game',
+            description: line,
+            topic: detectTopic(line),
+            difficulty: detectDifficulty(line),
+            prompt: line
+          });
+        }
+      }
+
+      return games;
+    };
+
+    // Helper to detect topic from text
+    const detectTopic = (text) => {
+      const lower = text.toLowerCase();
+      if (lower.includes('submit') || lower.includes('attack') || lower.includes('finish') || lower.includes('choke') || lower.includes('lock')) return 'offensive';
+      if (lower.includes('escape') || lower.includes('defend') || lower.includes('survive') || lower.includes('retain')) return 'defensive';
+      if (lower.includes('pass') || lower.includes('control') || lower.includes('pressure') || lower.includes('pin')) return 'control';
+      return 'transition';
+    };
+
+    // Helper to detect difficulty from text
+    const detectDifficulty = (text) => {
+      const lower = text.toLowerCase();
+      if (lower.includes('beginner') || lower.includes('basic') || lower.includes('fundamental')) return 'beginner';
+      if (lower.includes('advanced') || lower.includes('competition') || lower.includes('expert')) return 'advanced';
+      return 'intermediate';
+    };
+
+    if (!apiKey) {
+      // Use fallback parser
+      const games = parseFallback(input);
+      return res.json({
+        games,
+        source: 'template',
+        message: 'Parsed using pattern matching (add ANTHROPIC_API_KEY for AI parsing)'
+      });
+    }
+
+    // Use Claude for intelligent parsing
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        temperature: 0.3,
+        system: `You are an expert at parsing grappling/BJJ training game descriptions. Your job is to extract game information from any format - JSON, plain text, lists, paragraphs, notes, etc.
+
+For each game you identify, extract:
+- name: A clear, descriptive name
+- description: Brief description of what the game teaches
+- topic: one of "offensive", "defensive", "control", "transition"
+- difficulty: one of "beginner", "intermediate", "advanced"
+- prompt: A detailed prompt that could be used to generate the full game
+
+Guidelines:
+- If input is already structured (JSON), preserve that structure
+- If input is text/notes, intelligently split into separate games
+- Clean up and standardize names
+- Infer topic/difficulty from context
+- Be generous - if it could be a training game, include it
+
+Return ONLY this JSON (no markdown):
+{
+  "games": [
+    {
+      "name": "Game Name",
+      "description": "What it teaches",
+      "topic": "offensive|defensive|control|transition",
+      "difficulty": "beginner|intermediate|advanced",
+      "prompt": "Detailed prompt for generating full game"
+    }
+  ]
+}`,
+        messages: [
+          {
+            role: 'user',
+            content: `Parse these training game descriptions and extract individual games:\n\n${input}`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Claude API error for bulk parse:', response.status);
+      // Fallback to template parsing
+      const games = parseFallback(input);
+      return res.json({
+        games,
+        source: 'template',
+        apiError: true
+      });
+    }
+
+    const data = await response.json();
+    const textContent = data.content?.find(c => c.type === 'text')?.text;
+
+    if (!textContent) {
+      const games = parseFallback(input);
+      return res.json({ games, source: 'template' });
+    }
+
+    // Parse the JSON response
+    try {
+      const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return res.json({
+          games: parsed.games || [],
+          source: 'claude'
+        });
+      }
+    } catch (parseError) {
+      console.error('Failed to parse Claude response:', parseError);
+    }
+
+    // Fallback
+    const games = parseFallback(input);
+    res.json({ games, source: 'template', parseError: true });
+
+  } catch (error) {
+    console.error('Bulk parse error:', error);
+    res.status(500).json({ message: 'Failed to parse games', error: error.message });
   }
 });
 

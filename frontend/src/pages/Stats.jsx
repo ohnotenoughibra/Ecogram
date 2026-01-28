@@ -210,12 +210,13 @@ export default function Stats() {
           { id: 'overview', label: 'Overview', icon: '📊' },
           { id: 'activity', label: 'Activity', icon: '📈' },
           { id: 'library', label: 'Library', icon: '📚' },
-          { id: 'insights', label: 'Insights', icon: '💡' }
+          { id: 'insights', label: 'Insights', icon: '💡' },
+          { id: 'progress', label: 'Progress', icon: '🎯' }
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 min-w-[80px] px-3 py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`flex-1 min-w-[70px] px-2 py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1 ${
               activeTab === tab.id
                 ? 'bg-white dark:bg-gray-900 text-primary-600 dark:text-primary-400 shadow-sm transform scale-[1.02]'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95'
@@ -962,6 +963,291 @@ export default function Stats() {
                 })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Progress Tab - Part 4 Analytics */}
+      {activeTab === 'progress' && (
+        <div className="animate-fade-in">
+          {/* Skill Progression Overview */}
+          <div className="card p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-primary-500">
+                <path fillRule="evenodd" d="M12.577 4.878a.75.75 0 01.919-.53l4.78 1.281a.75.75 0 01.531.919l-1.281 4.78a.75.75 0 01-1.449-.387l.81-3.022a19.407 19.407 0 00-5.594 5.203.75.75 0 01-1.139.093L7 10.06l-4.72 4.72a.75.75 0 01-1.06-1.061l5.25-5.25a.75.75 0 011.06 0l3.074 3.073a20.923 20.923 0 015.545-4.931l-3.042-.815a.75.75 0 01-.53-.919z" clipRule="evenodd" />
+              </svg>
+              Skill Progression
+            </h2>
+
+            {/* Position Mastery */}
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Position Coverage</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[
+                  { position: 'closed-guard', label: 'Closed Guard', icon: '🛡️' },
+                  { position: 'open-guard', label: 'Open Guard', icon: '🦶' },
+                  { position: 'half-guard', label: 'Half Guard', icon: '½' },
+                  { position: 'mount', label: 'Mount', icon: '⬆️' },
+                  { position: 'side-control', label: 'Side Control', icon: '➡️' },
+                  { position: 'back-control', label: 'Back Control', icon: '🔙' },
+                  { position: 'standing', label: 'Standing', icon: '🧍' },
+                  { position: 'turtle', label: 'Turtle', icon: '🐢' },
+                  { position: 'leg-locks', label: 'Leg Locks', icon: '🦵' }
+                ].map(pos => {
+                  const count = games.filter(g => g.position === pos.position).length;
+                  const hasGames = count > 0;
+                  return (
+                    <div
+                      key={pos.position}
+                      className={`p-3 rounded-lg border transition-all ${
+                        hasGames
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{pos.icon}</span>
+                        <div>
+                          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{pos.label}</p>
+                          <p className={`text-xs ${hasGames ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                            {count} game{count !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Technique Coverage */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Technique Focus Areas</h3>
+              <div className="flex flex-wrap gap-2">
+                {(() => {
+                  // Calculate technique frequency from games
+                  const techCounts = {};
+                  games.forEach(g => {
+                    (g.techniques || []).forEach(t => {
+                      techCounts[t] = (techCounts[t] || 0) + 1;
+                    });
+                  });
+                  const sortedTechs = Object.entries(techCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 12);
+
+                  if (sortedTechs.length === 0) {
+                    return <p className="text-sm text-gray-500">No techniques tracked yet</p>;
+                  }
+
+                  return sortedTechs.map(([tech, count]) => (
+                    <span
+                      key={tech}
+                      className="px-2 py-1 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full"
+                    >
+                      {tech} ({count})
+                    </span>
+                  ));
+                })()}
+              </div>
+            </div>
+          </div>
+
+          {/* Learning Journey */}
+          <div className="card p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-yellow-500">
+                <path fillRule="evenodd" d="M16.403 12.652a3 3 0 000-5.304 3 3 0 00-3.75-3.751 3 3 0 00-5.305 0 3 3 0 00-3.751 3.75 3 3 0 000 5.305 3 3 0 003.75 3.751 3 3 0 005.305 0 3 3 0 003.751-3.75zm-2.546-4.46a.75.75 0 00-1.214-.883l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+              </svg>
+              Learning Journey
+            </h2>
+
+            <div className="space-y-4">
+              {/* Milestones */}
+              {[
+                { threshold: 1, label: 'First Game Created', icon: '🌱', achieved: stats.totalGames >= 1 },
+                { threshold: 5, label: 'Building Your Library', icon: '📚', achieved: stats.totalGames >= 5 },
+                { threshold: 10, label: 'Solid Foundation', icon: '🏗️', achieved: stats.totalGames >= 10 },
+                { threshold: 25, label: 'Comprehensive Library', icon: '📖', achieved: stats.totalGames >= 25 },
+                { threshold: 50, label: 'Master Coach', icon: '🏆', achieved: stats.totalGames >= 50 },
+                { threshold: 5, label: 'First Session Completed', icon: '✅', achieved: sessions.filter(s => s.games?.every(g => g.completed)).length >= 1, type: 'sessions' },
+                { threshold: 10, label: '10 Sessions Completed', icon: '🔟', achieved: sessions.filter(s => s.games?.every(g => g.completed)).length >= 10, type: 'sessions' },
+                { threshold: 4, label: 'All Topics Covered', icon: '🎨', achieved: topics.every(t => (stats.topicDistribution[t] || 0) > 0), type: 'balance' }
+              ].map((milestone, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                    milestone.achieved
+                      ? 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800'
+                      : 'bg-gray-50 dark:bg-gray-800 opacity-50'
+                  }`}
+                >
+                  <span className={`text-2xl ${milestone.achieved ? '' : 'grayscale'}`}>{milestone.icon}</span>
+                  <div className="flex-1">
+                    <p className={`text-sm font-medium ${milestone.achieved ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                      {milestone.label}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {milestone.type === 'sessions'
+                        ? `${sessions.filter(s => s.games?.every(g => g.completed)).length}/${milestone.threshold} sessions`
+                        : milestone.type === 'balance'
+                        ? `${topics.filter(t => (stats.topicDistribution[t] || 0) > 0).length}/4 topics`
+                        : `${Math.min(stats.totalGames, milestone.threshold)}/${milestone.threshold} games`}
+                    </p>
+                  </div>
+                  {milestone.achieved && (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-green-500">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Training Focus Radar */}
+          <div className="card p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-purple-500">
+                <path d="M10 1a6 6 0 00-3.815 10.631C7.237 12.5 8 13.443 8 14.456v.644a.75.75 0 00.572.729 6.016 6.016 0 002.856 0A.75.75 0 0012 15.1v-.644c0-1.013.762-1.957 1.815-2.825A6 6 0 0010 1z" />
+              </svg>
+              Training Focus Analysis
+            </h2>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Focus by Topic */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Strongest Area</h3>
+                {(() => {
+                  const maxTopic = topics.reduce((max, t) =>
+                    (stats.topicDistribution[t] || 0) > (stats.topicDistribution[max] || 0) ? t : max
+                  , topics[0]);
+                  const count = stats.topicDistribution[maxTopic] || 0;
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span className={`w-3 h-3 rounded-full ${topicColors[maxTopic]}`} />
+                      <span className="font-medium text-gray-900 dark:text-white">{topicLabels[maxTopic]}</span>
+                      <span className="text-sm text-gray-500">({count})</span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Needs Attention</h3>
+                {(() => {
+                  const minTopic = topics.reduce((min, t) =>
+                    (stats.topicDistribution[t] || 0) < (stats.topicDistribution[min] || Infinity) ? t : min
+                  , topics[0]);
+                  const count = stats.topicDistribution[minTopic] || 0;
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span className={`w-3 h-3 rounded-full ${topicColors[minTopic]}`} />
+                      <span className="font-medium text-gray-900 dark:text-white">{topicLabels[minTopic]}</span>
+                      <span className="text-sm text-gray-500">({count})</span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Most Used</h3>
+                {stats.mostUsed.length > 0 ? (
+                  <p className="font-medium text-gray-900 dark:text-white truncate">
+                    {stats.mostUsed[0]?.name}
+                  </p>
+                ) : (
+                  <p className="text-gray-400">No usage yet</p>
+                )}
+              </div>
+
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Highest Rated</h3>
+                {topEffectiveGames.length > 0 ? (
+                  <p className="font-medium text-gray-900 dark:text-white truncate">
+                    {topEffectiveGames[0]?.name}
+                  </p>
+                ) : (
+                  <p className="text-gray-400">No ratings yet</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Summary */}
+          <div className="card p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Overall Progress
+            </h2>
+            <div className="space-y-4">
+              {/* Library Progress */}
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600 dark:text-gray-400">Library Size</span>
+                  <span className="text-gray-900 dark:text-white font-medium">{stats.totalGames}/50 games</span>
+                </div>
+                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-700"
+                    style={{ width: animatedBars ? `${Math.min((stats.totalGames / 50) * 100, 100)}%` : '0%' }}
+                  />
+                </div>
+              </div>
+
+              {/* Usage Progress */}
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600 dark:text-gray-400">Games Used</span>
+                  <span className="text-gray-900 dark:text-white font-medium">
+                    {stats.usedCount}/{stats.totalGames} ({stats.totalGames > 0 ? Math.round((stats.usedCount / stats.totalGames) * 100) : 0}%)
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-700"
+                    style={{ width: animatedBars ? `${stats.totalGames > 0 ? (stats.usedCount / stats.totalGames) * 100 : 0}%` : '0%' }}
+                  />
+                </div>
+              </div>
+
+              {/* Topic Balance */}
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600 dark:text-gray-400">Topic Balance</span>
+                  <span className="text-gray-900 dark:text-white font-medium">
+                    {topics.filter(t => getBalanceStatus(stats.topicDistribution[t] || 0) === 'balanced').length}/4 balanced
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-700"
+                    style={{ width: animatedBars ? `${(topics.filter(t => getBalanceStatus(stats.topicDistribution[t] || 0) === 'balanced').length / 4) * 100}%` : '0%' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Next Steps</p>
+              <div className="flex flex-wrap gap-2">
+                {stats.totalGames < 10 && (
+                  <button onClick={() => navigate('/ai')} className="btn-secondary text-xs py-1.5">
+                    Add more games
+                  </button>
+                )}
+                {stats.usedCount < stats.totalGames / 2 && (
+                  <button onClick={() => navigate('/sessions')} className="btn-secondary text-xs py-1.5">
+                    Create a session
+                  </button>
+                )}
+                {topics.some(t => getBalanceStatus(stats.topicDistribution[t] || 0) === 'low') && (
+                  <button onClick={() => navigate('/problem-solver')} className="btn-secondary text-xs py-1.5">
+                    Fill gaps with Problem Solver
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -2,58 +2,175 @@ import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import api from '../utils/api';
 
-// Common problems coaches face - quick selection
+// Common problems coaches face - quick selection with grappler solutions
 const COMMON_PROBLEMS = [
-  { id: 'guard_passed', label: 'Guard keeps getting passed', category: 'defensive', icon: '🛡️' },
-  { id: 'cant_finish', label: "Can't finish submissions", category: 'offensive', icon: '🎯' },
-  { id: 'stuck_bottom', label: 'Stuck on bottom, no sweeps', category: 'transition', icon: '🔄' },
-  { id: 'loses_back', label: 'Loses back control quickly', category: 'control', icon: '🔙' },
-  { id: 'takedown_defense', label: 'Gets taken down easily', category: 'defensive', icon: '🤼' },
-  { id: 'scramble_loses', label: 'Loses every scramble', category: 'transition', icon: '💨' },
-  { id: 'no_pressure', label: 'No pressure from top', category: 'control', icon: '⬇️' },
-  { id: 'leg_lock_panic', label: 'Panics in leg lock situations', category: 'defensive', icon: '🦵' },
-  { id: 'guard_pull_only', label: 'Only knows how to pull guard', category: 'transition', icon: '🧲' },
-  { id: 'single_attack', label: 'Only has one attack', category: 'offensive', icon: '1️⃣' }
+  { id: 'guard_passed', label: 'Guard keeps getting passed', category: 'defensive', icon: '🛡️', expert: 'Lachlan Giles' },
+  { id: 'cant_finish', label: "Can't finish submissions", category: 'offensive', icon: '🎯', expert: 'John Danaher' },
+  { id: 'stuck_bottom', label: 'Stuck on bottom, no sweeps', category: 'transition', icon: '🔄', expert: 'Lachlan Giles' },
+  { id: 'loses_back', label: 'Loses back control quickly', category: 'control', icon: '🔙', expert: 'John Danaher' },
+  { id: 'takedown_defense', label: 'Gets taken down easily', category: 'defensive', icon: '🤼', expert: 'Craig Jones' },
+  { id: 'scramble_loses', label: 'Loses every scramble', category: 'transition', icon: '💨', expert: 'Craig Jones' },
+  { id: 'no_pressure', label: 'No pressure from top', category: 'control', icon: '⬇️', expert: 'Gordon Ryan' },
+  { id: 'leg_lock_panic', label: 'Panics in leg lock situations', category: 'defensive', icon: '🦵', expert: 'Lachlan Giles' },
+  { id: 'guard_pull_only', label: 'Only knows how to pull guard', category: 'transition', icon: '🧲', expert: 'Craig Jones' },
+  { id: 'single_attack', label: 'Only has one attack', category: 'offensive', icon: '1️⃣', expert: 'John Danaher' },
+  { id: 'passing_stalled', label: 'Guard passing stalls out', category: 'control', icon: '🚧', expert: 'Gordon Ryan' },
+  { id: 'leg_lock_entries', label: "Can't enter leg locks", category: 'offensive', icon: '🦿', expert: 'Craig Jones' }
 ];
 
-// Position-specific problems
+// Position-specific problems with expert solutions
 const POSITION_PROBLEMS = {
   'Closed Guard': [
     'Getting posture broken constantly',
     'Can\'t break opponent\'s posture',
     'Armbar always gets defended',
-    'No hip movement'
+    'No hip movement',
+    'Triangle keeps getting stacked'
   ],
   'Half Guard': [
     'Can\'t establish underhook',
     'Gets flattened out',
     'No sweeps working',
-    'Keeps getting passed'
+    'Keeps getting passed',
+    'Can\'t enter leg locks from half'
   ],
   'Mount': [
     'Gets bucked off immediately',
     'Can\'t isolate arms',
     'Opponent keeps escaping',
-    'No submissions from mount'
+    'No submissions from mount',
+    'Can\'t transition to back'
   ],
   'Side Control': [
     'Opponent always recovers guard',
     'Can\'t maintain pressure',
     'No progression to mount',
-    'Gets reversed'
+    'Gets reversed',
+    'Can\'t set up submissions'
   ],
   'Back Control': [
     'Can\'t get hooks in',
     'Loses seatbelt grip',
     'Opponent escapes to guard',
-    'RNC always defended'
+    'RNC always defended',
+    'Body triangle escapes'
   ],
   'Standing': [
     'No confidence in takedowns',
     'Always gets taken down',
     'Can\'t establish grips',
-    'No game plan from feet'
+    'No game plan from feet',
+    'Front headlock defense'
+  ],
+  'Leg Locks': [
+    'Can\'t finish heel hooks',
+    'Always getting leg locked',
+    'No entries to ashi',
+    'Can\'t defend saddle',
+    'Heel exposure problems'
+  ],
+  'Guard Passing': [
+    'Stalls in headquarters',
+    'Gets swept when passing',
+    'Body lock always broken',
+    'Can\'t deal with frames',
+    'Leg drag keeps failing'
   ]
+};
+
+// Expert solutions database - knowledge from prominent grapplers
+const GRAPPLER_SOLUTIONS = {
+  'Gordon Ryan': {
+    specialty: 'Systematic passing, body lock, pressure top game',
+    principles: [
+      'Systematize everything - have a clear A, B, C option from every position',
+      'Body lock passing: get the lock, walk the hips, stay patient',
+      'Pressure passing: never give space, make them carry your weight',
+      'Mount: low mount with grapevines first, then progress to high mount',
+      'Back attacks: body triangle > hooks for control'
+    ],
+    solutions: {
+      'no_pressure': 'Focus on connection. Chest to chest, hip to hip. Make them carry 100% of your weight. Body lock tightly.',
+      'passing_stalled': 'Headquarters position is key. Control one leg, threaten knee cut and leg drag. Chain passes.',
+      'mount_escapes': 'Low mount with grapevines. Keep hips heavy. Hands on mat for base, not on opponent.'
+    }
+  },
+  'John Danaher': {
+    specialty: 'Systematized approach, leg locks, back attacks, front headlock',
+    principles: [
+      'Every position has a hierarchy of attacks - know the order',
+      'Control before submission - position before submission is dated, control is what matters',
+      'Strangle systems: short choke, arm trap, sliding collar variations',
+      'Leg lock hierarchy: inside heel hook > outside heel hook > toe hold > knee bar',
+      'The back is the best finishing position - learn it deeply'
+    ],
+    solutions: {
+      'cant_finish': 'Break the problem down. What specifically is being defended? Attack the defense, not just the submission.',
+      'single_attack': 'Build chains. Every attack should have 2-3 follow-up options when defended.',
+      'loses_back': 'Chest-to-back connection is primary. Use body triangle. Trap an arm before attacking the choke.',
+      'rnc_defended': 'Short choke variation. Arm trap system. Dont fight the hands, reposition.'
+    }
+  },
+  'Lachlan Giles': {
+    specialty: 'K-guard, leg locks, guard retention, detailed instruction',
+    principles: [
+      'K-guard: control far leg, use cross grip, elevator sweeps',
+      'Guard retention: always face opponent, feet and hands as frames, never flat',
+      'Leg lock defense: boot, hide heel, rotate out, dont extend',
+      'Half guard bottom: get the underhook or use knee shield, never flat',
+      'Matrix position for leg lock entries from multiple guards'
+    ],
+    solutions: {
+      'guard_passed': 'Hip movement is everything. Never let your hips get pinned. Always be creating angles.',
+      'stuck_bottom': 'K-guard is the answer. Control far leg with cross grip, off-balance, then attack.',
+      'leg_lock_panic': 'Boot defense first. Hide the heel. Create rotation. Its a system, not a scramble.',
+      'cant_sweep': 'Off-balance first, then sweep. Most failed sweeps happen because opponent still has base.'
+    }
+  },
+  'Craig Jones': {
+    specialty: 'Body lock game, wrestling integration, leg locks, humor',
+    principles: [
+      'Wrestling wins: front headlock, body lock takedowns, scramble ability',
+      'Body lock from everywhere: passing, takedowns, guard',
+      'Inside sankaku is the best leg lock position',
+      'Guillotine system: power guillotine, arm-in variations',
+      'Transition game: always be ready to capitalize on scrambles'
+    ],
+    solutions: {
+      'takedown_defense': 'Sprawl hard, get the front headlock. Go behind or attack the neck.',
+      'scramble_loses': 'Never stop moving. The person who keeps going wins scrambles. Underhooks are life.',
+      'guard_pull_only': 'Learn wrestling fundamentals. Snap downs, arm drags, go-behinds. Guard pull is a tool, not a crutch.',
+      'leg_lock_entries': 'Inside sankaku entries: K-guard, SLX transitions, matrix. The entry is half the battle.'
+    }
+  },
+  'Mikey Musumeci': {
+    specialty: 'Butterfly guard, modern guards, smaller athlete strategies',
+    principles: [
+      'Butterfly guard is the most versatile position',
+      'Timing over strength - wait for the right moment',
+      'Arm drags create everything from butterfly',
+      'Single leg X entries from butterfly',
+      'Never stop moving - constant motion creates opportunities'
+    ],
+    solutions: {
+      'stuck_bottom': 'Butterfly hooks are your best friend. Arm drag, elevate, take the back.',
+      'guard_passed': 'Constant hip movement. Reguard immediately. Never accept bottom position.'
+    }
+  },
+  'Marcelo Garcia': {
+    specialty: 'X-guard, butterfly, guillotine, back takes',
+    principles: [
+      'X-guard sweeps: technical standup after off-balance',
+      'Arm drag to back is the highest percentage path',
+      'Guillotine from everywhere: standing, guard, mount',
+      'Always look for the back',
+      'Simplicity and repetition over complexity'
+    ],
+    solutions: {
+      'cant_finish': 'Focus on fewer techniques done better. The guillotine works everywhere.',
+      'stuck_bottom': 'Arm drag constantly. X-guard when legs are available. Always threatening sweeps.'
+    }
+  }
 };
 
 export default function ProblemSolver() {
@@ -228,6 +345,36 @@ export default function ProblemSolver() {
               ))}
             </div>
           </div>
+
+          {/* Expert Solutions Preview */}
+          {selectedQuickProblem && GRAPPLER_SOLUTIONS[selectedQuickProblem.expert] && (
+            <div className="card p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-lg">
+                  🎓
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                    {selectedQuickProblem.expert}'s Approach
+                    <span className="px-1.5 py-0.5 text-[10px] bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 rounded">
+                      {GRAPPLER_SOLUTIONS[selectedQuickProblem.expert].specialty.split(',')[0]}
+                    </span>
+                  </h4>
+                  <p className="text-sm text-purple-800 dark:text-purple-200 mt-1">
+                    {GRAPPLER_SOLUTIONS[selectedQuickProblem.expert].solutions[selectedQuickProblem.id] ||
+                     GRAPPLER_SOLUTIONS[selectedQuickProblem.expert].principles[0]}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {GRAPPLER_SOLUTIONS[selectedQuickProblem.expert].principles.slice(0, 2).map((principle, i) => (
+                      <span key={i} className="text-xs text-purple-600 dark:text-purple-400">
+                        • {principle}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Position-specific problems */}
           <div className="card p-4">
