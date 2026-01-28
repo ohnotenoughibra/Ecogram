@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { getPositionLabel } from '../utils/constants';
 import api from '../utils/api';
@@ -148,7 +148,13 @@ export default function SkillBalance({ showSuggestions = true, compact = false }
   const [topicCounts, setTopicCounts] = useState({});
   const [weakestTopic, setWeakestTopic] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+
+  // AI-powered suggestions state
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsSource, setSuggestionsSource] = useState('');
+  const excludedIds = useRef(new Set()); // Track shown suggestions to never repeat
+  const hasFetchedInitial = useRef(false);
 
   // Analyze games by position category
   const positionAnalysis = useMemo(() => {
@@ -218,74 +224,80 @@ export default function SkillBalance({ showSuggestions = true, compact = false }
     return coverage;
   }, [games]);
 
-  // Generate dynamic suggestions based on library analysis
-  const dynamicSuggestions = useMemo(() => {
-    const suggestions = [];
-    const weakPos = positionAnalysis.weakestPosition.category;
+  // Fetch AI-powered suggestions from backend
+  const fetchAiSuggestions = useCallback(async () => {
+    if (games.length === 0) return;
+
+    setSuggestionsLoading(true);
+    try {
+      const response = await api.post('/ai/smart-suggestions', {
+        excludeIds: Array.from(excludedIds.current)
+      });
+
+      const { suggestions, source } = response.data;
+      setSuggestionsSource(source);
+
+      // Transform suggestions to match component format
+      const formattedSuggestions = suggestions.map((s, i) => {
+        // Generate a unique ID for tracking
+        const suggestionId = `${s.name}-${Date.now()}-${i}`;
+        excludedIds.current.add(suggestionId);
+
+        return {
+          id: suggestionId,
+          name: s.name,
+          description: s.description,
+          prompt: s.prompt,
+          constraints: s.prompt?.substring(0, 100) || s.description,
+          category: s.position || 'various',
+          topic: s.topic || 'transition',
+          type: s.type || 'gap',
+          reasoning: s.reasoning,
+          basedOn: s.basedOn
+        };
+      });
+
+      setAiSuggestions(formattedSuggestions);
+    } catch (err) {
+      console.error('Failed to fetch AI suggestions:', err);
+      // Fall back to local suggestions on error
+      setAiSuggestions(generateLocalFallback());
+      setSuggestionsSource('local-fallback');
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }, [games]);
+
+  // Generate local fallback suggestions
+  const generateLocalFallback = () => {
+    const weakPos = positionAnalysis.weakestPosition?.category || 'guard';
     const topic = weakestTopic || 'offensive';
-
-    // 1. Position-based suggestions
     const templateKey = `${weakPos}-${topic}`;
-    const positionTemplates = SUGGESTION_TEMPLATES[templateKey] || SUGGESTION_TEMPLATES[`${weakPos}-offensive`] || [];
+    const templates = SUGGESTION_TEMPLATES[templateKey] || SUGGESTION_TEMPLATES[`${weakPos}-offensive`] || [];
 
-    // Shuffle and pick 2 from position templates
-    const shuffledPositionTemplates = [...positionTemplates].sort(() => Math.random() - 0.5);
-    shuffledPositionTemplates.slice(0, 2).forEach(template => {
-      suggestions.push({
-        name: template.name,
-        description: template.desc,
-        constraints: template.constraint,
-        category: weakPos,
-        topic: topic,
-        type: 'position'
-      });
-    });
+    return templates.slice(0, 3).map((t, i) => ({
+      id: `fallback-${Date.now()}-${i}`,
+      name: t.name,
+      description: t.desc,
+      prompt: `${t.name}: ${t.desc}. Constraint: ${t.constraint}`,
+      constraints: t.constraint,
+      category: weakPos,
+      topic: topic,
+      type: 'position'
+    }));
+  };
 
-    // 2. Meta technique suggestions - find what's missing
-    const metaCategories = Object.entries(metaCoverage)
-      .filter(([_, data]) => data.covered < data.total)
-      .sort((a, b) => (a[1].covered / a[1].total) - (b[1].covered / b[1].total));
-
-    if (metaCategories.length > 0) {
-      const [weakestMetaCategory, data] = metaCategories[0];
-      const missingTechniques = data.missing.slice(0, 3);
-
-      if (missingTechniques.length > 0) {
-        // Pick a random missing technique to suggest
-        const randomTech = missingTechniques[Math.floor(Math.random() * missingTechniques.length)];
-        suggestions.push({
-          name: `${randomTech.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} Game`,
-          description: `Develop ${randomTech} skills through focused drilling and positional sparring`,
-          constraints: `Work entries and finishes for ${randomTech}`,
-          category: weakestMetaCategory,
-          topic: 'offensive',
-          type: 'meta',
-          metaTechnique: randomTech
-        });
-      }
+  // Fetch suggestions on mount (once) and when games change significantly
+  useEffect(() => {
+    if (showSuggestions && games.length > 0 && !hasFetchedInitial.current) {
+      hasFetchedInitial.current = true;
+      fetchAiSuggestions();
     }
-
-    // 3. If library is small, suggest foundational games
-    if (games.length < 10) {
-      const foundational = [
-        { name: 'Positional Sparring', description: 'Start from specific position, work offense and defense', constraints: 'Reset on escape or submission', category: 'general', topic: 'transition', type: 'foundational' },
-        { name: 'Flow Rolling', description: 'Continuous movement at 50% intensity', constraints: 'No holding positions > 5 sec', category: 'general', topic: 'transition', type: 'foundational' }
-      ];
-      const existing = games.map(g => g.name.toLowerCase());
-      foundational.forEach(f => {
-        if (!existing.some(e => e.includes(f.name.toLowerCase().split(' ')[0]))) {
-          suggestions.push(f);
-        }
-      });
-    }
-
-    // Shuffle final suggestions for variety on refresh
-    return [...suggestions].sort(() => Math.random() - 0.5).slice(0, 3);
-  }, [games, positionAnalysis, metaCoverage, weakestTopic, refreshKey]);
+  }, [games.length, showSuggestions, fetchAiSuggestions]);
 
   const handleRefreshSuggestions = useCallback(() => {
-    setRefreshKey(prev => prev + 1);
-  }, []);
+    fetchAiSuggestions();
+  }, [fetchAiSuggestions]);
 
   useEffect(() => {
     // Count games by topic
@@ -427,20 +439,31 @@ export default function SkillBalance({ showSuggestions = true, compact = false }
         </div>
       )}
 
-      {/* Dynamic suggestions based on position + topic + meta analysis */}
-      {showSuggestions && totalGames > 0 && dynamicSuggestions.length > 0 && (
+      {/* AI-powered suggestions */}
+      {showSuggestions && totalGames > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
               <span>💡</span>
               Suggested Games to Add
+              {suggestionsSource === 'claude' && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded font-normal">
+                  AI
+                </span>
+              )}
             </h4>
             <button
               onClick={handleRefreshSuggestions}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="Get fresh suggestions"
+              disabled={suggestionsLoading}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              title="Get fresh AI suggestions"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-gray-500">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className={`w-4 h-4 text-gray-500 ${suggestionsLoading ? 'animate-spin' : ''}`}
+              >
                 <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
               </svg>
             </button>
@@ -468,14 +491,41 @@ export default function SkillBalance({ showSuggestions = true, compact = false }
             </div>
           </div>
 
-          <div className="space-y-2">
-            {dynamicSuggestions.map((suggestion, i) => (
-              <DynamicGameSuggestionCard
-                key={`${suggestion.name}-${refreshKey}-${i}`}
-                suggestion={suggestion}
-              />
-            ))}
-          </div>
+          {/* Loading state */}
+          {suggestionsLoading && aiSuggestions.length === 0 && (
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-1" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Suggestions */}
+          {aiSuggestions.length > 0 && (
+            <div className="space-y-2">
+              {aiSuggestions.map((suggestion) => (
+                <AiGameSuggestionCard
+                  key={suggestion.id}
+                  suggestion={suggestion}
+                  onAddedToLibrary={() => {
+                    // Mark as added and potentially refresh
+                    excludedIds.current.add(suggestion.name.toLowerCase());
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!suggestionsLoading && aiSuggestions.length === 0 && (
+            <div className="text-center py-4 text-sm text-gray-500">
+              <p>Click refresh to get AI-powered suggestions</p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -793,6 +843,254 @@ function DynamicGameSuggestionCard({ suggestion }) {
                   <span className={`w-3 h-3 rounded-full ${colors.color}`} />
                   <span className={`text-sm font-medium ${colors.textColor}`}>
                     {suggestion.type === 'meta' ? 'Meta Technique' : suggestion.category} Game
+                  </span>
+                </div>
+                <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded">
+                  AI Generated
+                </span>
+              </div>
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white mt-2">
+                {generatedGame.name}
+              </h3>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[50vh]">
+              {/* Start Position */}
+              {generatedGame.aiMetadata?.startPosition && (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Start Position</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{generatedGame.aiMetadata.startPosition}</p>
+                </div>
+              )}
+
+              {/* Players */}
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">Top Player</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3">{generatedGame.topPlayer}</p>
+                </div>
+                <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mb-1">Bottom Player</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3">{generatedGame.bottomPlayer}</p>
+                </div>
+              </div>
+
+              {/* Constraints */}
+              {generatedGame.aiMetadata?.constraints && (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Constraints</p>
+                  <div className="flex flex-wrap gap-1">
+                    {generatedGame.aiMetadata.constraints.slice(0, 4).map((c, i) => (
+                      <span key={i} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Coaching */}
+              {generatedGame.coaching && (
+                <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-1">Coaching Notes</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300">{generatedGame.coaching}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowPreview(false);
+                  setGeneratedGame(null);
+                }}
+                className="btn-secondary flex-1"
+              >
+                Discard
+              </button>
+              <button
+                onClick={generateGame}
+                disabled={generating}
+                className="btn-ghost px-3"
+                title="Regenerate"
+              >
+                {generating ? (
+                  <span className="w-4 h-4 block border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin" />
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.43l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={handleAddToLibrary}
+                disabled={adding}
+                className="btn-primary flex-1"
+              >
+                {adding ? (
+                  <>
+                    <span className="w-4 h-4 mr-2 block border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                    </svg>
+                    Add to Library
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// AI-powered game suggestion card with prompt-based generation
+function AiGameSuggestionCard({ suggestion, onAddedToLibrary }) {
+  const { createGame, showToast, fetchGames } = useApp();
+  const [generating, setGenerating] = useState(false);
+  const [generatedGame, setGeneratedGame] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  // Get color based on suggestion type
+  const getColors = () => {
+    const typeColors = {
+      meta: {
+        lightColor: 'bg-purple-100 dark:bg-purple-900/30',
+        textColor: 'text-purple-600 dark:text-purple-400',
+        color: 'bg-purple-500',
+        label: 'META'
+      },
+      gap: {
+        lightColor: 'bg-orange-100 dark:bg-orange-900/30',
+        textColor: 'text-orange-600 dark:text-orange-400',
+        color: 'bg-orange-500',
+        label: 'GAP'
+      },
+      variation: {
+        lightColor: 'bg-blue-100 dark:bg-blue-900/30',
+        textColor: 'text-blue-600 dark:text-blue-400',
+        color: 'bg-blue-500',
+        label: 'VARIATION'
+      },
+      complement: {
+        lightColor: 'bg-green-100 dark:bg-green-900/30',
+        textColor: 'text-green-600 dark:text-green-400',
+        color: 'bg-green-500',
+        label: 'COMPLEMENT'
+      },
+      progression: {
+        lightColor: 'bg-indigo-100 dark:bg-indigo-900/30',
+        textColor: 'text-indigo-600 dark:text-indigo-400',
+        color: 'bg-indigo-500',
+        label: 'PROGRESSION'
+      }
+    };
+
+    return typeColors[suggestion.type] || {
+      lightColor: 'bg-gray-100 dark:bg-gray-800',
+      textColor: 'text-gray-600 dark:text-gray-400',
+      color: 'bg-gray-500',
+      label: suggestion.type?.toUpperCase() || 'SUGGESTION'
+    };
+  };
+
+  const colors = getColors();
+
+  const generateGame = async () => {
+    setGenerating(true);
+    try {
+      // Use the prompt from AI suggestions
+      const prompt = suggestion.prompt || `${suggestion.name}: ${suggestion.description}`;
+      const response = await api.post('/ai/generate', { prompt });
+      const game = {
+        ...response.data.game,
+        topic: suggestion.topic || 'transition'
+      };
+      setGeneratedGame(game);
+      setShowPreview(true);
+    } catch (err) {
+      showToast('Failed to generate game', 'error');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleAddToLibrary = async () => {
+    if (!generatedGame) return;
+    setAdding(true);
+    try {
+      const result = await createGame(generatedGame);
+      if (result.success) {
+        showToast(`"${generatedGame.name}" added to library!`, 'success');
+        setShowPreview(false);
+        setGeneratedGame(null);
+        fetchGames();
+        onAddedToLibrary?.();
+      }
+    } catch (err) {
+      showToast('Failed to add game', 'error');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  return (
+    <>
+      <div className={`p-3 rounded-lg ${colors.lightColor} border border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition-colors`}>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <p className={`font-medium text-sm ${colors.textColor}`}>{suggestion.name}</p>
+              <span className={`text-[10px] px-1.5 py-0.5 ${colors.lightColor} ${colors.textColor} rounded border border-current/20`}>
+                {colors.label}
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{suggestion.description}</p>
+            {suggestion.reasoning && (
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1 italic">
+                {suggestion.reasoning}
+              </p>
+            )}
+            {suggestion.basedOn && (
+              <p className="text-[10px] text-gray-400 mt-1">
+                Based on: {suggestion.basedOn}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={generateGame}
+            disabled={generating}
+            className="ml-2 p-1.5 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow transition-shadow disabled:opacity-50"
+            title="Generate with AI"
+          >
+            {generating ? (
+              <span className="w-4 h-4 block border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${colors.textColor}`}>
+                <path d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1zM5.05 3.05a.75.75 0 011.06 0l1.062 1.06A.75.75 0 116.11 5.173L5.05 4.11a.75.75 0 010-1.06zm9.9 0a.75.75 0 010 1.06l-1.06 1.062a.75.75 0 01-1.062-1.061l1.061-1.06a.75.75 0 011.06 0zM3 8a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 013 8zm11 0a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 0114 8z" />
+                <path fillRule="evenodd" d="M10 5a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Preview Modal */}
+      {showPreview && generatedGame && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowPreview(false)}>
+          <div className="bg-white dark:bg-surface-dark rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className={`p-4 ${colors.lightColor} border-b border-gray-200 dark:border-gray-700`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-3 h-3 rounded-full ${colors.color}`} />
+                  <span className={`text-sm font-medium ${colors.textColor}`}>
+                    {colors.label} Game
                   </span>
                 </div>
                 <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded">

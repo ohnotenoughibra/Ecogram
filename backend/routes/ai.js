@@ -1855,4 +1855,626 @@ router.get('/find-similar', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/ai/smart-suggestions
+// @desc    Generate smart, library-aware game suggestions using AI
+// @access  Private
+router.post('/smart-suggestions', protect, async (req, res) => {
+  try {
+    const { excludeIds = [], suggestionType = 'auto' } = req.body;
+    const Game = require('../models/Game');
+
+    // Get user's existing games
+    const userGames = await Game.find({ user: req.user._id }).lean();
+
+    if (userGames.length === 0) {
+      // New user - suggest foundational games
+      return res.json({
+        suggestions: [
+          {
+            type: 'foundational',
+            name: 'Positional Sparring Framework',
+            description: 'Start building your game library with fundamental positional rounds',
+            prompt: 'Create a foundational positional sparring game that can be adapted to any position',
+            reasoning: 'Every coach needs a core positional sparring template to build upon'
+          },
+          {
+            type: 'foundational',
+            name: 'Guard Retention Basics',
+            description: 'Essential guard retention game for developing defensive awareness',
+            prompt: 'Create a guard retention training game focused on hip movement and framing',
+            reasoning: 'Guard retention is the foundation of bottom game development'
+          },
+          {
+            type: 'foundational',
+            name: 'Escape Drill Template',
+            description: 'Systematic escape training from bad positions',
+            prompt: 'Create an escape training game from side control with progressive resistance',
+            reasoning: 'Solid escapes build confidence to take risks elsewhere'
+          }
+        ],
+        libraryAnalysis: {
+          totalGames: 0,
+          message: 'Start building your library with these foundational games'
+        },
+        source: 'template'
+      });
+    }
+
+    // Deep library analysis
+    const analysis = analyzeLibrary(userGames);
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      // Smart template-based suggestions
+      const suggestions = generateSmartTemplateSuggestions(analysis, userGames, excludeIds);
+      return res.json({
+        suggestions,
+        libraryAnalysis: analysis,
+        source: 'template'
+      });
+    }
+
+    // Build context for Claude
+    const libraryContext = buildLibraryContext(userGames, analysis);
+
+    // Determine suggestion types based on analysis
+    const types = determineSuggestionTypes(analysis, suggestionType);
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2500,
+        system: `You are an elite NoGi grappling coach and curriculum designer. You analyze training game libraries and suggest new games that complement existing ones.
+
+## YOUR TASK
+Generate 3 unique, specific game suggestions based on the coach's existing library. Each suggestion should be:
+1. UNIQUE - Not similar to any existing game in their library
+2. SPECIFIC - Include actual positions, techniques, constraints (not generic)
+3. COMPLEMENTARY - Fill gaps or build on existing games
+4. ACTIONABLE - Ready to generate as a full training game
+
+## SUGGESTION TYPES
+
+**variation** - Take an existing game concept and create a meaningful variation:
+- Different position but same skill focus
+- Same position but different constraint/objective
+- Progression (harder/easier) of existing game
+
+**complement** - Games that chain with or counter existing games:
+- If they have guard attack games, suggest guard defense
+- If they have passing games, suggest guard retention
+- Position chains: half guard → deep half → back take
+
+**gap** - Fill missing areas in their training:
+- Missing skill topics (offensive/defensive/control/transition)
+- Missing positions (leg locks, standing, turtle)
+- Missing difficulty levels
+
+**meta** - Modern techniques not yet in their library:
+- Leg lock systems (ashi garami, saddle, 50-50)
+- Modern guards (k-guard, matrix, reverse DLR)
+- Wrestling integration (front headlock, body lock)
+- Back attack systems (body triangle, short choke)
+
+**progression** - Building on games they use frequently:
+- More advanced version of a beginner game
+- Foundational drill for an advanced game
+
+## OUTPUT FORMAT
+Return ONLY this JSON (no markdown, no explanation):
+{
+  "suggestions": [
+    {
+      "type": "variation|complement|gap|meta|progression",
+      "name": "Specific game name",
+      "description": "2-3 sentences describing the game and its purpose",
+      "prompt": "Detailed prompt to generate this game (include position, constraints, objectives)",
+      "reasoning": "Why this complements their library",
+      "basedOn": "Name of existing game this relates to (or null for new concepts)",
+      "position": "Primary position focus",
+      "topic": "offensive|defensive|control|transition"
+    }
+  ]
+}`,
+        messages: [
+          {
+            role: 'user',
+            content: `Analyze my training game library and suggest 3 NEW games I should add.
+
+## MY LIBRARY ANALYSIS
+${libraryContext}
+
+## SUGGESTION TYPES TO PRIORITIZE
+${types.map(t => `- ${t.type}: ${t.reason}`).join('\n')}
+
+## CONSTRAINTS
+- Do NOT suggest games similar to what I already have
+- Each suggestion must be DIFFERENT from each other
+- Include specific positions and constraints, not generic concepts
+- Consider modern grappling meta (leg locks, wrestling, modern guards)
+
+Generate 3 unique suggestions that would genuinely improve my training library.`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const suggestions = generateSmartTemplateSuggestions(analysis, userGames, excludeIds);
+      return res.json({
+        suggestions,
+        libraryAnalysis: analysis,
+        source: 'template',
+        apiError: true
+      });
+    }
+
+    const data = await response.json();
+    const textContent = data.content?.find(c => c.type === 'text')?.text;
+
+    let suggestions;
+    try {
+      const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(textContent);
+      suggestions = parsed.suggestions || [];
+
+      // Validate and enhance suggestions
+      suggestions = suggestions.map(s => ({
+        type: s.type || 'gap',
+        name: s.name || 'Training Game',
+        description: s.description || 'A new training game for your library',
+        prompt: s.prompt || `Create a training game: ${s.name}`,
+        reasoning: s.reasoning || 'Complements your existing library',
+        basedOn: s.basedOn || null,
+        position: s.position || 'various',
+        topic: s.topic || 'transition'
+      })).slice(0, 3);
+
+    } catch (parseError) {
+      console.error('Failed to parse AI suggestions:', parseError);
+      suggestions = generateSmartTemplateSuggestions(analysis, userGames, excludeIds);
+      return res.json({
+        suggestions,
+        libraryAnalysis: analysis,
+        source: 'template',
+        parseError: true
+      });
+    }
+
+    res.json({
+      suggestions,
+      libraryAnalysis: analysis,
+      source: 'claude'
+    });
+
+  } catch (error) {
+    console.error('Smart suggestions error:', error);
+    res.status(500).json({ message: 'Failed to generate suggestions', error: error.message });
+  }
+});
+
+// Helper: Analyze user's library deeply
+function analyzeLibrary(games) {
+  const analysis = {
+    totalGames: games.length,
+    byTopic: { offensive: 0, defensive: 0, control: 0, transition: 0 },
+    byDifficulty: { beginner: 0, intermediate: 0, advanced: 0 },
+    byGameType: { warmup: 0, main: 0, cooldown: 0 },
+    positions: {},
+    techniques: {},
+    skills: {},
+    patterns: {
+      constraintStyle: [],
+      coachingVoice: [],
+      favoritePositions: []
+    },
+    gaps: {
+      topics: [],
+      positions: [],
+      techniques: [],
+      difficulties: []
+    },
+    suggestions: []
+  };
+
+  // Position categories for analysis
+  const positionKeywords = {
+    guard: ['closed guard', 'half guard', 'butterfly', 'open guard', 'de la riva', 'dlr', 'spider', 'lasso', 'x guard', 'slx', 'deep half', 'z guard', 'k guard'],
+    top: ['mount', 'side control', 'knee on belly', 'north south', 'back control', 'back mount'],
+    standing: ['standing', 'clinch', 'wrestling', 'takedown'],
+    legLocks: ['ashi', 'saddle', 'inside sankaku', '50 50', 'heel hook', 'outside ashi', 'leg entanglement'],
+    turtle: ['turtle', 'front headlock', 'crucifix']
+  };
+
+  // Meta techniques to track
+  const metaTechniques = {
+    legLocks: ['heel hook', 'knee bar', 'toe hold', 'ashi garami', 'saddle', 'inside sankaku', '50-50', 'calf slicer'],
+    modernGuards: ['k guard', 'matrix', 'reverse de la riva', 'squid guard', 'body lock guard'],
+    wrestling: ['front headlock', 'guillotine', 'darce', 'anaconda', 'single leg', 'double leg', 'body lock', 'snap down'],
+    backAttacks: ['body triangle', 'rear naked', 'short choke', 'arm trap', 'straight jacket'],
+    modernPassing: ['body lock pass', 'over under', 'leg drag', 'knee cut', 'smash pass', 'float pass']
+  };
+
+  games.forEach(game => {
+    // Count by topic
+    if (game.topic && analysis.byTopic.hasOwnProperty(game.topic)) {
+      analysis.byTopic[game.topic]++;
+    }
+
+    // Count by difficulty
+    if (game.difficulty && analysis.byDifficulty.hasOwnProperty(game.difficulty)) {
+      analysis.byDifficulty[game.difficulty]++;
+    }
+
+    // Count by game type
+    const gameType = game.gameType || 'main';
+    if (analysis.byGameType.hasOwnProperty(gameType)) {
+      analysis.byGameType[gameType]++;
+    }
+
+    // Build searchable text
+    const gameText = [
+      game.name || '',
+      game.topPlayer || '',
+      game.bottomPlayer || '',
+      game.coaching || '',
+      game.position || '',
+      ...(game.skills || []),
+      ...(game.techniques || []),
+      game.aiMetadata?.startPosition || '',
+      game.aiMetadata?.description || '',
+      ...(game.aiMetadata?.constraints || [])
+    ].join(' ').toLowerCase();
+
+    // Count positions
+    Object.entries(positionKeywords).forEach(([category, keywords]) => {
+      keywords.forEach(keyword => {
+        if (gameText.includes(keyword)) {
+          analysis.positions[category] = (analysis.positions[category] || 0) + 1;
+        }
+      });
+    });
+
+    // Count meta techniques
+    Object.entries(metaTechniques).forEach(([category, techniques]) => {
+      techniques.forEach(tech => {
+        if (gameText.includes(tech.toLowerCase())) {
+          analysis.techniques[category] = (analysis.techniques[category] || 0) + 1;
+        }
+      });
+    });
+
+    // Count skills
+    (game.skills || []).forEach(skill => {
+      const normalizedSkill = skill.toLowerCase().trim();
+      analysis.skills[normalizedSkill] = (analysis.skills[normalizedSkill] || 0) + 1;
+    });
+
+    // Extract constraint patterns
+    if (game.aiMetadata?.constraints) {
+      analysis.patterns.constraintStyle.push(...game.aiMetadata.constraints.slice(0, 2));
+    }
+  });
+
+  // Identify gaps
+  const totalByTopic = Object.values(analysis.byTopic).reduce((a, b) => a + b, 0);
+  const avgPerTopic = totalByTopic / 4;
+
+  Object.entries(analysis.byTopic).forEach(([topic, count]) => {
+    if (count < avgPerTopic * 0.5) {
+      analysis.gaps.topics.push({ topic, count, deficit: Math.round(avgPerTopic - count) });
+    }
+  });
+
+  // Position gaps
+  const positionCategories = ['guard', 'top', 'standing', 'legLocks', 'turtle'];
+  positionCategories.forEach(pos => {
+    if (!analysis.positions[pos] || analysis.positions[pos] < 2) {
+      analysis.gaps.positions.push({ position: pos, count: analysis.positions[pos] || 0 });
+    }
+  });
+
+  // Meta technique gaps
+  Object.entries(metaTechniques).forEach(([category, techniques]) => {
+    if (!analysis.techniques[category] || analysis.techniques[category] < 1) {
+      analysis.gaps.techniques.push({ category, missing: techniques.slice(0, 3) });
+    }
+  });
+
+  // Difficulty gaps
+  Object.entries(analysis.byDifficulty).forEach(([diff, count]) => {
+    if (count === 0 && games.length > 3) {
+      analysis.gaps.difficulties.push(diff);
+    }
+  });
+
+  // Find most used games (for variation suggestions)
+  const gameUsage = games
+    .filter(g => g.usageCount || g.lastUsed)
+    .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
+    .slice(0, 5);
+
+  analysis.frequentGames = gameUsage.map(g => ({
+    name: g.name,
+    topic: g.topic,
+    position: g.position,
+    usageCount: g.usageCount || 0
+  }));
+
+  return analysis;
+}
+
+// Helper: Build library context for AI
+function buildLibraryContext(games, analysis) {
+  const sections = [];
+
+  // Overview
+  sections.push(`## Overview
+- Total games: ${analysis.totalGames}
+- By topic: Offensive (${analysis.byTopic.offensive}), Defensive (${analysis.byTopic.defensive}), Control (${analysis.byTopic.control}), Transition (${analysis.byTopic.transition})
+- By difficulty: Beginner (${analysis.byDifficulty.beginner}), Intermediate (${analysis.byDifficulty.intermediate}), Advanced (${analysis.byDifficulty.advanced})`);
+
+  // Sample games (to understand style)
+  const sampleGames = games.slice(0, 5);
+  sections.push(`## Sample Games (to understand coaching style)
+${sampleGames.map(g => `- "${g.name}" (${g.topic}): ${g.topPlayer?.substring(0, 100)}...`).join('\n')}`);
+
+  // Existing positions
+  sections.push(`## Position Coverage
+${Object.entries(analysis.positions).map(([pos, count]) => `- ${pos}: ${count} games`).join('\n') || '- No specific positions detected'}`);
+
+  // Gaps identified
+  if (analysis.gaps.topics.length > 0) {
+    sections.push(`## Topic Gaps
+${analysis.gaps.topics.map(g => `- ${g.topic}: only ${g.count} games (needs ~${g.deficit} more)`).join('\n')}`);
+  }
+
+  if (analysis.gaps.positions.length > 0) {
+    sections.push(`## Position Gaps
+${analysis.gaps.positions.map(g => `- ${g.position}: only ${g.count} games`).join('\n')}`);
+  }
+
+  if (analysis.gaps.techniques.length > 0) {
+    sections.push(`## Missing Modern Techniques
+${analysis.gaps.techniques.map(g => `- ${g.category}: missing ${g.missing.join(', ')}`).join('\n')}`);
+  }
+
+  // Frequently used (for progressions)
+  if (analysis.frequentGames.length > 0) {
+    sections.push(`## Most Used Games (good for variations/progressions)
+${analysis.frequentGames.map(g => `- "${g.name}" (${g.topic})`).join('\n')}`);
+  }
+
+  return sections.join('\n\n');
+}
+
+// Helper: Determine suggestion types based on analysis
+function determineSuggestionTypes(analysis, requestedType) {
+  const types = [];
+
+  if (requestedType !== 'auto') {
+    types.push({ type: requestedType, reason: 'User requested' });
+    return types;
+  }
+
+  // Prioritize based on gaps
+  if (analysis.gaps.positions.length > 0) {
+    const worstPos = analysis.gaps.positions[0];
+    types.push({ type: 'gap', reason: `Missing ${worstPos.position} games` });
+  }
+
+  if (analysis.gaps.techniques.length > 0) {
+    const worstTech = analysis.gaps.techniques[0];
+    types.push({ type: 'meta', reason: `No ${worstTech.category} coverage` });
+  }
+
+  if (analysis.gaps.topics.length > 0) {
+    const worstTopic = analysis.gaps.topics[0];
+    types.push({ type: 'gap', reason: `Low ${worstTopic.topic} games` });
+  }
+
+  if (analysis.frequentGames.length > 0) {
+    types.push({ type: 'variation', reason: 'Build on your most-used games' });
+  }
+
+  // Always include complement
+  types.push({ type: 'complement', reason: 'Chain with existing games' });
+
+  return types.slice(0, 3);
+}
+
+// Helper: Generate smart template suggestions when no API key
+function generateSmartTemplateSuggestions(analysis, games, excludeIds) {
+  const suggestions = [];
+  const existingNames = games.map(g => g.name.toLowerCase());
+
+  // 1. Gap-based suggestion
+  if (analysis.gaps.positions.length > 0) {
+    const gap = analysis.gaps.positions[0];
+    const gapSuggestions = {
+      legLocks: {
+        name: 'Ashi Garami Entry Game',
+        description: 'Develop leg lock entries from various guard positions with progressive resistance',
+        prompt: 'Create a leg lock entry game focused on achieving ashi garami control from open guard',
+        topic: 'offensive'
+      },
+      standing: {
+        name: 'Wrestling Tie-Up Battle',
+        description: 'Develop clinch control and takedown entries through grip fighting',
+        prompt: 'Create a wrestling game focused on establishing dominant ties and level changes',
+        topic: 'transition'
+      },
+      turtle: {
+        name: 'Turtle Attack & Defense',
+        description: 'Both players work turtle position - attacks from top, recoveries from bottom',
+        prompt: 'Create a turtle position game with back take attempts vs guard recovery',
+        topic: 'transition'
+      },
+      guard: {
+        name: 'Guard Sweep Wars',
+        description: 'Develop sweep timing and execution from various guard positions',
+        prompt: 'Create a guard game where bottom player hunts sweeps vs top player maintains base',
+        topic: 'transition'
+      },
+      top: {
+        name: 'Pin Transition Drill',
+        description: 'Flow between dominant positions while maintaining pressure and control',
+        prompt: 'Create a top position game cycling through side control, mount, back, and knee on belly',
+        topic: 'control'
+      }
+    };
+
+    if (gapSuggestions[gap.position]) {
+      suggestions.push({
+        type: 'gap',
+        position: gap.position,
+        reasoning: `Your library has only ${gap.count} ${gap.position} games`,
+        ...gapSuggestions[gap.position]
+      });
+    }
+  }
+
+  // 2. Meta technique suggestion
+  if (analysis.gaps.techniques.length > 0) {
+    const gap = analysis.gaps.techniques[0];
+    const metaSuggestions = {
+      legLocks: {
+        name: 'Heel Hook Control Game',
+        description: 'Modern leg lock game focusing on inside sankaku and saddle control before attacking',
+        prompt: 'Create a leg lock game emphasizing position before submission with heel hook finishes',
+        topic: 'offensive'
+      },
+      modernGuards: {
+        name: 'K-Guard Entry Drill',
+        description: 'Develop modern guard entries and sweeps using K-guard and matrix concepts',
+        prompt: 'Create a guard game using K-guard and matrix positions to off-balance and sweep',
+        topic: 'transition'
+      },
+      wrestling: {
+        name: 'Front Headlock Series',
+        description: 'Wrestling-based game developing snap downs, go-behinds, and guillotine threats',
+        prompt: 'Create a front headlock game with guillotine, darce, and anaconda options',
+        topic: 'offensive'
+      },
+      backAttacks: {
+        name: 'Back Attack System',
+        description: 'Comprehensive back control game with body triangle, collar control, and finishes',
+        prompt: 'Create a back attack game with body triangle control and RNC/arm attack options',
+        topic: 'offensive'
+      },
+      modernPassing: {
+        name: 'Body Lock Passing Game',
+        description: 'Modern pressure passing using body lock control to systematically pass guard',
+        prompt: 'Create a passing game using body lock pressure to pass half guard and open guard',
+        topic: 'control'
+      }
+    };
+
+    if (metaSuggestions[gap.category] && !existingNames.some(n => n.includes(gap.category.toLowerCase()))) {
+      suggestions.push({
+        type: 'meta',
+        position: gap.category,
+        reasoning: `No ${gap.category} techniques in your library`,
+        ...metaSuggestions[gap.category]
+      });
+    }
+  }
+
+  // 3. Topic balance suggestion
+  if (analysis.gaps.topics.length > 0) {
+    const gap = analysis.gaps.topics[0];
+    const topicSuggestions = {
+      offensive: {
+        name: 'Submission Hunt Game',
+        description: 'Develop attacking mindset with continuous submission attempts and chains',
+        prompt: 'Create an offensive game where attacker chains submissions with limited position holds'
+      },
+      defensive: {
+        name: 'Survival & Escape Rounds',
+        description: 'Build defensive skills through timed survival and systematic escapes',
+        prompt: 'Create a defensive game starting from bad positions with escape objectives'
+      },
+      control: {
+        name: 'Pressure Maintenance Game',
+        description: 'Develop top control through systematic pressure and position advancement',
+        prompt: 'Create a control game focused on maintaining and advancing dominant positions'
+      },
+      transition: {
+        name: 'Scramble Points Game',
+        description: 'Develop scramble awareness and speed with competitive position battles',
+        prompt: 'Create a transition game with point scoring for winning scrambles'
+      }
+    };
+
+    if (topicSuggestions[gap.topic]) {
+      suggestions.push({
+        type: 'gap',
+        topic: gap.topic,
+        reasoning: `Only ${gap.count} ${gap.topic} games (need more balance)`,
+        ...topicSuggestions[gap.topic]
+      });
+    }
+  }
+
+  // 4. Variation of popular game (if we have usage data)
+  if (analysis.frequentGames.length > 0 && suggestions.length < 3) {
+    const popular = analysis.frequentGames[0];
+    suggestions.push({
+      type: 'variation',
+      name: `${popular.name} - Advanced Version`,
+      description: `Competition-level variation of your most-used game with added pressure and time constraints`,
+      prompt: `Create an advanced/competition variation of: ${popular.name}. Add time pressure, degraded starting positions, and chain attack requirements.`,
+      reasoning: `Based on your frequently used game "${popular.name}"`,
+      basedOn: popular.name,
+      topic: popular.topic || 'transition'
+    });
+  }
+
+  // Fill remaining slots with general suggestions
+  const generalSuggestions = [
+    {
+      type: 'complement',
+      name: 'Counter Attack Game',
+      description: 'Develop counter-attacking skills by defending then immediately attacking',
+      prompt: 'Create a game where defender must counter-attack within 3 seconds of successful defense',
+      reasoning: 'Develops the connection between defense and offense',
+      topic: 'transition'
+    },
+    {
+      type: 'progression',
+      name: 'Competition Simulation',
+      description: 'Full competitive rounds with point scoring and time limits',
+      prompt: 'Create a competition simulation game with ADCC-style scoring and time pressure',
+      reasoning: 'Tests skills under competitive pressure',
+      topic: 'transition'
+    },
+    {
+      type: 'gap',
+      name: 'Guard Recovery Specialist',
+      description: 'Develop guard recovery from every bad position',
+      prompt: 'Create a game focused on recovering guard from passed positions',
+      reasoning: 'Essential skill often undertrained',
+      topic: 'defensive'
+    }
+  ];
+
+  while (suggestions.length < 3) {
+    const next = generalSuggestions[suggestions.length];
+    if (next && !existingNames.some(n => n.toLowerCase().includes(next.name.toLowerCase().split(' ')[0]))) {
+      suggestions.push(next);
+    } else {
+      break;
+    }
+  }
+
+  return suggestions.slice(0, 3);
+}
+
 module.exports = router;
