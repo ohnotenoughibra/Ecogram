@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import GameCard from '../components/GameCard';
@@ -18,6 +18,7 @@ import SmartTrainingHub from '../components/SmartTrainingHub';
 import GameOfTheDay from '../components/GameOfTheDay';
 
 export default function Games() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const {
     games,
@@ -55,6 +56,14 @@ export default function Games() {
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
   const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem('gamesViewMode') || 'list';
+  });
+
+  // Persist view mode preference
+  useEffect(() => {
+    localStorage.setItem('gamesViewMode', viewMode);
+  }, [viewMode]);
 
   useEffect(() => {
     fetchGames();
@@ -182,9 +191,41 @@ export default function Games() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Games</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {gamesPagination.total} games in your library
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {gamesPagination.total} games in your library
+            </p>
+            {/* View toggle */}
+            <div className="hidden sm:flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-md transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+                title="List view"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M2 4a1 1 0 011-1h10a1 1 0 110 2H3a1 1 0 01-1-1zm0 4a1 1 0 011-1h10a1 1 0 110 2H3a1 1 0 01-1-1zm0 4a1 1 0 011-1h10a1 1 0 110 2H3a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode('compact')}
+                className={`p-1.5 rounded-md transition-colors ${
+                  viewMode === 'compact'
+                    ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+                title="Compact view"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                  <path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9zM3.5 3a.5.5 0 00-.5.5v9a.5.5 0 00.5.5h9a.5.5 0 00.5-.5v-9a.5.5 0 00-.5-.5h-9z" />
+                  <path d="M4 5.25a.75.75 0 01.75-.75h6.5a.75.75 0 010 1.5h-6.5A.75.75 0 014 5.25zm0 2.5a.75.75 0 01.75-.75h6.5a.75.75 0 010 1.5h-6.5A.75.75 0 014 7.75zm0 2.5a.75.75 0 01.75-.75h6.5a.75.75 0 010 1.5h-6.5a.75.75 0 01-.75-.75z" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
@@ -254,15 +295,21 @@ export default function Games() {
         <EmptyState
           type="games"
           onAction={() => setShowGameModal(true)}
+          onSecondaryAction={() => navigate('/ai')}
+          onQuickAction={(action) => {
+            if (action === 'import') setShowBulkImport(true);
+            if (action === 'templates') navigate('/ai?tab=templates');
+          }}
         />
       ) : (
-        <div className="space-y-4">
+        <div className={viewMode === 'compact' ? 'space-y-2' : 'space-y-4'}>
           {games.map(game => (
             <GameCard
               key={game._id}
               game={game}
               onEdit={handleEditGame}
               onDelete={handleDeleteClick}
+              compact={viewMode === 'compact'}
             />
           ))}
 

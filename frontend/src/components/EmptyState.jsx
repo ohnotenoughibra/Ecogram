@@ -65,38 +65,102 @@ const illustrations = {
 
 const messages = {
   games: {
-    title: 'No games yet',
-    description: 'Start building your training library by creating your first game or using the AI designer.',
-    action: 'Create Game'
+    title: 'Your training library awaits',
+    description: 'Build a collection of BJJ training games to level up your practice.',
+    action: 'Create Game',
+    secondaryAction: 'AI Designer',
+    secondaryIcon: 'sparkles',
+    tip: 'Pro tip: Use the AI Designer to generate games based on specific techniques or positions.',
+    quickActions: [
+      { label: 'Import from file', icon: 'upload', action: 'import' },
+      { label: 'Browse templates', icon: 'template', action: 'templates' }
+    ]
   },
   sessions: {
-    title: 'No sessions found',
-    description: 'Create a training session to organize your games and track your practice.',
-    action: 'New Session'
+    title: 'Plan your training',
+    description: 'Sessions help you organize games into structured practice routines.',
+    action: 'New Session',
+    secondaryAction: 'Smart Build',
+    secondaryIcon: 'zap',
+    tip: 'Sessions track which games you use, helping you analyze your training patterns.',
+    quickActions: [
+      { label: 'Quick 15-min session', icon: 'clock', action: 'quick15' },
+      { label: 'Full class template', icon: 'template', action: 'fullClass' }
+    ]
   },
   favorites: {
-    title: 'No favorites yet',
-    description: 'Tap the star on any game to add it to your favorites for quick access.',
-    action: 'Browse Games'
+    title: 'Star your best games',
+    description: 'Tap the star on any game to add it here for quick access during training.',
+    action: 'Browse Games',
+    tip: 'Favorites appear at the top of game lists, perfect for your go-to drills.'
   },
   stats: {
-    title: 'No data yet',
-    description: 'Complete some training sessions and rate games to see your statistics.',
-    action: 'Start Training'
+    title: 'Track your journey',
+    description: 'Complete training sessions to unlock insights about your practice patterns.',
+    action: 'Start Training',
+    secondaryAction: 'View Goals',
+    secondaryIcon: 'target',
+    tip: 'The more you train, the better your personalized recommendations become.'
   },
   search: {
-    title: 'No results found',
-    description: 'Try adjusting your search or filters to find what you\'re looking for.',
-    action: 'Clear Filters'
+    title: 'No matches found',
+    description: 'Try different keywords or remove some filters to see more results.',
+    action: 'Clear Filters',
+    tip: 'Use specific terms like position names (guard, mount) or techniques (sweep, pass).'
   },
   offline: {
     title: 'You\'re offline',
-    description: 'Some features may be limited. Your data will sync when you\'re back online.',
-    action: null
+    description: 'Your cached games are still available. Changes will sync when you reconnect.',
+    action: null,
+    tip: 'Offline mode keeps your favorites and recent sessions accessible.'
   }
 };
 
-export default function EmptyState({ type = 'games', onAction, customTitle, customDescription, customAction }) {
+// Icon components for quick actions
+const actionIcons = {
+  sparkles: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path d="M10 1a.75.75 0 01.65.38l1.95 3.4 3.75.9a.75.75 0 01.4 1.23l-2.6 2.87.45 3.85a.75.75 0 01-1.07.8L10 12.62l-3.53 1.81a.75.75 0 01-1.07-.8l.45-3.85-2.6-2.87a.75.75 0 01.4-1.23l3.75-.9 1.95-3.4A.75.75 0 0110 1z" />
+    </svg>
+  ),
+  zap: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path d="M11.983 1.907a.75.75 0 00-1.292-.657l-8.5 9.5A.75.75 0 002.75 12h6.572l-1.305 6.093a.75.75 0 001.292.657l8.5-9.5A.75.75 0 0017.25 8h-6.572l1.305-6.093z" />
+    </svg>
+  ),
+  target: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path fillRule="evenodd" d="M10 1a.75.75 0 01.75.75v1.5a6.5 6.5 0 016 6h1.5a.75.75 0 010 1.5h-1.5a6.5 6.5 0 01-6 6v1.5a.75.75 0 01-1.5 0v-1.5a6.5 6.5 0 01-6-6H1.75a.75.75 0 010-1.5h1.5a6.5 6.5 0 016-6v-1.5A.75.75 0 0110 1z" clipRule="evenodd" />
+    </svg>
+  ),
+  upload: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path d="M9.25 13.25a.75.75 0 001.5 0V4.636l2.955 3.129a.75.75 0 001.09-1.03l-4.25-4.5a.75.75 0 00-1.09 0l-4.25 4.5a.75.75 0 101.09 1.03L9.25 4.636v8.614z" />
+      <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+    </svg>
+  ),
+  template: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clipRule="evenodd" />
+    </svg>
+  ),
+  clock: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" />
+    </svg>
+  ),
+};
+
+export default function EmptyState({
+  type = 'games',
+  onAction,
+  onSecondaryAction,
+  onQuickAction,
+  customTitle,
+  customDescription,
+  customAction,
+  showTip = true
+}) {
   const content = messages[type] || messages.games;
   const illustration = illustrations[type] || illustrations.games;
 
@@ -114,13 +178,54 @@ export default function EmptyState({ type = 'games', onAction, customTitle, cust
         {customDescription || content.description}
       </p>
 
+      {/* Main action buttons */}
       {(customAction || content.action) && onAction && (
-        <button
-          onClick={onAction}
-          className="btn-primary"
-        >
-          {customAction || content.action}
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
+          <button
+            onClick={onAction}
+            className="btn-primary"
+          >
+            {customAction || content.action}
+          </button>
+
+          {content.secondaryAction && onSecondaryAction && (
+            <button
+              onClick={onSecondaryAction}
+              className="btn-secondary flex items-center gap-2"
+            >
+              {content.secondaryIcon && actionIcons[content.secondaryIcon]}
+              {content.secondaryAction}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Quick actions */}
+      {content.quickActions && onQuickAction && (
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+          {content.quickActions.map((qa, idx) => (
+            <button
+              key={idx}
+              onClick={() => onQuickAction(qa.action)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              {actionIcons[qa.icon]}
+              {qa.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Pro tip */}
+      {showTip && content.tip && (
+        <div className="mt-2 flex items-start gap-2 max-w-md text-left bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-lg px-4 py-3">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5">
+            <path d="M10 1a6 6 0 00-3.815 10.631C7.237 12.5 8 13.443 8 14.456v.644a.75.75 0 00.572.729 6.016 6.016 0 002.856 0A.75.75 0 0012 15.1v-.644c0-1.013.762-1.957 1.815-2.825A6 6 0 0010 1zM8.863 17.414a.75.75 0 00-.226 1.483 9.066 9.066 0 002.726 0 .75.75 0 00-.226-1.483 7.553 7.553 0 01-2.274 0z" />
+          </svg>
+          <p className="text-sm text-primary-700 dark:text-primary-300">
+            {content.tip}
+          </p>
+        </div>
       )}
     </div>
   );

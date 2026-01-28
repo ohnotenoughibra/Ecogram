@@ -16,7 +16,7 @@ const topicColors = {
   transition: 'badge-transition'
 };
 
-export default function GameCard({ game, onEdit, onDelete, selectable = true }) {
+export default function GameCard({ game, onEdit, onDelete, selectable = true, compact = false }) {
   const { selectedGames, toggleGameSelection, updateGame, markGameUsed, duplicateGame, showToast } = useApp();
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -221,6 +221,119 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
       ))}
     </div>
   );
+
+  // Compact view - single row layout
+  if (compact) {
+    return (
+      <div
+        className={`flex items-center gap-3 p-3 bg-white dark:bg-surface-dark rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer group ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
+        onClick={() => onEdit(game)}
+      >
+        {selectable && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              toggleGameSelection(game._id);
+            }}
+            className="checkbox flex-shrink-0"
+          />
+        )}
+
+        {/* Topic color indicator */}
+        <div className={`w-1 h-8 rounded-full flex-shrink-0 ${
+          game.topic === 'offensive' ? 'bg-red-500' :
+          game.topic === 'defensive' ? 'bg-blue-500' :
+          game.topic === 'control' ? 'bg-purple-500' : 'bg-green-500'
+        }`} />
+
+        {/* Name and basic info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-900 dark:text-white truncate">{game.name}</span>
+            {game.videoUrl && (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-red-500 flex-shrink-0">
+                <path d="M3.25 4A2.25 2.25 0 001 6.25v3.5A2.25 2.25 0 003.25 12h5.5A2.25 2.25 0 0011 9.75v-3.5A2.25 2.25 0 008.75 4h-5.5zM15 5.75a.75.75 0 00-1.28-.53l-2 2a.75.75 0 000 1.06l2 2a.75.75 0 001.28-.53v-4z" />
+              </svg>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>{topicLabels[game.topic]}</span>
+            {game.skills?.length > 0 && (
+              <>
+                <span>•</span>
+                <span className="truncate">{game.skills.slice(0, 2).map(s => '#' + s).join(' ')}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Rating (compact) */}
+        {game.rating > 0 && (
+          <div className="hidden sm:flex items-center gap-0.5 text-yellow-400 flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+              <path d="M8 1.75a.75.75 0 01.692.462l1.41 3.393 3.664.293a.75.75 0 01.428 1.317l-2.791 2.39.853 3.575a.75.75 0 01-1.12.814L8 12.093l-3.136 1.9a.75.75 0 01-1.12-.814l.852-3.574-2.79-2.39a.75.75 0 01.427-1.318l3.663-.293 1.41-3.393A.75.75 0 018 1.75z" />
+            </svg>
+            <span className="text-xs">{game.rating}</span>
+          </div>
+        )}
+
+        {/* Freshness badge */}
+        <span className={`hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${freshness.color}`}>
+          {freshness.label}
+        </span>
+
+        {/* Favorite button */}
+        <button
+          onClick={handleFavoriteToggle}
+          className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
+            isFavorite
+              ? 'text-yellow-400 hover:text-yellow-500'
+              : 'text-gray-300 hover:text-yellow-400 dark:text-gray-600'
+          }`}
+          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+            <path d="M8 1.75a.75.75 0 01.692.462l1.41 3.393 3.664.293a.75.75 0 01.428 1.317l-2.791 2.39.853 3.575a.75.75 0 01-1.12.814L8 12.093l-3.136 1.9a.75.75 0 01-1.12-.814l.852-3.574-2.79-2.39a.75.75 0 01.427-1.318l3.663-.293 1.41-3.393A.75.75 0 018 1.75z" />
+          </svg>
+        </button>
+
+        {/* Quick actions (visible on hover) */}
+        <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          <button
+            onClick={handleMarkUsed}
+            disabled={isMarkingUsed}
+            className="p-1.5 text-gray-400 hover:text-green-500 rounded transition-colors disabled:opacity-50"
+            title="Mark as used"
+          >
+            {isMarkingUsed ? (
+              <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(game);
+            }}
+            className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors"
+            title="Delete"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 000 1.5h.3l.815 8.15A1.5 1.5 0 005.357 15h5.285a1.5 1.5 0 001.493-1.35l.815-8.15h.3a.75.75 0 000-1.5H11v-.75A2.25 2.25 0 008.75 1h-1.5A2.25 2.25 0 005 3.25zm2.25-.75a.75.75 0 00-.75.75V4h3v-.75a.75.75 0 00-.75-.75h-1.5z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
