@@ -282,3 +282,232 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ================================================
+   Progress & Achievement Animations
+   ================================================ */
+
+/* Completion celebration */
+@keyframes celebrate {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.2) rotate(-5deg); }
+  50% { transform: scale(1.1) rotate(5deg); }
+  75% { transform: scale(1.15) rotate(-3deg); }
+  100% { transform: scale(1); }
+}
+
+.animate-celebrate {
+  animation: celebrate 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Streak fire pulse */
+@keyframes firePulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.15); filter: brightness(1.2); }
+}
+
+.animate-fire-pulse {
+  animation: firePulse 1.5s ease-in-out infinite;
+}
+
+/* Achievement unlock */
+@keyframes unlockBadge {
+  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+  50% { transform: scale(1.3) rotate(10deg); opacity: 1; }
+  70% { transform: scale(0.9) rotate(-5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.animate-unlock {
+  animation: unlockBadge 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Progress bar fill */
+@keyframes progressFill {
+  from { width: 0%; }
+}
+
+.animate-progress-fill {
+  animation: progressFill 1s ease-out forwards;
+}
+
+/* Confetti burst */
+@keyframes confettiBurst {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-100px) scale(0); opacity: 0; }
+}
+
+.animate-confetti {
+  animation: confettiBurst 1s ease-out forwards;
+}
+
+/* Counter increment */
+@keyframes countUp {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-count-up {
+  animation: countUp 0.4s ease-out;
+}
+
+/* Glow pulse for milestones */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 20px 10px rgba(59, 130, 246, 0.2); }
+}
+
+.animate-glow {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Success checkmark draw */
+@keyframes drawCheck {
+  0% { stroke-dashoffset: 50; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.animate-check {
+  stroke-dasharray: 50;
+  animation: drawCheck 0.5s ease-out forwards;
+}
+
+/* Shake for attention */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.6s ease-in-out;
+}
+
+/* Bounce in for new items */
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Slide up reveal */
+@keyframes slideUpReveal {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up-reveal {
+  animation: slideUpReveal 0.4s ease-out;
+}
+
+/* Streak number increment */
+@keyframes numberPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); color: #f59e0b; }
+  100% { transform: scale(1); }
+}
+
+.animate-number-pop {
+  animation: numberPop 0.4s ease-out;
+}
+
+/* Ring expansion for completions */
+@keyframes ringExpand {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.animate-ring-expand {
+  animation: ringExpand 0.6s ease-out;
+}
+
+/* Trophy wobble */
+@keyframes trophyWobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-15deg); }
+  75% { transform: rotate(15deg); }
+}
+
+.animate-trophy {
+  animation: trophyWobble 0.5s ease-in-out;
+}
+
+/* Stat card highlight */
+@keyframes highlightCard {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(59, 130, 246, 0.1); }
+  100% { background-color: transparent; }
+}
+
+.animate-highlight {
+  animation: highlightCard 1s ease-out;
+}
+
+/* Ripple effect */
+@keyframes ripple {
+  0% { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+.animate-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple 0.6s ease-out;
+}
+
+/* Stagger animation helper classes */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* Success state transition */
+.success-flash {
+  transition: all 0.3s ease;
+}
+
+.success-flash.active {
+  background-color: rgba(34, 197, 94, 0.2);
+  transform: scale(1.02);
+}
+
+/* Completion particle effect container */
+.completion-particles {
+  position: absolute;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.completion-particles span {
+  position: absolute;
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: particleFloat 1s ease-out forwards;
+}
+
+@keyframes particleFloat {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-60px) scale(0); opacity: 0; }
+}

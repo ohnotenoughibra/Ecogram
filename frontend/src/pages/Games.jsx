@@ -16,6 +16,8 @@ import SkillBalance from '../components/SkillBalance';
 import EmptyState from '../components/EmptyState';
 import SmartTrainingHub from '../components/SmartTrainingHub';
 import GameOfTheDay from '../components/GameOfTheDay';
+import SmartPlaylists from '../components/SmartPlaylists';
+import PrintableGameCards from '../components/PrintableGameCards';
 
 export default function Games() {
   const navigate = useNavigate();
@@ -59,6 +61,7 @@ export default function Games() {
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem('gamesViewMode') || 'list';
   });
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Persist view mode preference
   useEffect(() => {
@@ -229,6 +232,16 @@ export default function Games() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => setShowPrintModal(true)}
+            className="btn-secondary"
+            title="Export to PDF / Print"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 sm:mr-1">
+              <path fillRule="evenodd" d="M5 2.75C5 1.784 5.784 1 6.75 1h6.5c.966 0 1.75.784 1.75 1.75v3.552c.377.046.752.097 1.126.153A2.212 2.212 0 0118 8.653v4.097A2.25 2.25 0 0115.75 15h-.241l.305 1.984A1.75 1.75 0 0114.084 19H5.915a1.75 1.75 0 01-1.73-2.016L4.492 15H4.25A2.25 2.25 0 012 12.75V8.653c0-1.082.775-2.034 1.874-2.198.374-.056.749-.107 1.126-.153V2.75zm1.5 0v3.401a41.709 41.709 0 017 0V2.75a.25.25 0 00-.25-.25h-6.5a.25.25 0 00-.25.25zM7.364 17.5l.294-1.914a.25.25 0 00-.247-.586H4.25a.75.75 0 01-.75-.75V8.653c0-.362.26-.678.616-.74a39.652 39.652 0 0111.768 0c.356.062.616.378.616.74v5.597a.75.75 0 01-.75.75h-3.161a.25.25 0 00-.247.586l.294 1.914H7.364z" clipRule="evenodd" />
+            </svg>
+            <span className="hidden sm:inline">Print</span>
+          </button>
+          <button
             onClick={() => setShowBulkImport(true)}
             className="btn-secondary"
             title="Bulk import games"
@@ -284,6 +297,11 @@ export default function Games() {
         <div className="mb-6">
           <SkillBalance compact={compactMode} />
         </div>
+      )}
+
+      {/* Smart Playlists - Auto-generated game collections */}
+      {games.length >= 5 && (
+        <SmartPlaylists compact={compactMode} />
       )}
 
       {/* Filters */}
@@ -469,6 +487,13 @@ export default function Games() {
       <BulkImport
         isOpen={showBulkImport}
         onClose={() => setShowBulkImport(false)}
+      />
+
+      {/* Print / PDF Export Modal */}
+      <PrintableGameCards
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        title="My Game Library"
       />
     </div>
   );
