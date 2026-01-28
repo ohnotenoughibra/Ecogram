@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useApp } from '../context/AppContext';
+import { getPositionLabel } from '../utils/constants';
 
 const topicColors = {
   offensive: 'from-red-500 to-orange-500',
@@ -17,19 +18,29 @@ const topicLabels = {
   transition: 'Transition'
 };
 
-export default function GameOfTheDay({ onUseGame }) {
+export default function GameOfTheDay() {
   const navigate = useNavigate();
-  const { markGameUsed, showToast } = useApp();
+  const { markGameUsed, showToast, sessions, fetchSessions, addGamesToSession } = useApp();
   const [gameData, setGameData] = useState(null);
+  const [fullGame, setFullGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
   const [used, setUsed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [showSessionMenu, setShowSessionMenu] = useState(false);
+  const [addingToSession, setAddingToSession] = useState(false);
 
   const fetchGameOfTheDay = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/games/game-of-the-day');
       setGameData(response.data);
+
+      // Fetch full game details if we have a game
+      if (response.data.game?._id) {
+        const fullGameResponse = await api.get(`/games/${response.data.game._id}`);
+        setFullGame(fullGameResponse.data);
+      }
 
       // Check if already used today
       const lastUsed = localStorage.getItem('gotd_last_used');
@@ -52,7 +63,8 @@ export default function GameOfTheDay({ onUseGame }) {
 
   useEffect(() => {
     fetchGameOfTheDay();
-  }, [fetchGameOfTheDay]);
+    fetchSessions();
+  }, [fetchGameOfTheDay, fetchSessions]);
 
   const handleUse = async () => {
     if (gameData?.game?._id) {
@@ -61,7 +73,6 @@ export default function GameOfTheDay({ onUseGame }) {
       const today = new Date().toISOString().split('T')[0];
       localStorage.setItem('gotd_last_used', today);
       showToast('Game marked as used!', 'success');
-      if (onUseGame) onUseGame(gameData.game);
     }
   };
 
@@ -71,9 +82,18 @@ export default function GameOfTheDay({ onUseGame }) {
     localStorage.setItem('gotd_dismissed', today);
   };
 
-  const handleViewGame = () => {
-    if (gameData?.game?._id) {
-      navigate(`/?edit=${gameData.game._id}`);
+  const handleAddToSession = async (sessionId) => {
+    if (!gameData?.game?._id) return;
+
+    setAddingToSession(true);
+    try {
+      await addGamesToSession(sessionId, [gameData.game._id]);
+      showToast('Game added to session!', 'success');
+      setShowSessionMenu(false);
+    } catch (err) {
+      showToast('Failed to add to session', 'error');
+    } finally {
+      setAddingToSession(false);
     }
   };
 
@@ -135,10 +155,15 @@ export default function GameOfTheDay({ onUseGame }) {
             <h3 className="font-semibold text-gray-900 dark:text-white text-lg truncate">
               {game.name}
             </h3>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r ${gradientClass} text-white`}>
                 {topicLabels[game.topic]}
               </span>
+              {game.position && (
+                <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                  {getPositionLabel(game.position)}
+                </span>
+              )}
               {game.favorite && (
                 <span className="text-yellow-400">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -154,6 +179,11 @@ export default function GameOfTheDay({ onUseGame }) {
                   {game.averageEffectiveness.toFixed(1)}
                 </span>
               )}
+              {game.usageCount > 0 && (
+                <span className="text-xs text-gray-500">
+                  Used {game.usageCount}x
+                </span>
+              )}
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
               {gameData.reason}
@@ -161,8 +191,126 @@ export default function GameOfTheDay({ onUseGame }) {
           </div>
         </div>
 
+        {/* Expanded Details */}
+        {expanded && fullGame && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3 animate-fade-in">
+            {/* Players instructions */}
+            <div className="grid grid-cols-2 gap-3">
+              {fullGame.topPlayer && (
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">Top Player</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3">{fullGame.topPlayer}</p>
+                </div>
+              )}
+              {fullGame.bottomPlayer && (
+                <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mb-1">Bottom Player</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3">{fullGame.bottomPlayer}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Coaching notes */}
+            {fullGame.coaching && (
+              <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-1">Coaching Notes</p>
+                <p className="text-xs text-gray-700 dark:text-gray-300">{fullGame.coaching}</p>
+              </div>
+            )}
+
+            {/* AI Metadata */}
+            {fullGame.aiMetadata?.constraints && fullGame.aiMetadata.constraints.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Constraints</p>
+                <div className="flex flex-wrap gap-1">
+                  {fullGame.aiMetadata.constraints.map((c, i) => (
+                    <span key={i} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Techniques */}
+            {fullGame.techniques && fullGame.techniques.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Techniques</p>
+                <div className="flex flex-wrap gap-1">
+                  {fullGame.techniques.map((t, i) => (
+                    <span key={i} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded capitalize">
+                      {t.replace(/-/g, ' ')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-2 mt-4">
+          {/* Expand/Collapse */}
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            {expanded ? 'Less' : 'Details'}
+          </button>
+
+          {/* Add to Session */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSessionMenu(!showSessionMenu)}
+              className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path d="M8.75 3.75a.75.75 0 00-1.5 0v3.5h-3.5a.75.75 0 000 1.5h3.5v3.5a.75.75 0 001.5 0v-3.5h3.5a.75.75 0 000-1.5h-3.5v-3.5z" />
+              </svg>
+              Session
+            </button>
+
+            {/* Session dropdown */}
+            {showSessionMenu && (
+              <div className="absolute left-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 py-1 animate-fade-in">
+                <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100 dark:border-gray-700">
+                  Add to session
+                </div>
+                {sessions.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-gray-500">
+                    No sessions yet
+                  </div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto">
+                    {sessions.slice(0, 5).map(session => (
+                      <button
+                        key={session._id}
+                        onClick={() => handleAddToSession(session._id)}
+                        disabled={addingToSession}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
+                      >
+                        <span className="truncate">{session.name}</span>
+                        <span className="text-xs text-gray-400">{session.games?.length || 0} games</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+                  <button
+                    onClick={() => {
+                      setShowSessionMenu(false);
+                      navigate('/sessions');
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Create new session
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Use / Used button */}
           {used ? (
             <div className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-sm font-medium">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -181,14 +329,16 @@ export default function GameOfTheDay({ onUseGame }) {
               Use This Game
             </button>
           )}
-          <button
-            onClick={handleViewGame}
-            className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            View Details
-          </button>
         </div>
       </div>
+
+      {/* Click outside to close session menu */}
+      {showSessionMenu && (
+        <div
+          className="fixed inset-0 z-0"
+          onClick={() => setShowSessionMenu(false)}
+        />
+      )}
     </div>
   );
 }

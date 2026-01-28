@@ -210,7 +210,7 @@ export default function Games() {
       {/* Skill Balance - show only when user has games */}
       {games.length > 0 && localStorage.getItem('showBalanceTips') !== 'false' && (
         <div className="mb-6">
-          <SkillBalance showSuggestions={games.length >= 3} />
+          <SkillBalance />
         </div>
       )}
 
