@@ -132,6 +132,41 @@ const sessionSchema = new mongoose.Schema({
   completedAt: {
     type: Date,
     default: null
+  },
+  // Coach's structured notes for tracking and future suggestions
+  coachesNotes: {
+    observations: {
+      type: String,
+      default: '',
+      maxlength: [2000, 'Observations cannot exceed 2000 characters']
+    },
+    problemsSpotted: [{
+      description: { type: String, maxlength: 500 },
+      severity: { type: String, enum: ['minor', 'moderate', 'major'], default: 'moderate' },
+      affectedStudents: { type: String, default: 'general' }, // 'general', 'beginners', 'advanced', or specific names
+      suggestedFocus: { type: String, maxlength: 200 } // e.g., "hip escape drills", "framing"
+    }],
+    suggestedTopics: [{
+      topic: { type: String, maxlength: 200 },
+      category: { type: String, enum: ['offensive', 'defensive', 'control', 'transition', 'fundamentals', 'other'] },
+      priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
+      reason: { type: String, maxlength: 300 }
+    }],
+    highlightMoments: {
+      type: String,
+      default: '',
+      maxlength: [1000, 'Highlight moments cannot exceed 1000 characters']
+    },
+    energyLevel: {
+      type: String,
+      enum: ['low', 'moderate', 'high', 'very-high'],
+      default: null
+    },
+    attendanceNotes: {
+      type: String,
+      default: '',
+      maxlength: [500, 'Attendance notes cannot exceed 500 characters']
+    }
   }
 }, {
   timestamps: true
