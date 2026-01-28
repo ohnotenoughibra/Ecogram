@@ -45,12 +45,118 @@ const filterPresets = [
   },
 ];
 
+// Common BJJ skills for autocomplete
+const COMMON_SKILLS = [
+  'armbar', 'triangle', 'kimura', 'omoplata', 'guillotine', 'rear naked choke', 'darce', 'anaconda',
+  'sweep', 'pass', 'escape', 'mount', 'back take', 'leg lock', 'heel hook', 'knee bar', 'ankle lock',
+  'underhook', 'overhook', 'frame', 'hip escape', 'bridge', 'shrimp', 'technical standup',
+  'wrestling', 'takedown', 'single leg', 'double leg', 'sprawl', 'snap down', 'arm drag'
+];
+
 export default function FilterBar({ onSearch, showQuickPositions = true }) {
-  const { filters, setFilters } = useApp();
+  const { filters, setFilters, games } = useApp();
   const [searchValue, setSearchValue] = useState(filters.search || '');
   const [isExpanded, setIsExpanded] = useState(false);
   const [activePreset, setActivePreset] = useState(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
   const searchTimeout = useRef(null);
+  const suggestionsRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Get unique skills from user's games
+  const userSkills = [...new Set(games?.flatMap(g => g.skills || []) || [])];
+
+  // Generate suggestions based on search value
+  useEffect(() => {
+    if (!searchValue || searchValue.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    const query = searchValue.toLowerCase();
+    const matched = [];
+
+    // Search in positions
+    POSITIONS.forEach(pos => {
+      if (pos.label.toLowerCase().includes(query) || pos.value.toLowerCase().includes(query)) {
+        matched.push({ type: 'position', value: pos.value, label: pos.label, icon: '📍' });
+      }
+    });
+
+    // Search in topics
+    TOPICS.forEach(topic => {
+      if (topic.label.toLowerCase().includes(query) || topic.value.toLowerCase().includes(query)) {
+        matched.push({ type: 'topic', value: topic.value, label: topic.label, icon: '🎯' });
+      }
+    });
+
+    // Search in techniques
+    TECHNIQUES.forEach(tech => {
+      if (tech.label.toLowerCase().includes(query) || tech.value.toLowerCase().includes(query)) {
+        matched.push({ type: 'technique', value: tech.value, label: tech.label, icon: '⚡' });
+      }
+    });
+
+    // Search in user's skills
+    userSkills.forEach(skill => {
+      if (skill.toLowerCase().includes(query)) {
+        matched.push({ type: 'skill', value: skill, label: `#${skill}`, icon: '🏷️' });
+      }
+    });
+
+    // Search in common skills
+    COMMON_SKILLS.forEach(skill => {
+      if (skill.toLowerCase().includes(query) && !userSkills.includes(skill)) {
+        matched.push({ type: 'search', value: skill, label: skill, icon: '🔍' });
+      }
+    });
+
+    // Limit and dedupe
+    const unique = matched.filter((item, index, self) =>
+      index === self.findIndex(t => t.value === item.value && t.type === item.type)
+    );
+    setSuggestions(unique.slice(0, 8));
+  }, [searchValue, userSkills]);
+
+  // Close suggestions on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target) &&
+          inputRef.current && !inputRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle suggestion selection
+  const handleSelectSuggestion = (suggestion) => {
+    setShowSuggestions(false);
+
+    switch (suggestion.type) {
+      case 'position':
+        setFilters(prev => ({ ...prev, position: suggestion.value }));
+        setSearchValue('');
+        break;
+      case 'topic':
+        setFilters(prev => ({ ...prev, topic: suggestion.value }));
+        setSearchValue('');
+        break;
+      case 'technique':
+        setFilters(prev => ({ ...prev, technique: suggestion.value }));
+        setSearchValue('');
+        break;
+      case 'skill':
+      case 'search':
+      default:
+        setSearchValue(suggestion.value);
+        break;
+    }
+
+    if (onSearch) onSearch();
+  };
 
   // Debounced search
   useEffect(() => {
@@ -147,7 +253,7 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
     <div className="space-y-3">
       {/* Search bar */}
       <div className="flex gap-2">
-        <div className="relative flex-1">
+        <div className="relative flex-1" ref={inputRef}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -159,19 +265,86 @@ export default function FilterBar({ onSearch, showQuickPositions = true }) {
           <input
             type="text"
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Search games, skills..."
+            onChange={(e) => {
+              setSearchValue(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setShowSuggestions(false);
+              if (e.key === 'ArrowDown' && suggestions.length > 0) {
+                e.preventDefault();
+                suggestionsRef.current?.querySelector('button')?.focus();
+              }
+            }}
+            placeholder="Search games, skills, positions..."
             className="input pl-11"
+            autoComplete="off"
           />
           {searchValue && (
             <button
-              onClick={() => setSearchValue('')}
+              onClick={() => {
+                setSearchValue('');
+                setShowSuggestions(false);
+              }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
                 <path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
               </svg>
             </button>
+          )}
+
+          {/* Autocomplete suggestions dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto animate-fade-in"
+            >
+              <div className="py-1">
+                {suggestions.map((suggestion, index) => (
+                  <button
+                    key={`${suggestion.type}-${suggestion.value}`}
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const next = e.currentTarget.nextElementSibling;
+                        if (next) next.focus();
+                      }
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const prev = e.currentTarget.previousElementSibling;
+                        if (prev) prev.focus();
+                        else inputRef.current?.querySelector('input')?.focus();
+                      }
+                      if (e.key === 'Escape') setShowSuggestions(false);
+                    }}
+                    className="w-full px-3 py-2 flex items-center gap-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none transition-colors"
+                  >
+                    <span className="text-lg">{suggestion.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {suggestion.label}
+                      </p>
+                      <p className="text-xs text-gray-500 capitalize">
+                        {suggestion.type === 'search' ? 'Search for' : `Filter by ${suggestion.type}`}
+                      </p>
+                    </div>
+                    {suggestion.type !== 'search' && suggestion.type !== 'skill' && (
+                      <span className="text-xs px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-full">
+                        Apply filter
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-700">
+                <p className="text-xs text-gray-400">
+                  Type to search or select a filter
+                </p>
+              </div>
+            </div>
           )}
         </div>
 

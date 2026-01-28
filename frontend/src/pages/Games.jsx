@@ -246,6 +246,7 @@ export default function Games() {
             }}
             className="btn-primary"
             title="Create new game (N)"
+            data-tour="new-game"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1">
               <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -264,13 +265,15 @@ export default function Games() {
 
       {/* Smart Training Hub - Unified coaching dashboard */}
       {showRecommendations && (
-        <SmartTrainingHub
-          compact={compactMode}
-          onFilterChange={(newFilters) => {
-            setFilters(prev => ({ ...prev, ...newFilters }));
-            fetchGames({ page: 1, ...newFilters });
-          }}
-        />
+        <div data-tour="smart-hub">
+          <SmartTrainingHub
+            compact={compactMode}
+            onFilterChange={(newFilters) => {
+              setFilters(prev => ({ ...prev, ...newFilters }));
+              fetchGames({ page: 1, ...newFilters });
+            }}
+          />
+        </div>
       )}
 
       {/* Game of the Day - Daily suggested game */}
@@ -284,7 +287,7 @@ export default function Games() {
       )}
 
       {/* Filters */}
-      <div className="mb-6">
+      <div className="mb-6" data-tour="filters">
         <FilterBar onSearch={handleSearch} showQuickPositions={showPositionChips} />
       </div>
 
@@ -303,14 +306,15 @@ export default function Games() {
         />
       ) : (
         <div className={viewMode === 'compact' ? 'space-y-2' : 'space-y-4'}>
-          {games.map(game => (
-            <GameCard
-              key={game._id}
-              game={game}
-              onEdit={handleEditGame}
-              onDelete={handleDeleteClick}
-              compact={viewMode === 'compact'}
-            />
+          {games.map((game, index) => (
+            <div key={game._id} data-tour={index === 0 ? 'game-card' : undefined}>
+              <GameCard
+                game={game}
+                onEdit={handleEditGame}
+                onDelete={handleDeleteClick}
+                compact={viewMode === 'compact'}
+              />
+            </div>
           ))}
 
           {/* Load more */}

@@ -12,6 +12,7 @@ import Timer from './components/Timer';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
 import OfflineIndicator from './components/OfflineIndicator';
 import Onboarding from './components/Onboarding';
+import FeatureTour from './components/FeatureTour';
 import QuickActions from './components/QuickActions';
 
 // Pages
@@ -79,6 +80,7 @@ function MainLayout({ children }) {
   const [showTimer, setShowTimer] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showFeatureTour, setShowFeatureTour] = useState(false);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -178,7 +180,19 @@ function MainLayout({ children }) {
 
       {/* Onboarding tutorial for new users */}
       {showOnboarding && (
-        <Onboarding onComplete={() => setShowOnboarding(false)} />
+        <Onboarding onComplete={() => {
+          setShowOnboarding(false);
+          // Start feature tour after onboarding (with delay for UI to render)
+          setTimeout(() => setShowFeatureTour(true), 500);
+        }} />
+      )}
+
+      {/* Interactive feature tour */}
+      {showFeatureTour && (
+        <FeatureTour
+          onComplete={() => setShowFeatureTour(false)}
+          autoStart={true}
+        />
       )}
 
       {/* Quick actions FAB */}

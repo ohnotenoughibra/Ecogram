@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { resetOnboarding } from '../components/Onboarding';
+import { resetFeatureTour } from '../components/FeatureTour';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 // Toggle switch component for cleaner code
@@ -388,13 +389,14 @@ export default function Profile() {
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-gray-900 dark:text-white font-medium">Tutorial</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">See the welcome tutorial again</p>
+                <p className="text-gray-900 dark:text-white font-medium">Tutorial & Tour</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">See welcome tutorial and feature tour again</p>
               </div>
               <button
                 onClick={() => {
                   resetOnboarding();
-                  showToast('Tutorial reset - refresh to see it', 'success');
+                  resetFeatureTour();
+                  showToast('Tutorial & tour reset - refresh to see them', 'success');
                 }}
                 className="btn-secondary text-sm py-1.5 px-3"
               >
