@@ -515,6 +515,13 @@ export default function SkillBalance({ showSuggestions = true, compact = false }
                     // Mark as added and potentially refresh
                     excludedIds.current.add(suggestion.name.toLowerCase());
                   }}
+                  onSkip={() => {
+                    // Add to excluded list so it won't appear again
+                    excludedIds.current.add(suggestion.name.toLowerCase());
+                    excludedIds.current.add(suggestion.id);
+                    // Remove from current suggestions
+                    setAiSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
+                  }}
                 />
               ))}
             </div>
@@ -950,7 +957,7 @@ function DynamicGameSuggestionCard({ suggestion }) {
 }
 
 // AI-powered game suggestion card with prompt-based generation
-function AiGameSuggestionCard({ suggestion, onAddedToLibrary }) {
+function AiGameSuggestionCard({ suggestion, onAddedToLibrary, onSkip }) {
   const { createGame, showToast, fetchGames } = useApp();
   const [generating, setGenerating] = useState(false);
   const [generatedGame, setGeneratedGame] = useState(null);
@@ -1063,21 +1070,34 @@ function AiGameSuggestionCard({ suggestion, onAddedToLibrary }) {
               </p>
             )}
           </div>
-          <button
-            onClick={generateGame}
-            disabled={generating}
-            className="ml-2 p-1.5 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow transition-shadow disabled:opacity-50"
-            title="Generate with AI"
-          >
-            {generating ? (
-              <span className="w-4 h-4 block border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin" />
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${colors.textColor}`}>
-                <path d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1zM5.05 3.05a.75.75 0 011.06 0l1.062 1.06A.75.75 0 116.11 5.173L5.05 4.11a.75.75 0 010-1.06zm9.9 0a.75.75 0 010 1.06l-1.06 1.062a.75.75 0 01-1.062-1.061l1.061-1.06a.75.75 0 011.06 0zM3 8a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 013 8zm11 0a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 0114 8z" />
-                <path fillRule="evenodd" d="M10 5a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd" />
+          <div className="flex items-center gap-1 ml-2">
+            {/* Skip/shuffle button */}
+            <button
+              onClick={onSkip}
+              className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              title="Skip this suggestion"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
               </svg>
-            )}
-          </button>
+            </button>
+            {/* Generate button */}
+            <button
+              onClick={generateGame}
+              disabled={generating}
+              className="p-1.5 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow transition-shadow disabled:opacity-50"
+              title="Generate with AI"
+            >
+              {generating ? (
+                <span className="w-4 h-4 block border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin" />
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${colors.textColor}`}>
+                  <path d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1zM5.05 3.05a.75.75 0 011.06 0l1.062 1.06A.75.75 0 116.11 5.173L5.05 4.11a.75.75 0 010-1.06zm9.9 0a.75.75 0 010 1.06l-1.06 1.062a.75.75 0 01-1.062-1.061l1.061-1.06a.75.75 0 011.06 0zM3 8a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 013 8zm11 0a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 0114 8z" />
+                  <path fillRule="evenodd" d="M10 5a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
