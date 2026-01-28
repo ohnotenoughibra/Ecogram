@@ -883,6 +883,22 @@ router.post('/:id/rate-effectiveness', protect, async (req, res) => {
   }
 });
 
+// @route   DELETE /api/games/all
+// @desc    Delete all games for user (empty library)
+// @access  Private
+router.delete('/all', protect, async (req, res) => {
+  try {
+    const result = await Game.deleteMany({ user: req.user._id });
+    res.json({
+      message: `Deleted all ${result.deletedCount} games`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Delete all games error:', error);
+    res.status(500).json({ message: 'Server error deleting all games' });
+  }
+});
+
 // @route   DELETE /api/games/:id
 // @desc    Delete a game
 // @access  Private
@@ -898,22 +914,6 @@ router.delete('/:id', protect, async (req, res) => {
   } catch (error) {
     console.error('Delete game error:', error);
     res.status(500).json({ message: 'Server error deleting game' });
-  }
-});
-
-// @route   DELETE /api/games/all
-// @desc    Delete all games for user (empty library)
-// @access  Private
-router.delete('/all', protect, async (req, res) => {
-  try {
-    const result = await Game.deleteMany({ user: req.user._id });
-    res.json({
-      message: `Deleted all ${result.deletedCount} games`,
-      deletedCount: result.deletedCount
-    });
-  } catch (error) {
-    console.error('Delete all games error:', error);
-    res.status(500).json({ message: 'Server error deleting all games' });
   }
 });
 
