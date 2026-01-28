@@ -14,7 +14,7 @@ import BulkImport from '../components/BulkImport';
 import { WhatsNewBanner } from '../components/FeatureTip';
 import SkillBalance from '../components/SkillBalance';
 import EmptyState from '../components/EmptyState';
-import TrainingRecommendations from '../components/TrainingRecommendations';
+import SmartTrainingHub from '../components/SmartTrainingHub';
 import GameOfTheDay from '../components/GameOfTheDay';
 
 export default function Games() {
@@ -208,9 +208,9 @@ export default function Games() {
         <QuickAccess onSmartBuild={() => setShowSmartBuilder(true)} compact={compactMode} />
       )}
 
-      {/* Training Recommendations - Smart tips based on training patterns */}
+      {/* Smart Training Hub - Unified coaching dashboard */}
       {showRecommendations && (
-        <TrainingRecommendations
+        <SmartTrainingHub
           compact={compactMode}
           onFilterChange={(newFilters) => {
             setFilters(prev => ({ ...prev, ...newFilters }));

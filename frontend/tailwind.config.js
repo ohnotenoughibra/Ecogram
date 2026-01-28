@@ -51,6 +51,7 @@ export default {
         'shimmer': 'shimmer 2s infinite',
         'bounce-in': 'bounceIn 0.5s ease-out',
         'pulse-soft': 'pulseSoft 2s infinite',
+        'pulse-slow': 'pulseSlow 3s infinite',
       },
       keyframes: {
         slideUp: {
@@ -81,6 +82,10 @@ export default {
         pulseSoft: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.7' },
+        },
+        pulseSlow: {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.9', transform: 'scale(1.02)' },
         },
       },
     },

@@ -515,6 +515,13 @@ router.get('/recommendations', protect, async (req, res) => {
       };
     }
 
+    // Simplified topic balance for frontend (just percentages)
+    const topicBalance = {};
+    for (const topic of topics) {
+      const percentage = (topicCounts[topic] / Math.max(totalGames, 1)) * 100;
+      topicBalance[topic] = Math.round(percentage);
+    }
+
     res.json({
       recommendations: recommendations.slice(0, 5), // Return top 5 recommendations
       insights: {
@@ -526,6 +533,7 @@ router.get('/recommendations', protect, async (req, res) => {
         daysSinceLastTraining,
         trainingStreak,
         topicsBalance,
+        topicBalance, // Simplified version for SmartTrainingHub
         positionCoverage: Object.keys(positionCounts).length,
         totalPositions: Object.keys(positionCounts).length
       }
