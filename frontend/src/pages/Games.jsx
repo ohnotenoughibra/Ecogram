@@ -13,6 +13,7 @@ import BulkImport from '../components/BulkImport';
 import { WhatsNewBanner } from '../components/FeatureTip';
 import SkillBalance from '../components/SkillBalance';
 import EmptyState from '../components/EmptyState';
+import TrainingRecommendations from '../components/TrainingRecommendations';
 
 export default function Games() {
   const {
@@ -27,7 +28,8 @@ export default function Games() {
     sessions,
     fetchSessions,
     addGamesToSession,
-    createSession
+    createSession,
+    setFilters
   } = useApp();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -191,6 +193,15 @@ export default function Games() {
 
       {/* Quick Access Section */}
       <QuickAccess onSmartBuild={() => setShowSmartBuilder(true)} />
+
+      {/* Training Recommendations - Smart tips based on training patterns */}
+      <TrainingRecommendations
+        compact={true}
+        onFilterChange={(newFilters) => {
+          setFilters(prev => ({ ...prev, ...newFilters }));
+          fetchGames({ page: 1, ...newFilters });
+        }}
+      />
 
       {/* Skill Balance - show only when user has games */}
       {games.length > 0 && localStorage.getItem('showBalanceTips') !== 'false' && (

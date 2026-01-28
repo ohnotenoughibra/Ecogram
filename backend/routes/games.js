@@ -105,6 +105,325 @@ router.get('/recent', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/games/recommendations
+// @desc    Get adaptive training recommendations based on user's training patterns
+// @access  Private
+router.get('/recommendations', protect, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const recommendations = [];
+
+    // Get all user's games
+    const allGames = await Game.find({ user: userId }).lean();
+
+    if (allGames.length === 0) {
+      return res.json({
+        recommendations: [{
+          type: 'getting_started',
+          priority: 'high',
+          title: 'Welcome to Ecogram!',
+          message: 'Create your first training game to get started with personalized recommendations.',
+          action: { type: 'create_game', label: 'Create Game' },
+          icon: 'rocket'
+        }],
+        insights: {
+          totalGames: 0,
+          daysSinceLastTraining: null,
+          trainingStreak: 0,
+          topicsBalance: {}
+        }
+      });
+    }
+
+    // Calculate time-based metrics
+    const now = new Date();
+    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now - 14 * 24 * 60 * 60 * 1000);
+    const oneMonthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+    // Games used in different time periods
+    const gamesUsedToday = allGames.filter(g => g.lastUsed && new Date(g.lastUsed) > oneDayAgo);
+    const gamesUsedThisWeek = allGames.filter(g => g.lastUsed && new Date(g.lastUsed) > oneWeekAgo);
+    const gamesUsedThisMonth = allGames.filter(g => g.lastUsed && new Date(g.lastUsed) > oneMonthAgo);
+    const neverUsedGames = allGames.filter(g => !g.lastUsed);
+
+    // Calculate days since last training
+    const lastUsedDates = allGames
+      .filter(g => g.lastUsed)
+      .map(g => new Date(g.lastUsed))
+      .sort((a, b) => b - a);
+
+    const daysSinceLastTraining = lastUsedDates.length > 0
+      ? Math.floor((now - lastUsedDates[0]) / (24 * 60 * 60 * 1000))
+      : null;
+
+    // Calculate training streak
+    const uniqueTrainingDays = [...new Set(
+      allGames
+        .filter(g => g.lastUsed)
+        .map(g => new Date(g.lastUsed).toDateString())
+    )].sort((a, b) => new Date(b) - new Date(a));
+
+    let trainingStreak = 0;
+    let checkDate = new Date();
+    checkDate.setHours(0, 0, 0, 0);
+
+    for (const dateStr of uniqueTrainingDays) {
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((checkDate - date) / (24 * 60 * 60 * 1000));
+
+      if (diffDays <= 1) {
+        trainingStreak++;
+        checkDate = date;
+      } else {
+        break;
+      }
+    }
+
+    // Topic distribution
+    const topicCounts = { offensive: 0, defensive: 0, control: 0, transition: 0 };
+    const topicUsage = { offensive: 0, defensive: 0, control: 0, transition: 0 };
+    const topicLastUsed = { offensive: null, defensive: null, control: null, transition: null };
+
+    allGames.forEach(game => {
+      if (game.topic) {
+        topicCounts[game.topic]++;
+        if (game.lastUsed) {
+          topicUsage[game.topic]++;
+          const lastUsed = new Date(game.lastUsed);
+          if (!topicLastUsed[game.topic] || lastUsed > topicLastUsed[game.topic]) {
+            topicLastUsed[game.topic] = lastUsed;
+          }
+        }
+      }
+    });
+
+    const totalGames = allGames.length;
+    const topics = ['offensive', 'defensive', 'control', 'transition'];
+    const topicLabels = {
+      offensive: 'Submissions & Attacks',
+      defensive: 'Defense & Escapes',
+      control: 'Control & Passing',
+      transition: 'Transitions & Scrambles'
+    };
+
+    // Position distribution
+    const positionCounts = {};
+    const positionLastUsed = {};
+    allGames.forEach(game => {
+      if (game.position) {
+        positionCounts[game.position] = (positionCounts[game.position] || 0) + 1;
+        if (game.lastUsed) {
+          const lastUsed = new Date(game.lastUsed);
+          if (!positionLastUsed[game.position] || lastUsed > positionLastUsed[game.position]) {
+            positionLastUsed[game.position] = lastUsed;
+          }
+        }
+      }
+    });
+
+    // High-effectiveness games not used recently
+    const highEffectivenessGames = allGames
+      .filter(g => g.averageEffectiveness >= 4 && g.lastUsed)
+      .sort((a, b) => new Date(a.lastUsed) - new Date(b.lastUsed));
+
+    // Favorite games not used recently
+    const neglectedFavorites = allGames
+      .filter(g => g.favorite && (!g.lastUsed || new Date(g.lastUsed) < twoWeeksAgo))
+      .slice(0, 3);
+
+    // === GENERATE RECOMMENDATIONS ===
+
+    // 1. Haven't trained today
+    if (daysSinceLastTraining === null || daysSinceLastTraining >= 1) {
+      const daysText = daysSinceLastTraining === null
+        ? "You haven't started training yet"
+        : daysSinceLastTraining === 1
+          ? "You didn't train yesterday"
+          : `It's been ${daysSinceLastTraining} days since your last training`;
+
+      recommendations.push({
+        type: 'training_reminder',
+        priority: daysSinceLastTraining >= 3 ? 'high' : 'medium',
+        title: 'Time to Train!',
+        message: daysText + '. Keep your streak alive!',
+        action: { type: 'quick_session', label: 'Start Session' },
+        icon: 'fire',
+        streak: trainingStreak
+      });
+    }
+
+    // 2. Neglected topics (not trained in 2+ weeks)
+    for (const topic of topics) {
+      const lastUsed = topicLastUsed[topic];
+      const count = topicCounts[topic];
+
+      if (count > 0 && (!lastUsed || new Date(lastUsed) < twoWeeksAgo)) {
+        const daysSince = lastUsed
+          ? Math.floor((now - new Date(lastUsed)) / (24 * 60 * 60 * 1000))
+          : null;
+
+        recommendations.push({
+          type: 'neglected_topic',
+          priority: 'high',
+          title: `${topicLabels[topic]} Needs Attention`,
+          message: daysSince
+            ? `You haven't trained ${topicLabels[topic].toLowerCase()} in ${daysSince} days. You have ${count} games available.`
+            : `You have ${count} ${topicLabels[topic].toLowerCase()} games you've never used!`,
+          action: { type: 'filter_topic', topic, label: `Train ${topic}` },
+          icon: 'target',
+          topic,
+          gamesAvailable: count
+        });
+      }
+    }
+
+    // 3. Imbalanced topics (< 15% of library)
+    for (const topic of topics) {
+      const percentage = (topicCounts[topic] / totalGames) * 100;
+      if (percentage < 15 && topicCounts[topic] < 3) {
+        recommendations.push({
+          type: 'topic_gap',
+          priority: 'medium',
+          title: `Build Your ${topicLabels[topic]} Library`,
+          message: `Only ${topicCounts[topic]} games (${Math.round(percentage)}%) in ${topicLabels[topic].toLowerCase()}. Consider adding more for balanced training.`,
+          action: { type: 'ai_generate', topic, label: 'Generate with AI' },
+          icon: 'sparkles',
+          topic,
+          currentCount: topicCounts[topic],
+          percentage: Math.round(percentage)
+        });
+      }
+    }
+
+    // 4. High-effectiveness games to revisit
+    if (highEffectivenessGames.length > 0) {
+      const game = highEffectivenessGames[0];
+      const daysSince = Math.floor((now - new Date(game.lastUsed)) / (24 * 60 * 60 * 1000));
+
+      if (daysSince >= 7) {
+        recommendations.push({
+          type: 'revisit_effective',
+          priority: 'medium',
+          title: 'Revisit a Top Performer',
+          message: `"${game.name}" has ${game.averageEffectiveness}/5 effectiveness but hasn't been used in ${daysSince} days.`,
+          action: { type: 'use_game', gameId: game._id, label: 'Use This Game' },
+          icon: 'star',
+          game: {
+            _id: game._id,
+            name: game.name,
+            topic: game.topic,
+            effectiveness: game.averageEffectiveness
+          }
+        });
+      }
+    }
+
+    // 5. Neglected favorites
+    if (neglectedFavorites.length > 0) {
+      const game = neglectedFavorites[0];
+      recommendations.push({
+        type: 'neglected_favorite',
+        priority: 'low',
+        title: 'Your Favorites Miss You',
+        message: `"${game.name}" is a favorite but ${game.lastUsed ? "hasn't been used in a while" : "has never been used"}.`,
+        action: { type: 'use_game', gameId: game._id, label: 'Use This Game' },
+        icon: 'heart',
+        game: {
+          _id: game._id,
+          name: game.name,
+          topic: game.topic
+        }
+      });
+    }
+
+    // 6. Try something new (never-used games)
+    if (neverUsedGames.length > 5) {
+      const randomUnused = neverUsedGames[Math.floor(Math.random() * neverUsedGames.length)];
+      recommendations.push({
+        type: 'try_new',
+        priority: 'low',
+        title: 'Try Something New',
+        message: `You have ${neverUsedGames.length} games you've never tried. How about "${randomUnused.name}"?`,
+        action: { type: 'use_game', gameId: randomUnused._id, label: 'Try It' },
+        icon: 'lightbulb',
+        game: {
+          _id: randomUnused._id,
+          name: randomUnused.name,
+          topic: randomUnused.topic
+        },
+        unusedCount: neverUsedGames.length
+      });
+    }
+
+    // 7. Streak encouragement
+    if (trainingStreak >= 3) {
+      recommendations.push({
+        type: 'streak_celebration',
+        priority: 'low',
+        title: `${trainingStreak} Day Streak!`,
+        message: trainingStreak >= 7
+          ? "You're on fire! Keep the momentum going!"
+          : "Great consistency! Keep training to build your streak.",
+        icon: 'trophy',
+        streak: trainingStreak
+      });
+    }
+
+    // 8. Suggest building a session if user has enough games
+    if (totalGames >= 5 && gamesUsedThisWeek.length < 3) {
+      recommendations.push({
+        type: 'build_session',
+        priority: 'medium',
+        title: 'Plan Your Training',
+        message: 'Create a structured session to get the most out of your practice time.',
+        action: { type: 'create_session', label: 'Build Session' },
+        icon: 'clipboard'
+      });
+    }
+
+    // Sort recommendations by priority
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+    // Calculate topic balance scores (0-100)
+    const topicsBalance = {};
+    const idealPercentage = 25; // Perfect balance would be 25% each
+    for (const topic of topics) {
+      const percentage = (topicCounts[topic] / Math.max(totalGames, 1)) * 100;
+      const deviation = Math.abs(percentage - idealPercentage);
+      topicsBalance[topic] = {
+        count: topicCounts[topic],
+        percentage: Math.round(percentage),
+        usageCount: topicUsage[topic],
+        lastUsed: topicLastUsed[topic],
+        balanceScore: Math.max(0, 100 - deviation * 2) // Higher is better
+      };
+    }
+
+    res.json({
+      recommendations: recommendations.slice(0, 5), // Return top 5 recommendations
+      insights: {
+        totalGames,
+        gamesUsedToday: gamesUsedToday.length,
+        gamesUsedThisWeek: gamesUsedThisWeek.length,
+        gamesUsedThisMonth: gamesUsedThisMonth.length,
+        neverUsedCount: neverUsedGames.length,
+        daysSinceLastTraining,
+        trainingStreak,
+        topicsBalance,
+        positionCoverage: Object.keys(positionCounts).length,
+        totalPositions: Object.keys(positionCounts).length
+      }
+    });
+  } catch (error) {
+    console.error('Get recommendations error:', error);
+    res.status(500).json({ message: 'Server error generating recommendations' });
+  }
+});
+
 // @route   GET /api/games/stats
 // @desc    Get game statistics
 // @access  Private
