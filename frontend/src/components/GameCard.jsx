@@ -23,6 +23,9 @@ export default function GameCard({ game, onEdit, onDelete, selectable = true, co
   const [showSessionMenu, setShowSessionMenu] = useState(false);
   const [recentSessions, setRecentSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [newSessionName, setNewSessionName] = useState('');
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const sessionMenuRef = useRef(null);
 
   // Optimistic UI state
@@ -185,6 +188,28 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
       setShowSessionMenu(false);
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to add game', 'error');
+    }
+  };
+
+  const handleCreateNewSession = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!newSessionName.trim()) return;
+
+    setIsCreatingSession(true);
+    try {
+      const response = await api.post('/sessions', {
+        name: newSessionName,
+        gameIds: [game._id]
+      });
+      showToast('Session created with game added!', 'success');
+      setShowNewSessionModal(false);
+      setNewSessionName('');
+      setShowSessionMenu(false);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to create session', 'error');
+    } finally {
+      setIsCreatingSession(false);
     }
   };
 
@@ -731,8 +756,22 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
                     {showSessionMenu && (
                       <div className="absolute bottom-full right-0 mb-1 w-48 bg-white dark:bg-surface-dark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-fade-in">
                         <div className="p-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowSessionMenu(false);
+                              setShowNewSessionModal(true);
+                            }}
+                            className="w-full text-left px-2 py-1.5 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded flex items-center gap-2 font-medium"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                              <path d="M8.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" />
+                            </svg>
+                            Create New Session
+                          </button>
+                          <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
                           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 py-1">
-                            Select Session
+                            Add to Existing
                           </p>
                           {loadingSessions ? (
                             <div className="px-2 py-3 text-center">
@@ -803,6 +842,59 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
           )}
         </div>
       </div>
+
+      {/* New Session Modal */}
+      {showNewSessionModal && (
+        <div className="modal-overlay" onClick={(e) => { e.stopPropagation(); setShowNewSessionModal(false); setNewSessionName(''); }}>
+          <div className="modal-content max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Create New Session
+              </h3>
+              <form onSubmit={handleCreateNewSession}>
+                <div className="mb-4">
+                  <label className="label">Session Name</label>
+                  <input
+                    type="text"
+                    value={newSessionName}
+                    onChange={(e) => setNewSessionName(e.target.value)}
+                    placeholder="e.g., Tuesday Guard Work"
+                    className="input"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  "{game.name}" will be added to this session
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setShowNewSessionModal(false); setNewSessionName(''); }}
+                    className="btn-secondary flex-1"
+                    disabled={isCreatingSession}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary flex-1 flex items-center justify-center gap-2"
+                    disabled={isCreatingSession || !newSessionName.trim()}
+                  >
+                    {isCreatingSession && (
+                      <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {isCreatingSession ? 'Creating...' : 'Create Session'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -277,6 +277,7 @@ export default function Sessions() {
   const handleConfirmDelete = async () => {
     if (sessionToDelete) {
       await deleteSession(sessionToDelete._id);
+      setShowDeleteConfirm(false);
       setSessionToDelete(null);
     }
   };

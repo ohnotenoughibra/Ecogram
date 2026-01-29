@@ -143,6 +143,7 @@ export default function Games() {
   const handleConfirmDelete = async () => {
     if (gameToDelete) {
       await deleteGame(gameToDelete._id);
+      setShowDeleteConfirm(false);
       setGameToDelete(null);
     }
   };
