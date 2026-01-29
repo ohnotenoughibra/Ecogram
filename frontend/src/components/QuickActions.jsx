@@ -117,7 +117,7 @@ export default function QuickActions({ onNewGame, onNewSession }) {
   }
 
   return (
-    <div ref={menuRef} className="fixed right-4 bottom-40 lg:bottom-24 z-30">
+    <div ref={menuRef} className="fixed right-4 bottom-24 lg:bottom-6 z-30">
       {/* Action buttons */}
       <div
         className={`absolute bottom-16 right-0 flex flex-col-reverse gap-3 transition-all duration-300 ${

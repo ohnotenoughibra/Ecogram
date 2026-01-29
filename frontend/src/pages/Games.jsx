@@ -52,6 +52,7 @@ export default function Games() {
   const [editingGame, setEditingGame] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [gameToDelete, setGameToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showSessionSelect, setShowSessionSelect] = useState(false);
   const [showSmartBuilder, setShowSmartBuilder] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
@@ -141,10 +142,14 @@ export default function Games() {
   };
 
   const handleConfirmDelete = async () => {
-    if (gameToDelete) {
-      await deleteGame(gameToDelete._id);
+    if (gameToDelete && !isDeleting) {
+      const gameId = gameToDelete._id;
+      setIsDeleting(true);
+      // Close dialog immediately for better UX
       setShowDeleteConfirm(false);
       setGameToDelete(null);
+      await deleteGame(gameId);
+      setIsDeleting(false);
     }
   };
 
@@ -369,14 +374,17 @@ export default function Games() {
       <ConfirmDialog
         isOpen={showDeleteConfirm}
         onClose={() => {
-          setShowDeleteConfirm(false);
-          setGameToDelete(null);
+          if (!isDeleting) {
+            setShowDeleteConfirm(false);
+            setGameToDelete(null);
+          }
         }}
         onConfirm={handleConfirmDelete}
         title="Delete Game"
-        message={`Are you sure you want to delete "${gameToDelete?.name}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete "${gameToDelete?.name || 'this game'}"? This action cannot be undone.`}
         confirmText="Delete"
         type="danger"
+        loading={isDeleting}
       />
 
       {/* Session Select Modal */}

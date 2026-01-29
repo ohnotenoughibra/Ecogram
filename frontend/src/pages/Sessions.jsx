@@ -29,8 +29,10 @@ export default function Sessions() {
   const [editingSession, setEditingSession] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState(null);
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
   const [sessionName, setSessionName] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharingSession, setSharingSession] = useState(null);
   const [shareUrl, setShareUrl] = useState('');
@@ -241,23 +243,28 @@ export default function Sessions() {
 
   const handleCreateSession = async (e) => {
     e.preventDefault();
-    if (!sessionName.trim()) return;
+    if (!sessionName.trim() || isCreatingSession) return;
 
+    setIsCreatingSession(true);
     const sessionData = {
       name: sessionName,
       scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
     };
 
-    if (editingSession) {
-      await updateSession(editingSession._id, sessionData);
-    } else {
-      await createSession({ ...sessionData, gameIds: [] });
-    }
+    try {
+      if (editingSession) {
+        await updateSession(editingSession._id, sessionData);
+      } else {
+        await createSession({ ...sessionData, gameIds: [] });
+      }
 
-    setShowCreateModal(false);
-    setEditingSession(null);
-    setSessionName('');
-    setScheduledDate('');
+      setShowCreateModal(false);
+      setEditingSession(null);
+      setSessionName('');
+      setScheduledDate('');
+    } finally {
+      setIsCreatingSession(false);
+    }
   };
 
   const handleEditSession = (session) => {
@@ -275,10 +282,14 @@ export default function Sessions() {
   };
 
   const handleConfirmDelete = async () => {
-    if (sessionToDelete) {
-      await deleteSession(sessionToDelete._id);
+    if (sessionToDelete && !isDeletingSession) {
+      const sessionId = sessionToDelete._id;
+      setIsDeletingSession(true);
+      // Close dialog immediately for better UX
       setShowDeleteConfirm(false);
       setSessionToDelete(null);
+      await deleteSession(sessionId);
+      setIsDeletingSession(false);
     }
   };
 
@@ -979,14 +990,22 @@ export default function Sessions() {
                     type="button"
                     onClick={() => setShowCreateModal(false)}
                     className="btn-secondary flex-1"
+                    disabled={isCreatingSession}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="btn-primary flex-1"
+                    className="btn-primary flex-1 flex items-center justify-center gap-2"
+                    disabled={isCreatingSession || !sessionName.trim()}
                   >
-                    {editingSession ? 'Save' : 'Create'}
+                    {isCreatingSession && (
+                      <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {isCreatingSession ? 'Creating...' : (editingSession ? 'Save' : 'Create')}
                   </button>
                 </div>
               </form>
@@ -1052,14 +1071,17 @@ export default function Sessions() {
       <ConfirmDialog
         isOpen={showDeleteConfirm}
         onClose={() => {
-          setShowDeleteConfirm(false);
-          setSessionToDelete(null);
+          if (!isDeletingSession) {
+            setShowDeleteConfirm(false);
+            setSessionToDelete(null);
+          }
         }}
         onConfirm={handleConfirmDelete}
         title="Delete Session"
-        message={`Are you sure you want to delete "${sessionToDelete?.name}"? This will not delete the games in the session.`}
+        message={`Are you sure you want to delete "${sessionToDelete?.name || 'this session'}"? This will not delete the games in the session.`}
         confirmText="Delete"
         type="danger"
+        loading={isDeletingSession}
       />
 
       {/* Delete Template Confirmation */}
