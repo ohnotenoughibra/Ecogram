@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { protect, generateToken } = require('../middleware/auth');
+const { sendPasswordResetEmail, verifyEmailConfig } = require('../utils/email');
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -195,19 +196,24 @@ router.post('/forgot-password', [
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save({ validateBeforeSave: false });
 
-    // In production, you would send an email here
-    // For now, log the token (development only)
-    console.log('=== PASSWORD RESET TOKEN ===');
-    console.log('Email:', email);
-    console.log('Reset Token:', resetToken);
-    console.log('Reset URL: /reset-password/' + resetToken);
-    console.log('============================');
+    // Send password reset email
+    const emailResult = await sendPasswordResetEmail(email, resetToken, user.username);
 
-    res.json({
-      message: 'If an account with that email exists, a password reset link has been sent.',
-      // Include token in response for development/testing
-      ...(process.env.NODE_ENV !== 'production' && { resetToken })
-    });
+    // Response based on environment
+    const response = {
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    };
+
+    // Include additional info in development
+    if (process.env.NODE_ENV !== 'production') {
+      response.resetToken = resetToken;
+      response.emailSent = emailResult.sent;
+      if (!emailResult.sent) {
+        response.emailReason = emailResult.reason;
+      }
+    }
+
+    res.json(response);
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: 'Server error' });

@@ -136,7 +136,7 @@ export default function Recent() {
         }}
         onConfirm={handleConfirmDelete}
         title="Delete Game"
-        message={`Are you sure you want to delete "${gameToDelete?.name}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete "${gameToDelete?.name || 'this game'}"? This action cannot be undone.`}
         confirmText="Delete"
         type="danger"
       />

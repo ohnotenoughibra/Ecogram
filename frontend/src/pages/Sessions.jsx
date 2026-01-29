@@ -970,6 +970,28 @@ export default function Sessions() {
                       autoFocus
                       required
                     />
+                    {/* Quick name suggestions */}
+                    {!editingSession && !sessionName && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {[
+                          `${new Date().toLocaleDateString('en-US', { weekday: 'long' })} Class`,
+                          'Guard Work',
+                          'Passing Drills',
+                          'Submission Hunt',
+                          'Defense Focus',
+                          'Open Mat'
+                        ].map(suggestion => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => setSessionName(suggestion)}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="label">

@@ -1,8 +1,91 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ALL_POSITIONS, POSITIONS, ALL_TECHNIQUES, TECHNIQUES, getPositionLabel } from '../utils/constants';
 import DrillChainManager from './DrillChainManager';
+import { useApp } from '../context/AppContext';
 
 const DRAFT_KEY = 'gameModalDraft';
+
+// Quick templates for faster game creation
+const GAME_TEMPLATES = [
+  {
+    id: 'guard-pass',
+    name: 'Guard Passing Game',
+    icon: '🎯',
+    data: {
+      topic: 'control',
+      position: 'closed-guard',
+      topPlayer: 'Work to pass the guard using proper posture and grips',
+      bottomPlayer: 'Retain guard, work for sweeps or submissions',
+      gameType: 'main',
+      difficulty: 'intermediate'
+    }
+  },
+  {
+    id: 'sweep-game',
+    name: 'Sweep Game',
+    icon: '🔄',
+    data: {
+      topic: 'transition',
+      position: 'closed-guard',
+      topPlayer: 'Maintain base and posture, prevent sweeps',
+      bottomPlayer: 'Work to sweep and come on top',
+      gameType: 'main',
+      difficulty: 'intermediate'
+    }
+  },
+  {
+    id: 'escape-drill',
+    name: 'Escape Drill',
+    icon: '🏃',
+    data: {
+      topic: 'defensive',
+      position: 'side-control',
+      topPlayer: 'Maintain dominant position with pressure',
+      bottomPlayer: 'Work to escape and recover guard or stand up',
+      gameType: 'main',
+      difficulty: 'intermediate'
+    }
+  },
+  {
+    id: 'submission-hunt',
+    name: 'Submission Hunt',
+    icon: '⚔️',
+    data: {
+      topic: 'offensive',
+      position: 'mount',
+      topPlayer: 'Hunt for submissions while maintaining position',
+      bottomPlayer: 'Defend and look for escapes',
+      gameType: 'main',
+      difficulty: 'intermediate'
+    }
+  },
+  {
+    id: 'takedown-game',
+    name: 'Takedown Game',
+    icon: '🤼',
+    data: {
+      topic: 'transition',
+      position: 'standing',
+      topPlayer: 'Work takedowns or pulls',
+      bottomPlayer: 'Counter and look for your own takedowns',
+      gameType: 'warmup',
+      difficulty: 'beginner'
+    }
+  },
+  {
+    id: 'leg-lock',
+    name: 'Leg Lock Battle',
+    icon: '🦵',
+    data: {
+      topic: 'offensive',
+      position: 'open-guard',
+      topPlayer: 'Pass or attack legs',
+      bottomPlayer: 'Set up leg entanglements and attacks',
+      gameType: 'main',
+      difficulty: 'advanced'
+    }
+  }
+];
 
 const topics = [
   { value: 'offensive', label: 'Offensive / Submissions', color: 'bg-red-500' },
@@ -24,6 +107,7 @@ const difficulties = [
 ];
 
 export default function GameModal({ isOpen, onClose, onSave, game = null }) {
+  const { checkDuplicates } = useApp();
   const [formData, setFormData] = useState({
     name: '',
     topic: 'transition',
@@ -47,7 +131,11 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
   const [hasDraft, setHasDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(true);
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const saveTimeoutRef = useRef(null);
+  const duplicateCheckRef = useRef(null);
 
   // Auto-save draft to localStorage (debounced)
   const saveDraft = useCallback((data) => {
@@ -141,6 +229,9 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
     setTechniqueInput('');
     setShowTechniqueSelect(false);
     setIsSaving(false);
+    setShowTemplates(!game); // Show templates only for new games
+    setDuplicateWarning(null);
+    setCheckingDuplicates(false);
   }, [game, isOpen, loadDraft]);
 
   // Auto-save draft when form data changes (only for new games)
@@ -178,12 +269,63 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
     }
   };
 
+  // Check for duplicates when name changes
+  const checkForDuplicates = useCallback(async (name) => {
+    if (!name?.trim() || game) return; // Don't check when editing
+
+    if (duplicateCheckRef.current) {
+      clearTimeout(duplicateCheckRef.current);
+    }
+
+    duplicateCheckRef.current = setTimeout(async () => {
+      setCheckingDuplicates(true);
+      try {
+        const result = await checkDuplicates({
+          name: name.trim(),
+          topic: formData.topic,
+          position: formData.position,
+          techniques: formData.techniques
+        });
+
+        if (result.hasDuplicates) {
+          setDuplicateWarning(result);
+        } else {
+          setDuplicateWarning(null);
+        }
+      } catch (e) {
+        console.error('Error checking duplicates:', e);
+      } finally {
+        setCheckingDuplicates(false);
+      }
+    }, 500);
+  }, [checkDuplicates, formData.topic, formData.position, formData.techniques, game]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
+
+    // Check for duplicates when name changes
+    if (name === 'name') {
+      checkForDuplicates(value);
+    }
+  };
+
+  // Apply a template
+  const applyTemplate = (template) => {
+    setFormData(prev => ({
+      ...prev,
+      name: '',
+      ...template.data
+    }));
+    setShowTemplates(false);
+    // Focus on name input
+    setTimeout(() => {
+      const nameInput = document.querySelector('input[name="name"]');
+      if (nameInput) nameInput.focus();
+    }, 100);
   };
 
   const handleAddSkill = (e) => {
@@ -303,19 +445,87 @@ export default function GameModal({ isOpen, onClose, onSave, game = null }) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Quick Templates - Only show for new games */}
+            {!game && showTemplates && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="label mb-0">Quick Start Templates</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplates(false)}
+                    className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  >
+                    Start from scratch
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {GAME_TEMPLATES.map(template => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => applyTemplate(template)}
+                      className="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all text-left"
+                    >
+                      <span className="text-xl">{template.icon}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{template.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Select a template to pre-fill common settings, then customize as needed
+                </p>
+              </div>
+            )}
+
             {/* Name */}
             <div>
               <label className="label">Game Name *</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="e.g., Guard Retention Game"
-                className={`input ${errors.name ? 'input-error' : ''}`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="e.g., Guard Retention Game"
+                  className={`input ${errors.name ? 'input-error' : ''} ${duplicateWarning?.hasExactMatch ? 'border-amber-500 focus:border-amber-500' : ''}`}
+                />
+                {checkingDuplicates && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <svg className="animate-spin w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                  </span>
+                )}
+              </div>
               {errors.name && (
                 <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+              )}
+
+              {/* Duplicate Warning */}
+              {duplicateWarning && duplicateWarning.duplicates.length > 0 && (
+                <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5">
+                      <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                        {duplicateWarning.hasExactMatch ? 'Similar game exists!' : 'Possible duplicates found'}
+                      </p>
+                      <ul className="mt-1 space-y-1">
+                        {duplicateWarning.duplicates.slice(0, 3).map(dup => (
+                          <li key={dup._id} className="text-xs text-amber-700 dark:text-amber-300">
+                            "{dup.name}" - {dup.reasons.join(', ')}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                        You can still create this game if it's different
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 

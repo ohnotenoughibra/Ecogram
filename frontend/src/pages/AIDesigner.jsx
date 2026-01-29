@@ -1656,7 +1656,7 @@ export default function AIDesigner() {
                 Delete Game?
               </h3>
               <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">
-                Are you sure you want to delete "{gameToDelete?.name}"? This action cannot be undone.
+                Are you sure you want to delete "{gameToDelete?.name || 'this game'}"? This action cannot be undone.
               </p>
               <div className="flex gap-3">
                 <button
