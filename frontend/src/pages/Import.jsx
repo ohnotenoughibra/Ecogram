@@ -394,10 +394,16 @@ export default function Import() {
       return;
     }
 
-    const trimmedInput = textInput.trim();
+    // Remove BOM, smart quotes, and normalize whitespace
+    const trimmedInput = textInput
+      .replace(/^\uFEFF/, '')
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .trim();
 
     // Check if input looks like JSON (starts with [ or {)
-    if (trimmedInput.startsWith('[') || trimmedInput.startsWith('{')) {
+    const firstChar = trimmedInput.charAt(0);
+    if (firstChar === '[' || firstChar === '{') {
       try {
         const data = JSON.parse(trimmedInput);
 
@@ -433,11 +439,13 @@ export default function Import() {
           source: 'json',
           enrichedCount
         });
-        showToast(`Detected JSON format with ${gamesArray.length} games`, 'success');
+        showToast(`Parsed ${gamesArray.length} games from JSON`, 'success');
         return;
       } catch (e) {
-        // Not valid JSON, continue with text parsing
-        console.log('Not valid JSON, trying text parser');
+        // JSON parsing failed - show error, don't fall through to text parsing
+        console.error('JSON parse error:', e.message);
+        showToast(`JSON parse error: ${e.message.substring(0, 100)}`, 'error');
+        return;
       }
     }
 
