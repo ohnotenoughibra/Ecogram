@@ -281,4 +281,50 @@ router.get('/verify-reset-token/:token', async (req, res) => {
   }
 });
 
+// @route   POST /api/auth/clear-expired-tokens
+// @desc    Clear all expired password reset tokens from database
+// @access  Private (requires authentication)
+router.post('/clear-expired-tokens', protect, async (req, res) => {
+  try {
+    // Clear expired tokens (tokens where expiry date has passed)
+    const expiredResult = await User.updateMany(
+      { resetPasswordExpires: { $lt: Date.now(), $ne: null } },
+      { $set: { resetPasswordToken: null, resetPasswordExpires: null } }
+    );
+
+    // Also clear any orphaned tokens (token exists but no expiry)
+    const orphanedResult = await User.updateMany(
+      { resetPasswordToken: { $ne: null }, resetPasswordExpires: null },
+      { $set: { resetPasswordToken: null } }
+    );
+
+    res.json({
+      message: 'Email/reset token cache cleared',
+      expiredTokensCleared: expiredResult.modifiedCount || 0,
+      orphanedTokensCleared: orphanedResult.modifiedCount || 0,
+      totalCleared: (expiredResult.modifiedCount || 0) + (orphanedResult.modifiedCount || 0)
+    });
+  } catch (error) {
+    console.error('Clear expired tokens error:', error);
+    res.status(500).json({ message: 'Server error clearing tokens' });
+  }
+});
+
+// @route   DELETE /api/auth/my-reset-token
+// @desc    Clear current user's password reset token
+// @access  Private
+router.delete('/my-reset-token', protect, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user._id, {
+      resetPasswordToken: null,
+      resetPasswordExpires: null
+    });
+
+    res.json({ message: 'Your password reset token has been cleared' });
+  } catch (error) {
+    console.error('Clear my reset token error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

@@ -119,8 +119,8 @@ export default function GameOfTheDay() {
   const gradientClass = topicColors[game.topic] || topicColors.transition;
 
   return (
-    <div className={`relative overflow-hidden rounded-xl mb-4 bg-gradient-to-r ${gradientClass} p-[2px]`}>
-      <div className="bg-white dark:bg-gray-900 rounded-[10px] p-4">
+    <div className={`relative rounded-xl mb-4 bg-gradient-to-r ${gradientClass} p-[2px]`}>
+      <div className="bg-white dark:bg-gray-900 rounded-[10px] p-4 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -272,7 +272,7 @@ export default function GameOfTheDay() {
 
             {/* Session dropdown */}
             {showSessionMenu && (
-              <div className="absolute left-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 py-1 animate-fade-in">
+              <div className="absolute left-0 bottom-full mb-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-1 animate-fade-in">
                 <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100 dark:border-gray-700">
                   Add to session
                 </div>

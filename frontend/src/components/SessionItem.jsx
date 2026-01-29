@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { getTopicColor } from '../utils/constants';
@@ -545,8 +546,8 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
         </div>
       )}
 
-      {/* Add Game Modal */}
-      {showAddGame && (
+      {/* Add Game Modal - rendered via Portal to avoid z-index issues */}
+      {showAddGame && createPortal(
         <div
           className="modal-overlay"
           onClick={(e) => {
@@ -626,7 +627,8 @@ export default function SessionItem({ session, onEdit, onDelete, onShare, onSess
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
