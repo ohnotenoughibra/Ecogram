@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
@@ -30,8 +30,6 @@ export default function GameOfTheDay() {
   const [expanded, setExpanded] = useState(false);
   const [showSessionMenu, setShowSessionMenu] = useState(false);
   const [addingToSession, setAddingToSession] = useState(false);
-  const sessionButtonRef = useRef(null);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
 
   const fetchGameOfTheDay = useCallback(async () => {
     try {
@@ -263,17 +261,7 @@ export default function GameOfTheDay() {
 
           {/* Add to Session */}
           <button
-            ref={sessionButtonRef}
-            onClick={() => {
-              if (sessionButtonRef.current) {
-                const rect = sessionButtonRef.current.getBoundingClientRect();
-                setMenuPosition({
-                  top: rect.top - 8, // Position above button
-                  left: rect.left
-                });
-              }
-              setShowSessionMenu(!showSessionMenu);
-            }}
+            onClick={() => setShowSessionMenu(true)}
             className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -304,58 +292,91 @@ export default function GameOfTheDay() {
         </div>
       </div>
 
-      {/* Session dropdown - rendered via Portal */}
+      {/* Session selection modal - rendered via Portal */}
       {showSessionMenu && createPortal(
-        <>
-          {/* Backdrop to close menu */}
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowSessionMenu(false)}
+        >
           <div
-            className="fixed inset-0 z-40"
-            onClick={() => setShowSessionMenu(false)}
-          />
-          {/* Dropdown menu */}
-          <div
-            className="fixed w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-1 animate-fade-in"
-            style={{
-              top: menuPosition.top,
-              left: menuPosition.left,
-              transform: 'translateY(-100%)'
-            }}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm animate-fade-in"
+            onClick={e => e.stopPropagation()}
           >
-            <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100 dark:border-gray-700">
-              Add to session
-            </div>
-            {sessions.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-500">
-                No sessions yet
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Add to Session
+                </h3>
+                <button
+                  onClick={() => setShowSessionMenu(false)}
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                    <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                  </svg>
+                </button>
               </div>
-            ) : (
-              <div className="max-h-48 overflow-y-auto">
-                {sessions.slice(0, 5).map(session => (
+              <p className="text-sm text-gray-500 mt-1">
+                Add "{game.name}" to a session
+              </p>
+            </div>
+
+            <div className="p-2 max-h-64 overflow-y-auto">
+              {sessions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No sessions yet</p>
+                  <button
+                    onClick={() => {
+                      setShowSessionMenu(false);
+                      navigate('/sessions?new=true');
+                    }}
+                    className="mt-2 text-primary-600 dark:text-primary-400 font-medium"
+                  >
+                    Create your first session
+                  </button>
+                </div>
+              ) : (
+                sessions.slice(0, 8).map(session => (
                   <button
                     key={session._id}
                     onClick={() => handleAddToSession(session._id)}
                     disabled={addingToSession}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
+                    className="w-full px-3 py-3 text-left rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition-colors disabled:opacity-50"
                   >
-                    <span className="truncate">{session.name}</span>
-                    <span className="text-xs text-gray-400">{session.games?.length || 0} games</span>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5 text-primary-600 dark:text-primary-400">
+                          <path d="M3.5 2A1.5 1.5 0 002 3.5v9A1.5 1.5 0 003.5 14h9a1.5 1.5 0 001.5-1.5v-7A1.5 1.5 0 0012.5 4H9.621a1.5 1.5 0 01-1.06-.44L7.439 2.44A1.5 1.5 0 006.38 2H3.5z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{session.name}</p>
+                        <p className="text-xs text-gray-500">{session.games?.length || 0} games</p>
+                      </div>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5 text-primary-500">
+                      <path d="M8.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" />
+                    </svg>
                   </button>
-                ))}
+                ))
+              )}
+            </div>
+
+            {sessions.length > 0 && (
+              <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => {
+                    setShowSessionMenu(false);
+                    navigate('/sessions?new=true');
+                  }}
+                  className="w-full py-2.5 text-center text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-colors"
+                >
+                  + Create New Session
+                </button>
               </div>
             )}
-            <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
-              <button
-                onClick={() => {
-                  setShowSessionMenu(false);
-                  navigate('/sessions');
-                }}
-                className="w-full px-3 py-2 text-left text-sm text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                Create new session
-              </button>
-            </div>
           </div>
-        </>,
+        </div>,
         document.body
       )}
     </div>
