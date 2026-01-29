@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useApp } from '../context/AppContext';
@@ -29,6 +30,8 @@ export default function GameOfTheDay() {
   const [expanded, setExpanded] = useState(false);
   const [showSessionMenu, setShowSessionMenu] = useState(false);
   const [addingToSession, setAddingToSession] = useState(false);
+  const sessionButtonRef = useRef(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
 
   const fetchGameOfTheDay = useCallback(async () => {
     try {
@@ -259,56 +262,25 @@ export default function GameOfTheDay() {
           </button>
 
           {/* Add to Session */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSessionMenu(!showSessionMenu)}
-              className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                <path d="M8.75 3.75a.75.75 0 00-1.5 0v3.5h-3.5a.75.75 0 000 1.5h3.5v3.5a.75.75 0 001.5 0v-3.5h3.5a.75.75 0 000-1.5h-3.5v-3.5z" />
-              </svg>
-              Session
-            </button>
-
-            {/* Session dropdown */}
-            {showSessionMenu && (
-              <div className="absolute left-0 bottom-full mb-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-1 animate-fade-in">
-                <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100 dark:border-gray-700">
-                  Add to session
-                </div>
-                {sessions.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">
-                    No sessions yet
-                  </div>
-                ) : (
-                  <div className="max-h-48 overflow-y-auto">
-                    {sessions.slice(0, 5).map(session => (
-                      <button
-                        key={session._id}
-                        onClick={() => handleAddToSession(session._id)}
-                        disabled={addingToSession}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
-                      >
-                        <span className="truncate">{session.name}</span>
-                        <span className="text-xs text-gray-400">{session.games?.length || 0} games</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
-                  <button
-                    onClick={() => {
-                      setShowSessionMenu(false);
-                      navigate('/sessions');
-                    }}
-                    className="w-full px-3 py-2 text-left text-sm text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    Create new session
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <button
+            ref={sessionButtonRef}
+            onClick={() => {
+              if (sessionButtonRef.current) {
+                const rect = sessionButtonRef.current.getBoundingClientRect();
+                setMenuPosition({
+                  top: rect.top - 8, // Position above button
+                  left: rect.left
+                });
+              }
+              setShowSessionMenu(!showSessionMenu);
+            }}
+            className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path d="M8.75 3.75a.75.75 0 00-1.5 0v3.5h-3.5a.75.75 0 000 1.5h3.5v3.5a.75.75 0 001.5 0v-3.5h3.5a.75.75 0 000-1.5h-3.5v-3.5z" />
+            </svg>
+            Session
+          </button>
 
           {/* Use / Used button */}
           {used ? (
@@ -332,12 +304,59 @@ export default function GameOfTheDay() {
         </div>
       </div>
 
-      {/* Click outside to close session menu */}
-      {showSessionMenu && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => setShowSessionMenu(false)}
-        />
+      {/* Session dropdown - rendered via Portal */}
+      {showSessionMenu && createPortal(
+        <>
+          {/* Backdrop to close menu */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setShowSessionMenu(false)}
+          />
+          {/* Dropdown menu */}
+          <div
+            className="fixed w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-1 animate-fade-in"
+            style={{
+              top: menuPosition.top,
+              left: menuPosition.left,
+              transform: 'translateY(-100%)'
+            }}
+          >
+            <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100 dark:border-gray-700">
+              Add to session
+            </div>
+            {sessions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-500">
+                No sessions yet
+              </div>
+            ) : (
+              <div className="max-h-48 overflow-y-auto">
+                {sessions.slice(0, 5).map(session => (
+                  <button
+                    key={session._id}
+                    onClick={() => handleAddToSession(session._id)}
+                    disabled={addingToSession}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
+                  >
+                    <span className="truncate">{session.name}</span>
+                    <span className="text-xs text-gray-400">{session.games?.length || 0} games</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+              <button
+                onClick={() => {
+                  setShowSessionMenu(false);
+                  navigate('/sessions');
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Create new session
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );
