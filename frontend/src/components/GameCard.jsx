@@ -6,14 +6,16 @@ const topicLabels = {
   offensive: 'Offensive / Submissions',
   defensive: 'Defensive / Escapes',
   control: 'Control / Passing',
-  transition: 'Transition / Scrambles'
+  transition: 'Transition / Scrambles',
+  competition: 'Competition / Match Sim'
 };
 
 const topicColors = {
   offensive: 'badge-offensive',
   defensive: 'badge-defensive',
   control: 'badge-control',
-  transition: 'badge-transition'
+  transition: 'badge-transition',
+  competition: 'badge-competition'
 };
 
 export default function GameCard({ game, onEdit, onDelete, selectable = true, compact = false }) {
@@ -270,7 +272,8 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
         <div className={`w-1 h-8 rounded-full flex-shrink-0 ${
           game.topic === 'offensive' ? 'bg-red-500' :
           game.topic === 'defensive' ? 'bg-blue-500' :
-          game.topic === 'control' ? 'bg-purple-500' : 'bg-green-500'
+          game.topic === 'control' ? 'bg-purple-500' :
+          game.topic === 'competition' ? 'bg-orange-500' : 'bg-green-500'
         }`} />
 
         {/* Name and basic info */}

@@ -43,7 +43,7 @@ Generate unique, creative training games that:
 Return ONLY this JSON (no markdown, no explanation):
 {
   "name": "Creative, memorable game name",
-  "topic": "offensive|defensive|control|transition",
+  "topic": "offensive|defensive|control|transition|competition",
   "topPlayer": "Detailed instructions with clear win condition",
   "bottomPlayer": "Detailed instructions with clear win condition",
   "coaching": "Specific coaching cues and common mistakes to watch for",
@@ -873,7 +873,7 @@ router.post('/suggest-topic', protect, async (req, res) => {
 
     // Select 3 suggestions that balance different categories
     const getBalancedSuggestions = () => {
-      const categories = ['offensive', 'defensive', 'control', 'transition'];
+      const categories = ['offensive', 'defensive', 'control', 'transition', 'competition'];
       const selected = [];
       const shuffled = [...allFallbackSuggestions].sort(() => Math.random() - 0.5);
 
@@ -1772,7 +1772,7 @@ Return ONLY a JSON object with the requested levels. Each variation should:
 {
   "${levelsToGenerate[0]}": {
     "name": "string (Prefix: Foundation/Competition for beginner/advanced)",
-    "topic": "offensive|defensive|control|transition",
+    "topic": "offensive|defensive|control|transition|competition",
     "topPlayer": "Specific instructions with difficulty modifications",
     "bottomPlayer": "Specific instructions with difficulty modifications",
     "coaching": "CLA-focused coaching with external cues",
@@ -2795,7 +2795,7 @@ Return ONLY this JSON:
       "name": "Game name (can reference expert)",
       "description": "What it does and expert reasoning",
       "prompt": "Detailed prompt to generate full game",
-      "topic": "offensive|defensive|control|transition",
+      "topic": "offensive|defensive|control|transition|competition",
       "matchScore": 85-99,
       "reasoning": "Why this addresses the problem",
       "expert": "Expert who inspires this approach"
@@ -2995,7 +2995,7 @@ Return ONLY this JSON (no markdown):
     {
       "name": "Game Name",
       "description": "What it teaches",
-      "topic": "offensive|defensive|control|transition",
+      "topic": "offensive|defensive|control|transition|competition",
       "difficulty": "beginner|intermediate|advanced",
       "prompt": "Detailed prompt for generating full game"
     }

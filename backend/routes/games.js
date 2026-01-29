@@ -24,7 +24,7 @@ router.get('/', protect, async (req, res) => {
     const query = { user: req.user._id };
 
     // Topic filter
-    if (topic && ['offensive', 'defensive', 'control', 'transition'].includes(topic)) {
+    if (topic && ['offensive', 'defensive', 'control', 'transition', 'competition'].includes(topic)) {
       query.topic = topic;
     }
 
@@ -422,12 +422,13 @@ router.get('/recommendations', protect, async (req, res) => {
     });
 
     const totalGames = allGames.length;
-    const topics = ['offensive', 'defensive', 'control', 'transition'];
+    const topics = ['offensive', 'defensive', 'control', 'transition', 'competition'];
     const topicLabels = {
       offensive: 'Submissions & Attacks',
       defensive: 'Defense & Escapes',
       control: 'Control & Passing',
-      transition: 'Transitions & Scrambles'
+      transition: 'Transitions & Scrambles',
+      competition: 'Competition & Match Sim'
     };
 
     // Position distribution
@@ -748,6 +749,14 @@ router.post('/import', protect, async (req, res) => {
       'defensive': 'defensive',
       'control': 'control',
       'transition': 'transition',
+      'competition': 'competition',
+      // Competition-related terms
+      'comp': 'competition',
+      'comp prep': 'competition',
+      'tournament': 'competition',
+      'match': 'competition',
+      'adcc': 'competition',
+      'ibjjf': 'competition',
       // Submissions & Attacks -> Offensive
       'submissions': 'offensive',
       'submission': 'offensive',
@@ -893,7 +902,7 @@ router.get('/:id', protect, async (req, res) => {
 router.post('/', protect, [
   body('name').trim().notEmpty().withMessage('Game name is required')
     .isLength({ max: 100 }).withMessage('Name cannot exceed 100 characters'),
-  body('topic').isIn(['offensive', 'defensive', 'control', 'transition'])
+  body('topic').isIn(['offensive', 'defensive', 'control', 'transition', 'competition'])
     .withMessage('Invalid topic')
 ], async (req, res) => {
   try {

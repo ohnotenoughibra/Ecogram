@@ -7,14 +7,16 @@ const topicLabels = {
   offensive: 'Offensive / Submissions',
   defensive: 'Defensive / Escapes',
   control: 'Control / Passing',
-  transition: 'Transition / Scrambles'
+  transition: 'Transition / Scrambles',
+  competition: 'Competition / Match Sim'
 };
 
 const topicColors = {
   offensive: { bg: 'bg-red-500', light: 'bg-red-100 dark:bg-red-900/20', text: 'text-red-600 dark:text-red-400' },
   defensive: { bg: 'bg-blue-500', light: 'bg-blue-100 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
   control: { bg: 'bg-purple-500', light: 'bg-purple-100 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400' },
-  transition: { bg: 'bg-green-500', light: 'bg-green-100 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400' }
+  transition: { bg: 'bg-green-500', light: 'bg-green-100 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400' },
+  competition: { bg: 'bg-orange-500', light: 'bg-orange-100 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400' }
 };
 
 const positionLabels = {
@@ -49,7 +51,7 @@ export default function Stats() {
   const metrics = useMemo(() => {
     if (!stats) return null;
 
-    const topics = ['offensive', 'defensive', 'control', 'transition'];
+    const topics = ['offensive', 'defensive', 'control', 'transition', 'competition'];
     const totalTopics = topics.reduce((sum, t) => sum + (stats.topicDistribution[t] || 0), 0);
     const maxTopicCount = Math.max(...topics.map(t => stats.topicDistribution[t] || 0), 1);
 
@@ -741,7 +743,7 @@ function TrainingCalendar({ games }) {
 }
 
 function RecommendationsCard({ stats, metrics, navigate }) {
-  const topics = ['offensive', 'defensive', 'control', 'transition'];
+  const topics = ['offensive', 'defensive', 'control', 'transition', 'competition'];
   const recommendations = [];
 
   // Low topic coverage
@@ -828,7 +830,7 @@ function RecommendationsCard({ stats, metrics, navigate }) {
 }
 
 function AchievementsCard({ stats, metrics, sessions }) {
-  const topics = ['offensive', 'defensive', 'control', 'transition'];
+  const topics = ['offensive', 'defensive', 'control', 'transition', 'competition'];
 
   const achievements = [
     { icon: '📚', label: 'Library Builder', achieved: stats.totalGames >= 10, progress: `${Math.min(stats.totalGames, 10)}/10` },
@@ -874,7 +876,7 @@ function AchievementsCard({ stats, metrics, sessions }) {
 }
 
 function MilestonesTimeline({ stats, metrics, sessions }) {
-  const topics = ['offensive', 'defensive', 'control', 'transition'];
+  const topics = ['offensive', 'defensive', 'control', 'transition', 'competition'];
 
   const milestones = [
     { icon: '🌱', label: 'First Game', achieved: stats.totalGames >= 1 },

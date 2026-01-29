@@ -165,7 +165,7 @@ export default function SessionCalendar({
       }
     });
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
-    const mainCategories = ['offensive', 'defensive', 'control', 'transition'];
+    const mainCategories = ['offensive', 'defensive', 'control', 'transition', 'competition'];
     const mainCounts = mainCategories.map(c => counts[c]);
     const average = total > 0 ? total / mainCategories.length : 0;
     const variance = mainCounts.reduce((sum, count) => sum + Math.pow(count - average, 2), 0) / mainCategories.length;

@@ -148,7 +148,7 @@ const sessionSchema = new mongoose.Schema({
     }],
     suggestedTopics: [{
       topic: { type: String, maxlength: 200 },
-      category: { type: String, enum: ['offensive', 'defensive', 'control', 'transition', 'fundamentals', 'other'] },
+      category: { type: String, enum: ['offensive', 'defensive', 'control', 'transition', 'competition', 'fundamentals', 'other'] },
       priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
       reason: { type: String, maxlength: 300 }
     }],

@@ -91,7 +91,8 @@ const topics = [
   { value: 'offensive', label: 'Offensive / Submissions', color: 'bg-red-500' },
   { value: 'defensive', label: 'Defensive / Escapes', color: 'bg-blue-500' },
   { value: 'control', label: 'Control / Passing', color: 'bg-purple-500' },
-  { value: 'transition', label: 'Transition / Scrambles', color: 'bg-green-500' }
+  { value: 'transition', label: 'Transition / Scrambles', color: 'bg-green-500' },
+  { value: 'competition', label: 'Competition / Match Sim', color: 'bg-orange-500' }
 ];
 
 const gameTypes = [

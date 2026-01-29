@@ -50,7 +50,7 @@ const gameSchema = new mongoose.Schema({
   topic: {
     type: String,
     required: true,
-    enum: ['offensive', 'defensive', 'control', 'transition'],
+    enum: ['offensive', 'defensive', 'control', 'transition', 'competition'],
     default: 'transition'
   },
   // Starting position for the drill

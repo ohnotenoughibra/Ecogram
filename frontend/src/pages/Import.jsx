@@ -214,7 +214,7 @@ function parseTextToGames(text) {
               game.skills = value.split(/[,#]/).map(s => s.trim()).filter(s => s);
             } else if (currentField === 'topic') {
               const topicLower = value.toLowerCase();
-              if (['offensive', 'defensive', 'control', 'transition'].includes(topicLower)) {
+              if (['offensive', 'defensive', 'control', 'transition', 'competition'].includes(topicLower)) {
                 game.topic = topicLower;
               }
             }
@@ -242,7 +242,7 @@ function parseTextToGames(text) {
           game.skills = value.split(/[,#]/).map(s => s.trim()).filter(s => s);
         } else if (currentField === 'topic') {
           const topicLower = value.toLowerCase();
-          if (['offensive', 'defensive', 'control', 'transition'].includes(topicLower)) {
+          if (['offensive', 'defensive', 'control', 'transition', 'competition'].includes(topicLower)) {
             game.topic = topicLower;
           }
         }
