@@ -394,6 +394,53 @@ export default function Import() {
       return;
     }
 
+    const trimmedInput = textInput.trim();
+
+    // Check if input looks like JSON (starts with [ or {)
+    if (trimmedInput.startsWith('[') || trimmedInput.startsWith('{')) {
+      try {
+        const data = JSON.parse(trimmedInput);
+
+        // Accept both array format [...] and object format { games: [...] }
+        let gamesArray;
+        if (Array.isArray(data)) {
+          gamesArray = data;
+        } else if (data.games && Array.isArray(data.games)) {
+          gamesArray = data.games;
+        } else if (data._id && data.name) {
+          // Single game object
+          gamesArray = [data];
+        } else {
+          showToast('Invalid JSON format. Expected array or { games: [...] }', 'error');
+          return;
+        }
+
+        if (gamesArray.length === 0) {
+          showToast('No games found in JSON', 'error');
+          return;
+        }
+
+        // Enrich games with positions and techniques
+        const enrichedGames = gamesArray.map(enrichGame);
+        const enrichedCount = enrichedGames.filter((g, i) =>
+          (g.position && !gamesArray[i].position) ||
+          (g.techniques?.length > (gamesArray[i].techniques?.length || 0))
+        ).length;
+
+        setPreviewData({
+          games: enrichedGames,
+          count: enrichedGames.length,
+          source: 'json',
+          enrichedCount
+        });
+        showToast(`Detected JSON format with ${gamesArray.length} games`, 'success');
+        return;
+      } catch (e) {
+        // Not valid JSON, continue with text parsing
+        console.log('Not valid JSON, trying text parser');
+      }
+    }
+
     const parsedGames = parseTextToGames(textInput);
     if (parsedGames.length === 0) {
       showToast('Could not parse any games from text', 'error');
