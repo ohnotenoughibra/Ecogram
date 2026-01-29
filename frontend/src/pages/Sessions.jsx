@@ -54,6 +54,11 @@ export default function Sessions() {
   const [showTopicModal, setShowTopicModal] = useState(false);
   const [editingTopic, setEditingTopic] = useState(null);
 
+  // Add game to session state
+  const [gameToAdd, setGameToAdd] = useState(null);
+  const [showAddGameToSession, setShowAddGameToSession] = useState(false);
+  const [addingGameToSession, setAddingGameToSession] = useState(false);
+
   useEffect(() => {
     fetchSessions();
     fetchTemplates();
@@ -72,6 +77,27 @@ export default function Sessions() {
       setSearchParams({});
     }
   }, [searchParams, setSearchParams]);
+
+  // Handle ?addGame=gameId query parameter
+  useEffect(() => {
+    const addGameId = searchParams.get('addGame');
+    if (addGameId && sessions.length > 0) {
+      // Fetch game details
+      const fetchGame = async () => {
+        try {
+          const response = await api.get(`/games/${addGameId}`);
+          setGameToAdd(response.data);
+          setShowAddGameToSession(true);
+          // Clear the query param
+          setSearchParams({});
+        } catch (err) {
+          showToast('Game not found', 'error');
+          setSearchParams({});
+        }
+      };
+      fetchGame();
+    }
+  }, [searchParams, sessions.length]);
 
   // Handle smart playlist navigation - create session from selected games
   useEffect(() => {
@@ -402,6 +428,26 @@ export default function Sessions() {
       setIsDeletingTemplate(false);
       setShowDeleteTemplateConfirm(false);
       setTemplateToDelete(null);
+    }
+  };
+
+  const handleAddGameToSession = async (sessionId) => {
+    if (!gameToAdd) return;
+
+    setAddingGameToSession(true);
+    try {
+      await api.put(`/sessions/${sessionId}/games`, {
+        action: 'add',
+        gameId: gameToAdd._id
+      });
+      showToast(`"${gameToAdd.name}" added to session!`, 'success');
+      setShowAddGameToSession(false);
+      setGameToAdd(null);
+      fetchSessions();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to add game', 'error');
+    } finally {
+      setAddingGameToSession(false);
     }
   };
 
@@ -1284,6 +1330,87 @@ export default function Sessions() {
           onSave={handleCreateTopic}
           onDelete={editingTopic && !editingTopic._isNew ? () => handleDeleteTopic(editingTopic._id) : null}
         />
+      )}
+
+      {/* Add Game to Session Modal */}
+      {showAddGameToSession && gameToAdd && (
+        <div className="modal-overlay" onClick={() => { setShowAddGameToSession(false); setGameToAdd(null); }}>
+          <div className="modal-content max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Add to Session
+                </h3>
+                <button
+                  onClick={() => { setShowAddGameToSession(false); setGameToAdd(null); }}
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                    <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Select a session to add "{gameToAdd.name}"
+              </p>
+            </div>
+
+            <div className="p-2 max-h-80 overflow-y-auto">
+              {sessions.filter(s => !s.isTemplate).length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No sessions yet</p>
+                  <button
+                    onClick={() => {
+                      setShowAddGameToSession(false);
+                      setGameToAdd(null);
+                      setShowCreateModal(true);
+                    }}
+                    className="mt-2 text-primary-600 dark:text-primary-400 font-medium"
+                  >
+                    Create your first session
+                  </button>
+                </div>
+              ) : (
+                sessions.filter(s => !s.isTemplate).map(session => (
+                  <button
+                    key={session._id}
+                    onClick={() => handleAddGameToSession(session._id)}
+                    disabled={addingGameToSession}
+                    className="w-full px-3 py-3 text-left rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5 text-primary-600 dark:text-primary-400">
+                          <path d="M3.5 2A1.5 1.5 0 002 3.5v9A1.5 1.5 0 003.5 14h9a1.5 1.5 0 001.5-1.5v-7A1.5 1.5 0 0012.5 4H9.621a1.5 1.5 0 01-1.06-.44L7.439 2.44A1.5 1.5 0 006.38 2H3.5z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{session.name}</p>
+                        <p className="text-xs text-gray-500">{session.games?.length || 0} games</p>
+                      </div>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5 text-primary-500">
+                      <path d="M8.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" />
+                    </svg>
+                  </button>
+                ))
+              )}
+            </div>
+
+            <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  setShowAddGameToSession(false);
+                  setGameToAdd(null);
+                  setShowCreateModal(true);
+                }}
+                className="w-full py-2.5 text-center text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-colors"
+              >
+                + Create New Session
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
