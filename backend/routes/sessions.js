@@ -344,28 +344,69 @@ router.delete('/:id', protect, async (req, res) => {
 });
 
 // @route   POST /api/sessions/smart-build
-// @desc    Auto-generate a balanced session based on topic/focus
+// @desc    Auto-generate a balanced session based on constraints
 // @access  Private
 router.post('/smart-build', protect, async (req, res) => {
   try {
-    const { topic, focus, duration, name } = req.body;
+    const { topic, position, duration, name, gameCount, difficulty, durationMinutes } = req.body;
 
-    // Session structure based on duration
-    const sessionStructure = {
-      short: { warmup: 1, main: 2, cooldown: 0 },      // ~30 min
-      medium: { warmup: 1, main: 3, cooldown: 1 },     // ~45-60 min
-      long: { warmup: 2, main: 4, cooldown: 1 }        // ~90 min
-    };
+    // Calculate game structure based on constraints
+    let structure;
 
-    const structure = sessionStructure[duration || 'medium'];
+    if (gameCount) {
+      // User specified exact game count
+      const count = Math.min(Math.max(1, parseInt(gameCount)), 15);
+      if (count <= 3) {
+        structure = { warmup: 0, main: count, cooldown: 0 };
+      } else if (count <= 5) {
+        structure = { warmup: 1, main: count - 1, cooldown: 0 };
+      } else {
+        structure = { warmup: 1, main: count - 2, cooldown: 1 };
+      }
+    } else if (durationMinutes) {
+      // User specified duration in minutes - estimate ~8 min per game
+      const mins = Math.min(Math.max(15, parseInt(durationMinutes)), 180);
+      const estimatedGames = Math.round(mins / 8);
+      if (estimatedGames <= 3) {
+        structure = { warmup: 0, main: estimatedGames, cooldown: 0 };
+      } else if (estimatedGames <= 5) {
+        structure = { warmup: 1, main: estimatedGames - 1, cooldown: 0 };
+      } else {
+        structure = { warmup: 1, main: estimatedGames - 2, cooldown: 1 };
+      }
+    } else {
+      // Fall back to duration preset
+      const sessionStructure = {
+        short: { warmup: 1, main: 2, cooldown: 0 },      // ~30 min
+        medium: { warmup: 1, main: 3, cooldown: 1 },     // ~45-60 min
+        long: { warmup: 2, main: 4, cooldown: 1 }        // ~90 min
+      };
+      structure = sessionStructure[duration || 'medium'];
+    }
 
     // Get user's games
-    const userGames = await Game.find({ user: req.user._id });
+    let userGames = await Game.find({ user: req.user._id });
 
     if (userGames.length === 0) {
       return res.status(400).json({
         message: 'No games in library. Add some games first to auto-generate sessions.'
       });
+    }
+
+    // Filter by difficulty/skill level if specified
+    if (difficulty) {
+      const diffFiltered = userGames.filter(g => g.difficulty === difficulty);
+      if (diffFiltered.length >= 3) {
+        userGames = diffFiltered;
+      }
+    }
+
+    // Filter by position if specified
+    if (position) {
+      const posFiltered = userGames.filter(g => g.position === position);
+      if (posFiltered.length >= 3) {
+        userGames = posFiltered;
+      }
     }
 
     // Categorize games
@@ -433,7 +474,27 @@ router.post('/smart-build', protect, async (req, res) => {
       control: 'Control',
       transition: 'Movement'
     };
-    const sessionName = name || `${topicNames[topic] || 'Training'} Session - ${new Date().toLocaleDateString()}`;
+    const positionNames = {
+      guard: 'Guard',
+      'half-guard': 'Half Guard',
+      mount: 'Mount',
+      'side-control': 'Side Control',
+      back: 'Back',
+      turtle: 'Turtle',
+      standing: 'Standing'
+    };
+    const difficultyNames = {
+      beginner: 'Beginner',
+      intermediate: 'Intermediate',
+      advanced: 'Advanced'
+    };
+
+    let sessionNameParts = [];
+    if (topic && topicNames[topic]) sessionNameParts.push(topicNames[topic]);
+    if (position && positionNames[position]) sessionNameParts.push(positionNames[position]);
+    if (difficulty && difficultyNames[difficulty]) sessionNameParts.push(difficultyNames[difficulty]);
+
+    const sessionName = name || `${sessionNameParts.length > 0 ? sessionNameParts.join(' ') : 'Training'} Session - ${new Date().toLocaleDateString()}`;
 
     // Create the session
     const games = selectedGames.map((g, index) => ({
@@ -459,7 +520,10 @@ router.post('/smart-build', protect, async (req, res) => {
         main: mains.length,
         cooldown: structure.cooldown > 0 ? selectedGames.length - warmups.length - mains.length : 0,
         total: selectedGames.length,
-        topic: topic || 'mixed'
+        topic: topic || 'mixed',
+        position: position || null,
+        difficulty: difficulty || null,
+        estimatedMinutes: selectedGames.length * 8
       }
     });
   } catch (error) {
