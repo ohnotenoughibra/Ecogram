@@ -3,88 +3,73 @@ import api from '../utils/api';
 
 const AuthContext = createContext(null);
 
+// Default user for auth-less mode
+const DEFAULT_USER = {
+  _id: 'default',
+  username: 'Coach',
+  email: 'default@ecogram.local',
+  preferences: {
+    darkMode: false,
+    timerSound: true,
+    defaultTimerDuration: 300,
+    showQuickAccess: true,
+    showRecommendations: true,
+    showGameOfDay: true,
+    showSkillBalance: true,
+    showPositionChips: true,
+    compactMode: false
+  }
+};
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(DEFAULT_USER);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Check for existing token on mount
+  // Load preferences from localStorage on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
+    const savedPrefs = localStorage.getItem('ecogram_preferences');
+    if (savedPrefs) {
+      try {
+        const prefs = JSON.parse(savedPrefs);
+        setUser(prev => ({ ...prev, preferences: { ...prev.preferences, ...prefs } }));
+      } catch (e) {
+        // Ignore parse errors
+      }
     }
   }, []);
 
-  const fetchUser = async () => {
-    try {
-      const response = await api.get('/auth/me');
-      setUser(response.data);
-      setError(null);
-    } catch (err) {
-      localStorage.removeItem('token');
-      setUser(null);
-      setError('Session expired. Please login again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Login is no longer required but kept for compatibility
   const login = async (email, password) => {
-    try {
-      setError(null);
-      const response = await api.post('/auth/login', { email, password });
-      const { token, ...userData } = response.data;
-      localStorage.setItem('token', token);
-      setUser(userData);
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.message || 'Login failed';
-      setError(message);
-      return { success: false, error: message };
-    }
+    return { success: true };
   };
 
+  // Register is no longer required but kept for compatibility
   const register = async (username, email, password) => {
-    try {
-      setError(null);
-      const response = await api.post('/auth/register', { username, email, password });
-      const { token, ...userData } = response.data;
-      localStorage.setItem('token', token);
-      setUser(userData);
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Registration failed';
-      setError(message);
-      return { success: false, error: message };
-    }
+    return { success: true };
   };
 
+  // Logout just resets to default user
   const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    setUser(null);
+    setUser(DEFAULT_USER);
     setError(null);
   }, []);
 
+  // Update preferences - save to localStorage
   const updatePreferences = async (preferences) => {
     try {
-      const response = await api.put('/auth/preferences', preferences);
-      setUser(prev => ({ ...prev, preferences: response.data.preferences }));
+      const newPrefs = { ...user.preferences, ...preferences };
+      setUser(prev => ({ ...prev, preferences: newPrefs }));
+      localStorage.setItem('ecogram_preferences', JSON.stringify(newPrefs));
       return { success: true };
     } catch (err) {
-      return { success: false, error: err.response?.data?.message || 'Failed to update preferences' };
+      return { success: false, error: 'Failed to update preferences' };
     }
   };
 
+  // Password update - no longer needed
   const updatePassword = async (currentPassword, newPassword) => {
-    try {
-      await api.put('/auth/password', { currentPassword, newPassword });
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.response?.data?.message || 'Failed to update password' };
-    }
+    return { success: true };
   };
 
   const value = {
@@ -96,7 +81,7 @@ export function AuthProvider({ children }) {
     logout,
     updatePreferences,
     updatePassword,
-    isAuthenticated: !!user
+    isAuthenticated: true // Always authenticated in auth-less mode
   };
 
   return (

@@ -24,7 +24,7 @@ router.get('/', protect, async (req, res) => {
     const query = { user: req.user._id };
 
     // Topic filter
-    if (topic && ['offensive', 'defensive', 'control', 'transition'].includes(topic)) {
+    if (topic && ['offensive', 'defensive', 'control', 'transition', 'competition'].includes(topic)) {
       query.topic = topic;
     }
 
@@ -81,6 +81,115 @@ router.get('/', protect, async (req, res) => {
   } catch (error) {
     console.error('Get games error:', error);
     res.status(500).json({ message: 'Server error fetching games' });
+  }
+});
+
+// @route   POST /api/games/check-duplicates
+// @desc    Check for similar/duplicate games before creating
+// @access  Private
+router.post('/check-duplicates', protect, async (req, res) => {
+  try {
+    const { name, topic, position, techniques = [] } = req.body;
+    const userId = req.user._id;
+
+    if (!name) {
+      return res.json({ duplicates: [], suggestions: [] });
+    }
+
+    // Find potential duplicates using multiple criteria
+    const allGames = await Game.find({ user: userId }).lean();
+
+    const duplicates = [];
+    const suggestions = [];
+    const nameLower = name.toLowerCase().trim();
+
+    // Remove common suffixes for comparison
+    const cleanName = nameLower.replace(/\s*\(copy\)\s*$/i, '').replace(/\s*\(\d+\)\s*$/i, '').trim();
+
+    for (const game of allGames) {
+      const gameNameLower = game.name.toLowerCase().trim();
+      const cleanGameName = gameNameLower.replace(/\s*\(copy\)\s*$/i, '').replace(/\s*\(\d+\)\s*$/i, '').trim();
+
+      let score = 0;
+      let reasons = [];
+
+      // Exact name match (or with Copy suffix)
+      if (cleanName === cleanGameName) {
+        score += 100;
+        reasons.push('Exact name match');
+      }
+      // Name contains check
+      else if (cleanName.includes(cleanGameName) || cleanGameName.includes(cleanName)) {
+        score += 60;
+        reasons.push('Similar name');
+      }
+      // Word overlap
+      else {
+        const words1 = new Set(cleanName.split(/\s+/).filter(w => w.length > 2));
+        const words2 = new Set(cleanGameName.split(/\s+/).filter(w => w.length > 2));
+        const overlap = [...words1].filter(w => words2.has(w)).length;
+        const maxWords = Math.max(words1.size, words2.size);
+        if (maxWords > 0 && overlap / maxWords >= 0.5) {
+          score += 40;
+          reasons.push('Similar words');
+        }
+      }
+
+      // Same topic
+      if (topic && game.topic === topic) {
+        score += 15;
+        reasons.push('Same topic');
+      }
+
+      // Same position
+      if (position && game.position === position) {
+        score += 20;
+        reasons.push('Same position');
+      }
+
+      // Overlapping techniques
+      if (techniques.length > 0 && game.techniques?.length > 0) {
+        const techOverlap = techniques.filter(t => game.techniques.includes(t)).length;
+        if (techOverlap > 0) {
+          score += techOverlap * 10;
+          reasons.push(`${techOverlap} common technique(s)`);
+        }
+      }
+
+      if (score >= 60) {
+        duplicates.push({
+          _id: game._id,
+          name: game.name,
+          topic: game.topic,
+          position: game.position,
+          score,
+          reasons,
+          isExactMatch: score >= 100
+        });
+      } else if (score >= 30) {
+        suggestions.push({
+          _id: game._id,
+          name: game.name,
+          topic: game.topic,
+          score,
+          reasons
+        });
+      }
+    }
+
+    // Sort by score
+    duplicates.sort((a, b) => b.score - a.score);
+    suggestions.sort((a, b) => b.score - a.score);
+
+    res.json({
+      duplicates: duplicates.slice(0, 5),
+      suggestions: suggestions.slice(0, 3),
+      hasDuplicates: duplicates.length > 0,
+      hasExactMatch: duplicates.some(d => d.isExactMatch)
+    });
+  } catch (error) {
+    console.error('Check duplicates error:', error);
+    res.status(500).json({ message: 'Server error checking duplicates' });
   }
 });
 
@@ -313,12 +422,13 @@ router.get('/recommendations', protect, async (req, res) => {
     });
 
     const totalGames = allGames.length;
-    const topics = ['offensive', 'defensive', 'control', 'transition'];
+    const topics = ['offensive', 'defensive', 'control', 'transition', 'competition'];
     const topicLabels = {
       offensive: 'Submissions & Attacks',
       defensive: 'Defense & Escapes',
       control: 'Control & Passing',
-      transition: 'Transitions & Scrambles'
+      transition: 'Transitions & Scrambles',
+      competition: 'Competition & Match Sim'
     };
 
     // Position distribution
@@ -639,6 +749,14 @@ router.post('/import', protect, async (req, res) => {
       'defensive': 'defensive',
       'control': 'control',
       'transition': 'transition',
+      'competition': 'competition',
+      // Competition-related terms
+      'comp': 'competition',
+      'comp prep': 'competition',
+      'tournament': 'competition',
+      'match': 'competition',
+      'adcc': 'competition',
+      'ibjjf': 'competition',
       // Submissions & Attacks -> Offensive
       'submissions': 'offensive',
       'submission': 'offensive',
@@ -784,7 +902,7 @@ router.get('/:id', protect, async (req, res) => {
 router.post('/', protect, [
   body('name').trim().notEmpty().withMessage('Game name is required')
     .isLength({ max: 100 }).withMessage('Name cannot exceed 100 characters'),
-  body('topic').isIn(['offensive', 'defensive', 'control', 'transition'])
+  body('topic').isIn(['offensive', 'defensive', 'control', 'transition', 'competition'])
     .withMessage('Invalid topic')
 ], async (req, res) => {
   try {

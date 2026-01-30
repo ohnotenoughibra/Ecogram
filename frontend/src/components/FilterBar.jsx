@@ -43,6 +43,12 @@ const filterPresets = [
     icon: '🤼',
     filters: { position: 'standing', topic: '' }
   },
+  {
+    id: 'competition',
+    label: 'Comp Prep',
+    icon: '🏆',
+    filters: { topic: 'competition', position: '' }
+  },
 ];
 
 // Common BJJ skills for autocomplete

@@ -41,7 +41,7 @@ const competitionSchema = new mongoose.Schema({
   },
   focusAreas: [{
     type: String,
-    enum: ['offensive', 'defensive', 'control', 'transition']
+    enum: ['offensive', 'defensive', 'control', 'transition', 'competition']
   }],
   // Weight tracking entries
   weightLog: [{

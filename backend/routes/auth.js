@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { protect, generateToken } = require('../middleware/auth');
+const { sendPasswordResetEmail, verifyEmailConfig } = require('../utils/email');
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -195,19 +196,24 @@ router.post('/forgot-password', [
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save({ validateBeforeSave: false });
 
-    // In production, you would send an email here
-    // For now, log the token (development only)
-    console.log('=== PASSWORD RESET TOKEN ===');
-    console.log('Email:', email);
-    console.log('Reset Token:', resetToken);
-    console.log('Reset URL: /reset-password/' + resetToken);
-    console.log('============================');
+    // Send password reset email
+    const emailResult = await sendPasswordResetEmail(email, resetToken, user.username);
 
-    res.json({
-      message: 'If an account with that email exists, a password reset link has been sent.',
-      // Include token in response for development/testing
-      ...(process.env.NODE_ENV !== 'production' && { resetToken })
-    });
+    // Response based on environment
+    const response = {
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    };
+
+    // Include additional info in development
+    if (process.env.NODE_ENV !== 'production') {
+      response.resetToken = resetToken;
+      response.emailSent = emailResult.sent;
+      if (!emailResult.sent) {
+        response.emailReason = emailResult.reason;
+      }
+    }
+
+    res.json(response);
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -272,6 +278,52 @@ router.get('/verify-reset-token/:token', async (req, res) => {
   } catch (error) {
     console.error('Verify reset token error:', error);
     res.status(500).json({ valid: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/clear-expired-tokens
+// @desc    Clear all expired password reset tokens from database
+// @access  Private (requires authentication)
+router.post('/clear-expired-tokens', protect, async (req, res) => {
+  try {
+    // Clear expired tokens (tokens where expiry date has passed)
+    const expiredResult = await User.updateMany(
+      { resetPasswordExpires: { $lt: Date.now(), $ne: null } },
+      { $set: { resetPasswordToken: null, resetPasswordExpires: null } }
+    );
+
+    // Also clear any orphaned tokens (token exists but no expiry)
+    const orphanedResult = await User.updateMany(
+      { resetPasswordToken: { $ne: null }, resetPasswordExpires: null },
+      { $set: { resetPasswordToken: null } }
+    );
+
+    res.json({
+      message: 'Email/reset token cache cleared',
+      expiredTokensCleared: expiredResult.modifiedCount || 0,
+      orphanedTokensCleared: orphanedResult.modifiedCount || 0,
+      totalCleared: (expiredResult.modifiedCount || 0) + (orphanedResult.modifiedCount || 0)
+    });
+  } catch (error) {
+    console.error('Clear expired tokens error:', error);
+    res.status(500).json({ message: 'Server error clearing tokens' });
+  }
+});
+
+// @route   DELETE /api/auth/my-reset-token
+// @desc    Clear current user's password reset token
+// @access  Private
+router.delete('/my-reset-token', protect, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user._id, {
+      resetPasswordToken: null,
+      resetPasswordExpires: null
+    });
+
+    res.json({ message: 'Your password reset token has been cleared' });
+  } catch (error) {
+    console.error('Clear my reset token error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

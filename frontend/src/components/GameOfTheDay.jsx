@@ -20,15 +20,13 @@ const topicLabels = {
 
 export default function GameOfTheDay() {
   const navigate = useNavigate();
-  const { markGameUsed, showToast, sessions, fetchSessions, addGamesToSession } = useApp();
+  const { markGameUsed, showToast } = useApp();
   const [gameData, setGameData] = useState(null);
   const [fullGame, setFullGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
   const [used, setUsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [showSessionMenu, setShowSessionMenu] = useState(false);
-  const [addingToSession, setAddingToSession] = useState(false);
 
   const fetchGameOfTheDay = useCallback(async () => {
     try {
@@ -63,8 +61,7 @@ export default function GameOfTheDay() {
 
   useEffect(() => {
     fetchGameOfTheDay();
-    fetchSessions();
-  }, [fetchGameOfTheDay, fetchSessions]);
+  }, [fetchGameOfTheDay]);
 
   const handleUse = async () => {
     if (gameData?.game?._id) {
@@ -80,21 +77,6 @@ export default function GameOfTheDay() {
     setDismissed(true);
     const today = new Date().toISOString().split('T')[0];
     localStorage.setItem('gotd_dismissed', today);
-  };
-
-  const handleAddToSession = async (sessionId) => {
-    if (!gameData?.game?._id) return;
-
-    setAddingToSession(true);
-    try {
-      await addGamesToSession(sessionId, [gameData.game._id]);
-      showToast('Game added to session!', 'success');
-      setShowSessionMenu(false);
-    } catch (err) {
-      showToast('Failed to add to session', 'error');
-    } finally {
-      setAddingToSession(false);
-    }
   };
 
   if (loading) {
@@ -119,8 +101,8 @@ export default function GameOfTheDay() {
   const gradientClass = topicColors[game.topic] || topicColors.transition;
 
   return (
-    <div className={`relative overflow-hidden rounded-xl mb-4 bg-gradient-to-r ${gradientClass} p-[2px]`}>
-      <div className="bg-white dark:bg-gray-900 rounded-[10px] p-4">
+    <div className={`relative rounded-xl mb-4 bg-gradient-to-r ${gradientClass} p-[2px]`}>
+      <div className="bg-white dark:bg-gray-900 rounded-[10px] p-4 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -258,57 +240,16 @@ export default function GameOfTheDay() {
             {expanded ? 'Less' : 'Details'}
           </button>
 
-          {/* Add to Session */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSessionMenu(!showSessionMenu)}
-              className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                <path d="M8.75 3.75a.75.75 0 00-1.5 0v3.5h-3.5a.75.75 0 000 1.5h3.5v3.5a.75.75 0 001.5 0v-3.5h3.5a.75.75 0 000-1.5h-3.5v-3.5z" />
-              </svg>
-              Session
-            </button>
-
-            {/* Session dropdown */}
-            {showSessionMenu && (
-              <div className="absolute left-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 py-1 animate-fade-in">
-                <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100 dark:border-gray-700">
-                  Add to session
-                </div>
-                {sessions.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">
-                    No sessions yet
-                  </div>
-                ) : (
-                  <div className="max-h-48 overflow-y-auto">
-                    {sessions.slice(0, 5).map(session => (
-                      <button
-                        key={session._id}
-                        onClick={() => handleAddToSession(session._id)}
-                        disabled={addingToSession}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
-                      >
-                        <span className="truncate">{session.name}</span>
-                        <span className="text-xs text-gray-400">{session.games?.length || 0} games</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
-                  <button
-                    onClick={() => {
-                      setShowSessionMenu(false);
-                      navigate('/sessions');
-                    }}
-                    className="w-full px-3 py-2 text-left text-sm text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    Create new session
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Add to Session - Navigate to sessions page */}
+          <button
+            onClick={() => navigate(`/sessions?addGame=${game._id}`)}
+            className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path d="M8.75 3.75a.75.75 0 00-1.5 0v3.5h-3.5a.75.75 0 000 1.5h3.5v3.5a.75.75 0 001.5 0v-3.5h3.5a.75.75 0 000-1.5h-3.5v-3.5z" />
+            </svg>
+            Session
+          </button>
 
           {/* Use / Used button */}
           {used ? (
@@ -332,13 +273,6 @@ export default function GameOfTheDay() {
         </div>
       </div>
 
-      {/* Click outside to close session menu */}
-      {showSessionMenu && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => setShowSessionMenu(false)}
-        />
-      )}
     </div>
   );
 }

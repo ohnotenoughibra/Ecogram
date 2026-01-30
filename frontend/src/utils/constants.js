@@ -135,7 +135,8 @@ export const TOPICS = [
   { value: 'offensive', label: 'Offensive', color: 'bg-red-500' },
   { value: 'defensive', label: 'Defensive', color: 'bg-blue-500' },
   { value: 'control', label: 'Control', color: 'bg-purple-500' },
-  { value: 'transition', label: 'Transition', color: 'bg-green-500' }
+  { value: 'transition', label: 'Transition', color: 'bg-green-500' },
+  { value: 'competition', label: 'Competition', color: 'bg-orange-500' }
 ];
 
 // Topic colors for visual coding (solid colors for general use)
@@ -143,7 +144,8 @@ export const TOPIC_COLORS = {
   offensive: 'bg-red-500',
   defensive: 'bg-blue-500',
   control: 'bg-purple-500',
-  transition: 'bg-green-500'
+  transition: 'bg-green-500',
+  competition: 'bg-orange-500'
 };
 
 // Topic labels

@@ -183,8 +183,60 @@ export function AppProvider({ children }) {
     }
   }, []);
 
-  const duplicateGame = useCallback(async (game) => {
+  const checkDuplicates = useCallback(async (gameData) => {
     try {
+      const response = await api.post('/games/check-duplicates', gameData);
+      return response.data;
+    } catch (err) {
+      console.error('Error checking duplicates:', err);
+      return { duplicates: [], suggestions: [], hasDuplicates: false };
+    }
+  }, []);
+
+  const duplicateGame = useCallback(async (game, forceDuplicate = false) => {
+    try {
+      // Check for existing duplicates first
+      if (!forceDuplicate) {
+        const duplicateCheck = await checkDuplicates({
+          name: `${game.name} (Copy)`,
+          topic: game.topic,
+          position: game.position,
+          techniques: game.techniques || []
+        });
+
+        if (duplicateCheck.hasExactMatch) {
+          // Find unique name
+          let copyNum = 1;
+          let newName = `${game.name} (Copy)`;
+          const existingNames = new Set(games.map(g => g.name.toLowerCase()));
+
+          while (existingNames.has(newName.toLowerCase())) {
+            copyNum++;
+            newName = `${game.name} (Copy ${copyNum})`;
+          }
+
+          // Create a copy of the game data, excluding certain fields
+          const duplicatedData = {
+            name: newName,
+            topic: game.topic,
+            gameType: game.gameType,
+            difficulty: game.difficulty,
+            topPlayer: game.topPlayer,
+            bottomPlayer: game.bottomPlayer,
+            coaching: game.coaching,
+            personalNotes: game.personalNotes,
+            position: game.position,
+            techniques: game.techniques || [],
+            skills: [...(game.skills || [])]
+          };
+
+          const response = await api.post('/games', duplicatedData);
+          setGames(prev => [response.data, ...prev]);
+          showToast(`Game duplicated as "${newName}"`, 'success');
+          return { success: true, game: response.data };
+        }
+      }
+
       // Create a copy of the game data, excluding certain fields
       const duplicatedData = {
         name: `${game.name} (Copy)`,
@@ -195,6 +247,8 @@ export function AppProvider({ children }) {
         bottomPlayer: game.bottomPlayer,
         coaching: game.coaching,
         personalNotes: game.personalNotes,
+        position: game.position,
+        techniques: game.techniques || [],
         skills: [...(game.skills || [])]
       };
 
@@ -206,7 +260,7 @@ export function AppProvider({ children }) {
       showToast(err.response?.data?.message || 'Failed to duplicate game', 'error');
       return { success: false };
     }
-  }, [showToast]);
+  }, [games, showToast, checkDuplicates]);
 
   const bulkGameAction = useCallback(async (action) => {
     if (selectedGames.size === 0) return;
@@ -420,6 +474,7 @@ export function AppProvider({ children }) {
     deleteGame,
     markGameUsed,
     duplicateGame,
+    checkDuplicates,
     bulkGameAction,
 
     // Sessions

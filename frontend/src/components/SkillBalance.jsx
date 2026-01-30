@@ -94,6 +94,15 @@ const topicInfo = {
     icon: '🔄',
     description: 'Scrambles, movement chains, flow',
     claFocus: 'Dynamic constraints promoting adaptability'
+  },
+  competition: {
+    label: 'Competition',
+    color: 'bg-orange-500',
+    lightColor: 'bg-orange-100 dark:bg-orange-900/30',
+    textColor: 'text-orange-600 dark:text-orange-400',
+    icon: '🏆',
+    description: 'Match simulation, time pressure, points',
+    claFocus: 'Competition-specific constraints and rule-based scenarios'
   }
 };
 
@@ -108,7 +117,7 @@ export default function SkillBalance({ compact = false }) {
   }, [fetchStats]);
 
   // Get data from stats
-  const topicCounts = stats?.topicDistribution || { offensive: 0, defensive: 0, control: 0, transition: 0 };
+  const topicCounts = stats?.topicDistribution || { offensive: 0, defensive: 0, control: 0, transition: 0, competition: 0 };
   const positionCounts = stats?.positionDistribution || {};
   const totalGamesInLibrary = stats?.totalGames || 0;
   const gamesWithPositions = stats?.gamesWithPositions || 0;
@@ -128,9 +137,9 @@ export default function SkillBalance({ compact = false }) {
   }, [topicCounts, totalGames]);
 
   // Calculate balance score for topics (0-100, 100 being perfectly balanced)
-  const average = totalGames / 4;
+  const average = totalGames / 5;
   const variance = Object.values(topicCounts).reduce((sum, count) =>
-    sum + Math.pow(count - average, 2), 0) / 4;
+    sum + Math.pow(count - average, 2), 0) / 5;
   const balanceScore = Math.max(0, 100 - Math.sqrt(variance) * 10);
 
   // Calculate balance score for positions
@@ -455,7 +464,7 @@ export default function SkillBalance({ compact = false }) {
 
 // Quick balance indicator for headers
 export function BalanceIndicator({ games }) {
-  const counts = { offensive: 0, defensive: 0, control: 0, transition: 0 };
+  const counts = { offensive: 0, defensive: 0, control: 0, transition: 0, competition: 0 };
   games?.forEach(game => {
     if (game.topic && counts.hasOwnProperty(game.topic)) {
       counts[game.topic]++;
@@ -463,9 +472,9 @@ export function BalanceIndicator({ games }) {
   });
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const average = total / 4;
+  const average = total / 5;
   const variance = Object.values(counts).reduce((sum, count) =>
-    sum + Math.pow(count - average, 2), 0) / 4;
+    sum + Math.pow(count - average, 2), 0) / 5;
   const balanceScore = Math.max(0, 100 - Math.sqrt(variance) * 10);
 
   return (

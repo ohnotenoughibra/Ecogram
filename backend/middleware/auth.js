@@ -1,7 +1,24 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Protect routes - require authentication
+// Default user email for auth-less mode
+const DEFAULT_USER_EMAIL = 'default@ecogram.local';
+
+// Get or create the default user
+const getDefaultUser = async () => {
+  let user = await User.findOne({ email: DEFAULT_USER_EMAIL });
+  if (!user) {
+    user = await User.create({
+      username: 'Coach',
+      email: DEFAULT_USER_EMAIL,
+      password: 'default-no-login-required'
+    });
+    console.log('Default user created for auth-less mode');
+  }
+  return user;
+};
+
+// Protect routes - uses default user when no auth token (auth disabled)
 const protect = async (req, res, next) => {
   let token;
 
@@ -11,23 +28,25 @@ const protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = await User.findById(decoded.id).select('-password');
 
-      if (!req.user) {
-        return res.status(401).json({ message: 'User not found' });
+      if (req.user) {
+        return next();
       }
-
-      next();
     } catch (error) {
-      console.error('Auth middleware error:', error);
-      return res.status(401).json({ message: 'Not authorized, token failed' });
+      // Token invalid, fall through to default user
     }
   }
 
-  if (!token) {
-    return res.status(401).json({ message: 'Not authorized, no token' });
+  // No valid token - use default user (auth disabled mode)
+  try {
+    req.user = await getDefaultUser();
+    next();
+  } catch (error) {
+    console.error('Failed to get default user:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Optional authentication - attach user if token exists but don't require it
+// Optional authentication - uses default user if no token (auth disabled mode)
 const optionalAuth = async (req, res, next) => {
   let token;
 
@@ -36,12 +55,20 @@ const optionalAuth = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = await User.findById(decoded.id).select('-password');
+      if (req.user) {
+        return next();
+      }
     } catch (error) {
-      // Token invalid, but that's okay for optional auth
-      req.user = null;
+      // Token invalid, fall through to default user
     }
   }
 
+  // Use default user when no valid token
+  try {
+    req.user = await getDefaultUser();
+  } catch (error) {
+    req.user = null;
+  }
   next();
 };
 

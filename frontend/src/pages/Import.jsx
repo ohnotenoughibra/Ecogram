@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 const topicKeywords = {
-  offensive: ['submit', 'submission', 'attack', 'finish', 'choke', 'armbar', 'leg lock', 'strangle', 'offense'],
-  defensive: ['escape', 'defend', 'defense', 'survival', 'recover', 'guard recovery', 'retention'],
-  control: ['pass', 'passing', 'control', 'pressure', 'pin', 'mount', 'side control', 'position'],
-  transition: ['scramble', 'transition', 'sweep', 'reversal', 'movement', 'flow', 'chain']
+  offensive: ['submit', 'submission', 'attack', 'finish', 'choke', 'armbar', 'leg lock', 'strangle', 'offense', 'hunt'],
+  defensive: ['escape', 'defend', 'defense', 'survival', 'recover', 'guard recovery', 'retention', 'survive'],
+  control: ['pass', 'passing', 'control', 'pressure', 'pin', 'mount', 'side control', 'position', 'maintain'],
+  transition: ['scramble', 'transition', 'sweep', 'reversal', 'movement', 'flow', 'chain', 'drill'],
+  competition: ['match', 'competition', 'points', 'adcc', 'ibjjf', 'tournament', 'overtime']
 };
 
 // Position detection patterns
@@ -69,27 +70,191 @@ const techniquePatterns = {
   'berimbolo': /berimbolo|bolo/i
 };
 
-// Skill to position mapping
-const skillPositionMap = {
-  'guard': 'open-guard',
-  'closed-guard': 'closed-guard',
-  'half-guard': 'half-guard',
-  'butterfly': 'butterfly-guard',
-  'dlr': 'dlr',
-  'spider': 'spider-guard',
-  'lasso': 'lasso-guard',
-  'x-guard': 'x-guard',
-  'mount': 'mount',
-  'side-control': 'side-control',
-  'back': 'back-control',
-  'back-control': 'back-control',
-  'turtle': 'turtle',
-  'standing': 'standing',
-  'takedowns': 'standing',
-  'wrestling': 'standing',
-  'leg-locks': 'ashi-garami',
-  'leglocks': 'ashi-garami'
+// Field name mappings for different JSON schemas
+const fieldMappings = {
+  name: ['name', 'title', 'gameName', 'game_name', 'drill', 'drillName', 'exercise', 'activity'],
+  topic: ['topic', 'type', 'category', 'gameType', 'game_type', 'focus', 'objective', 'theme'],
+  position: ['position', 'startingPosition', 'starting_position', 'pos', 'startPosition', 'location'],
+  topPlayer: ['topPlayer', 'top_player', 'top', 'attacker', 'passer', 'topInstructions', 'playerA', 'player1'],
+  bottomPlayer: ['bottomPlayer', 'bottom_player', 'bottom', 'defender', 'guard', 'bottomInstructions', 'playerB', 'player2'],
+  coaching: ['coaching', 'notes', 'description', 'instructions', 'coachingNotes', 'coaching_notes', 'details', 'rules', 'explanation', 'how', 'howTo'],
+  techniques: ['techniques', 'technique', 'moves', 'skills', 'tags', 'submissionTypes', 'moves'],
+  difficulty: ['difficulty', 'level', 'skillLevel', 'experience'],
+  gameType: ['gameType', 'drillType', 'exerciseType', 'warmup', 'type']
 };
+
+// Topic normalization
+const topicNormalization = {
+  'offense': 'offensive',
+  'attack': 'offensive',
+  'attacking': 'offensive',
+  'submission': 'offensive',
+  'defense': 'defensive',
+  'escape': 'defensive',
+  'escaping': 'defensive',
+  'guard': 'defensive',
+  'pass': 'control',
+  'passing': 'control',
+  'positional': 'control',
+  'position': 'control',
+  'sweep': 'transition',
+  'movement': 'transition',
+  'flow': 'transition',
+  'dynamic': 'transition',
+  'match': 'competition',
+  'sparring': 'competition',
+  'live': 'competition'
+};
+
+function getFieldValue(obj, fieldNames) {
+  for (const field of fieldNames) {
+    if (obj[field] !== undefined && obj[field] !== null && obj[field] !== '') {
+      return obj[field];
+    }
+    // Try case-insensitive match
+    const lowerField = field.toLowerCase();
+    for (const key of Object.keys(obj)) {
+      if (key.toLowerCase() === lowerField) {
+        return obj[key];
+      }
+    }
+  }
+  return undefined;
+}
+
+function normalizeTopic(topic) {
+  if (!topic) return 'transition';
+  const lower = topic.toLowerCase().trim();
+
+  // Direct match
+  if (['offensive', 'defensive', 'control', 'transition', 'competition'].includes(lower)) {
+    return lower;
+  }
+
+  // Normalized match
+  if (topicNormalization[lower]) {
+    return topicNormalization[lower];
+  }
+
+  return 'transition';
+}
+
+function isGameLikeObject(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+
+  // Must have at least a name or title-like field
+  const hasName = getFieldValue(obj, fieldMappings.name);
+  if (!hasName) return false;
+
+  // Should have at least one other game-related field
+  const hasTopPlayer = getFieldValue(obj, fieldMappings.topPlayer);
+  const hasBottomPlayer = getFieldValue(obj, fieldMappings.bottomPlayer);
+  const hasCoaching = getFieldValue(obj, fieldMappings.coaching);
+  const hasTopic = getFieldValue(obj, fieldMappings.topic);
+  const hasPosition = getFieldValue(obj, fieldMappings.position);
+  const hasTechniques = getFieldValue(obj, fieldMappings.techniques);
+
+  return hasTopPlayer || hasBottomPlayer || hasCoaching || hasTopic || hasPosition || hasTechniques;
+}
+
+function normalizeGameObject(obj) {
+  const game = {
+    name: '',
+    topic: 'transition',
+    position: '',
+    topPlayer: '',
+    bottomPlayer: '',
+    coaching: '',
+    techniques: [],
+    skills: [],
+    difficulty: 'intermediate',
+    gameType: 'main'
+  };
+
+  // Extract fields using mappings
+  game.name = String(getFieldValue(obj, fieldMappings.name) || '').trim();
+
+  const topicValue = getFieldValue(obj, fieldMappings.topic);
+  game.topic = normalizeTopic(topicValue);
+
+  game.position = String(getFieldValue(obj, fieldMappings.position) || '').trim();
+  game.topPlayer = String(getFieldValue(obj, fieldMappings.topPlayer) || '').trim();
+  game.bottomPlayer = String(getFieldValue(obj, fieldMappings.bottomPlayer) || '').trim();
+  game.coaching = String(getFieldValue(obj, fieldMappings.coaching) || '').trim();
+
+  const techValue = getFieldValue(obj, fieldMappings.techniques);
+  if (Array.isArray(techValue)) {
+    game.techniques = techValue.map(t => String(t).trim()).filter(t => t);
+  } else if (typeof techValue === 'string') {
+    game.techniques = techValue.split(/[,;]/).map(t => t.trim()).filter(t => t);
+  }
+
+  const diffValue = getFieldValue(obj, fieldMappings.difficulty);
+  if (diffValue && ['beginner', 'intermediate', 'advanced'].includes(String(diffValue).toLowerCase())) {
+    game.difficulty = String(diffValue).toLowerCase();
+  }
+
+  const gameTypeValue = getFieldValue(obj, fieldMappings.gameType);
+  if (gameTypeValue && ['warmup', 'main', 'cooldown'].includes(String(gameTypeValue).toLowerCase())) {
+    game.gameType = String(gameTypeValue).toLowerCase();
+  }
+
+  // Copy over any other fields that might be useful
+  if (obj.skills) {
+    game.skills = Array.isArray(obj.skills) ? obj.skills : String(obj.skills).split(/[,;]/).map(s => s.trim());
+  }
+  if (obj.personalNotes) game.personalNotes = String(obj.personalNotes);
+  if (obj.videoUrl) game.videoUrl = String(obj.videoUrl);
+  if (obj.favorite !== undefined) game.favorite = Boolean(obj.favorite);
+
+  return game;
+}
+
+function findGamesInJson(data, depth = 0, maxDepth = 5) {
+  const games = [];
+
+  if (depth > maxDepth) return games;
+
+  // If it's an array, check each element
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      if (isGameLikeObject(item)) {
+        games.push(normalizeGameObject(item));
+      } else if (typeof item === 'object' && item !== null) {
+        games.push(...findGamesInJson(item, depth + 1, maxDepth));
+      }
+    }
+    return games;
+  }
+
+  // If it's an object
+  if (typeof data === 'object' && data !== null) {
+    // Check if the object itself is a game
+    if (isGameLikeObject(data)) {
+      games.push(normalizeGameObject(data));
+      return games;
+    }
+
+    // Check known container fields
+    const containerFields = ['games', 'drills', 'exercises', 'activities', 'items', 'data', 'results', 'list'];
+    for (const field of containerFields) {
+      if (data[field]) {
+        games.push(...findGamesInJson(data[field], depth + 1, maxDepth));
+      }
+    }
+
+    // If nothing found in known containers, check all object values
+    if (games.length === 0) {
+      for (const key of Object.keys(data)) {
+        if (typeof data[key] === 'object' && data[key] !== null) {
+          games.push(...findGamesInJson(data[key], depth + 1, maxDepth));
+        }
+      }
+    }
+  }
+
+  return games;
+}
 
 function analyzeGameText(game) {
   const parts = [
@@ -97,33 +262,20 @@ function analyzeGameText(game) {
     game.topPlayer || '',
     game.bottomPlayer || '',
     game.coaching || '',
-    ...(Array.isArray(game.skills) ? game.skills : [])
+    ...(Array.isArray(game.skills) ? game.skills : []),
+    ...(Array.isArray(game.techniques) ? game.techniques : [])
   ];
   return parts.join(' ').toLowerCase();
 }
 
 function detectPosition(game) {
+  if (game.position) return game.position;
+
   const text = analyzeGameText(game);
 
-  // Check patterns
   for (const [position, pattern] of Object.entries(positionPatterns)) {
     if (pattern.test(text)) return position;
   }
-
-  // Check skills
-  const skills = Array.isArray(game.skills) ? game.skills : [];
-  for (const skill of skills) {
-    const normalized = skill.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    if (skillPositionMap[normalized]) return skillPositionMap[normalized];
-    if (skillPositionMap[skill.toLowerCase()]) return skillPositionMap[skill.toLowerCase()];
-  }
-
-  // Contextual inference
-  if (text.includes('guard retention') || text.includes('retain')) return 'open-guard';
-  if (text.includes('pass') && !text.includes('escape')) return 'standing';
-  if (text.includes('escape') && text.includes('mount')) return 'mount';
-  if (text.includes('escape') && text.includes('side')) return 'side-control';
-  if (text.includes('sweep')) return 'closed-guard';
 
   return '';
 }
@@ -139,21 +291,6 @@ function detectTechniques(game) {
   return techniques;
 }
 
-function enrichGame(game) {
-  const enriched = { ...game };
-
-  if (!enriched.position) {
-    enriched.position = detectPosition(game);
-  }
-
-  const existingTechniques = enriched.techniques || [];
-  const detectedTechniques = detectTechniques(game);
-  const allTechniques = [...new Set([...existingTechniques, ...detectedTechniques])];
-  enriched.techniques = allTechniques;
-
-  return enriched;
-}
-
 function detectTopic(text) {
   const lower = text.toLowerCase();
   for (const [topic, keywords] of Object.entries(topicKeywords)) {
@@ -166,10 +303,29 @@ function detectTopic(text) {
   return 'transition';
 }
 
+function enrichGame(game) {
+  const enriched = { ...game };
+
+  if (!enriched.position) {
+    enriched.position = detectPosition(game);
+  }
+
+  const existingTechniques = enriched.techniques || [];
+  const detectedTechniques = detectTechniques(game);
+  const allTechniques = [...new Set([...existingTechniques, ...detectedTechniques])];
+  enriched.techniques = allTechniques;
+
+  // Detect topic if default
+  if (enriched.topic === 'transition') {
+    const text = analyzeGameText(enriched);
+    enriched.topic = detectTopic(text);
+  }
+
+  return enriched;
+}
+
 function parseTextToGames(text) {
   const games = [];
-
-  // Split by double newlines or "---" separators
   const blocks = text.split(/\n\n+|---+/).filter(b => b.trim());
 
   for (const block of blocks) {
@@ -185,13 +341,11 @@ function parseTextToGames(text) {
       skills: []
     };
 
-    // Check for structured format with labels
     const hasLabels = lines.some(l =>
       /^(name|title|game|top|bottom|coaching|notes|skills|tags|topic):/i.test(l)
     );
 
     if (hasLabels) {
-      // Parse labeled format
       let currentField = null;
       let currentValue = [];
 
@@ -199,7 +353,6 @@ function parseTextToGames(text) {
         const labelMatch = line.match(/^(name|title|game|top|bottom|coaching|notes|skills|tags|topic):\s*(.*)/i);
 
         if (labelMatch) {
-          // Save previous field
           if (currentField && currentValue.length > 0) {
             const value = currentValue.join('\n').trim();
             if (currentField === 'name' || currentField === 'title' || currentField === 'game') {
@@ -213,13 +366,9 @@ function parseTextToGames(text) {
             } else if (currentField === 'skills' || currentField === 'tags') {
               game.skills = value.split(/[,#]/).map(s => s.trim()).filter(s => s);
             } else if (currentField === 'topic') {
-              const topicLower = value.toLowerCase();
-              if (['offensive', 'defensive', 'control', 'transition'].includes(topicLower)) {
-                game.topic = topicLower;
-              }
+              game.topic = normalizeTopic(value);
             }
           }
-
           currentField = labelMatch[1].toLowerCase();
           currentValue = labelMatch[2] ? [labelMatch[2]] : [];
         } else if (currentField) {
@@ -227,7 +376,6 @@ function parseTextToGames(text) {
         }
       }
 
-      // Save last field
       if (currentField && currentValue.length > 0) {
         const value = currentValue.join('\n').trim();
         if (currentField === 'name' || currentField === 'title' || currentField === 'game') {
@@ -241,27 +389,20 @@ function parseTextToGames(text) {
         } else if (currentField === 'skills' || currentField === 'tags') {
           game.skills = value.split(/[,#]/).map(s => s.trim()).filter(s => s);
         } else if (currentField === 'topic') {
-          const topicLower = value.toLowerCase();
-          if (['offensive', 'defensive', 'control', 'transition'].includes(topicLower)) {
-            game.topic = topicLower;
-          }
+          game.topic = normalizeTopic(value);
         }
       }
     } else {
-      // Simple format: first line is name, rest is description
       game.name = lines[0].replace(/^[-*•]\s*/, '');
 
       if (lines.length > 1) {
-        // Check if lines mention top/bottom player
         const restText = lines.slice(1).join('\n');
-
         const topMatch = restText.match(/top(?:\s+player)?[:\s]+([^\n]+)/i);
         const bottomMatch = restText.match(/bottom(?:\s+player)?[:\s]+([^\n]+)/i);
 
         if (topMatch) game.topPlayer = topMatch[1].trim();
         if (bottomMatch) game.bottomPlayer = bottomMatch[1].trim();
 
-        // Remaining text becomes coaching notes
         let coaching = restText
           .replace(/top(?:\s+player)?[:\s]+[^\n]+/gi, '')
           .replace(/bottom(?:\s+player)?[:\s]+[^\n]+/gi, '')
@@ -270,19 +411,16 @@ function parseTextToGames(text) {
         if (coaching) game.coaching = coaching;
       }
 
-      // Extract hashtags as skills
       const hashtags = block.match(/#\w+/g);
       if (hashtags) {
         game.skills = hashtags.map(t => t.slice(1));
       }
     }
 
-    // Auto-detect topic from content
     if (game.topic === 'transition') {
       game.topic = detectTopic(`${game.name} ${game.topPlayer} ${game.bottomPlayer} ${game.coaching}`);
     }
 
-    // Only add if we have a name
     if (game.name) {
       games.push(game);
     }
@@ -297,7 +435,7 @@ export default function Import() {
   const totalGames = gamesPagination?.total || 0;
   const fileInputRef = useRef(null);
 
-  const [mode, setMode] = useState('text'); // 'text' or 'json'
+  const [mode, setMode] = useState('text');
   const [textInput, setTextInput] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [previewData, setPreviewData] = useState(null);
@@ -331,51 +469,58 @@ export default function Import() {
     }
   };
 
+  const processJsonData = (text) => {
+    // Clean input
+    const cleaned = text
+      .replace(/^\uFEFF/, '') // BOM
+      .replace(/[\u201C\u201D]/g, '"') // Smart quotes
+      .replace(/[\u2018\u2019]/g, "'") // Smart apostrophes
+      .trim();
+
+    try {
+      const data = JSON.parse(cleaned);
+      const games = findGamesInJson(data);
+
+      if (games.length === 0) {
+        return { success: false, error: 'No games found in JSON. Make sure objects have a "name" field and game-related fields like "topPlayer", "bottomPlayer", "coaching", etc.' };
+      }
+
+      const enrichedGames = games.map(enrichGame);
+      const enrichedCount = enrichedGames.filter((g, i) =>
+        (g.position && !games[i].position) ||
+        (g.techniques?.length > (games[i].techniques?.length || 0))
+      ).length;
+
+      return {
+        success: true,
+        games: enrichedGames,
+        count: enrichedGames.length,
+        enrichedCount,
+        source: 'json'
+      };
+    } catch (e) {
+      return { success: false, error: `JSON parse error: ${e.message}` };
+    }
+  };
+
   const handleFile = async (file) => {
     try {
       const text = await file.text();
 
-      if (file.name.endsWith('.json')) {
-        const data = JSON.parse(text);
-
-        // Accept both array format [...] and object format { games: [...] }
-        let gamesArray;
-        if (Array.isArray(data)) {
-          gamesArray = data;
-        } else if (data.games && Array.isArray(data.games)) {
-          gamesArray = data.games;
+      if (file.name.endsWith('.json') || text.trim().startsWith('[') || text.trim().startsWith('{')) {
+        const result = processJsonData(text);
+        if (result.success) {
+          setPreviewData(result);
+          showToast(`Found ${result.count} games`, 'success');
         } else {
-          showToast('Invalid JSON format. Expected array or { games: [...] }', 'error');
-          return;
+          showToast(result.error, 'error');
         }
-
-        if (gamesArray.length === 0) {
-          showToast('No games found in file', 'error');
-          return;
-        }
-
-        // Enrich games with positions and techniques
-        const enrichedGames = gamesArray.map(enrichGame);
-        const enrichedCount = enrichedGames.filter((g, i) =>
-          (g.position && !gamesArray[i].position) ||
-          (g.techniques?.length > (gamesArray[i].techniques?.length || 0))
-        ).length;
-
-        setPreviewData({
-          games: enrichedGames,
-          exportDate: data.exportDate,
-          count: enrichedGames.length,
-          source: 'json',
-          enrichedCount
-        });
       } else {
-        // Text file - parse it
         const parsedGames = parseTextToGames(text);
         if (parsedGames.length === 0) {
           showToast('No games found in file', 'error');
           return;
         }
-        // Enrich games
         const enrichedGames = parsedGames.map(enrichGame);
         setPreviewData({
           games: enrichedGames,
@@ -384,7 +529,7 @@ export default function Import() {
         });
       }
     } catch (error) {
-      showToast('Failed to parse file', 'error');
+      showToast(`Failed to parse file: ${error.message}`, 'error');
     }
   };
 
@@ -394,13 +539,28 @@ export default function Import() {
       return;
     }
 
+    const trimmedInput = textInput.trim();
+    const firstChar = trimmedInput.charAt(0);
+
+    // Check if JSON
+    if (firstChar === '[' || firstChar === '{') {
+      const result = processJsonData(trimmedInput);
+      if (result.success) {
+        setPreviewData(result);
+        showToast(`Found ${result.count} games`, 'success');
+      } else {
+        showToast(result.error, 'error');
+      }
+      return;
+    }
+
+    // Parse as text
     const parsedGames = parseTextToGames(textInput);
     if (parsedGames.length === 0) {
       showToast('Could not parse any games from text', 'error');
       return;
     }
 
-    // Enrich games
     const enrichedGames = parsedGames.map(enrichGame);
     setPreviewData({
       games: enrichedGames,
@@ -419,13 +579,6 @@ export default function Import() {
     if (result.success) {
       navigate('/');
     }
-  };
-
-  const topicLabels = {
-    offensive: 'Offensive',
-    defensive: 'Defensive',
-    control: 'Control',
-    transition: 'Transition'
   };
 
   const exampleText = `Guard Retention Game
@@ -456,7 +609,7 @@ Skills: mount, submissions, pressure`;
         </button>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Import Games</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Import from text or JSON file
+          Import from text or any JSON format
         </p>
       </div>
 
@@ -489,7 +642,7 @@ Skills: mount, submissions, pressure`;
           {mode === 'text' ? (
             <div className="space-y-4">
               <div className="card p-4">
-                <label className="label">Paste your games</label>
+                <label className="label">Paste your games (text or JSON)</label>
                 <textarea
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
@@ -498,7 +651,7 @@ Skills: mount, submissions, pressure`;
                   className="input resize-none font-mono text-sm"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Separate games with blank lines or ---
+                  Supports text format or any JSON structure
                 </p>
               </div>
 
@@ -513,11 +666,15 @@ Skills: mount, submissions, pressure`;
               <div className="card p-4 bg-gray-50 dark:bg-gray-800/50">
                 <h3 className="font-medium text-gray-900 dark:text-white mb-2">Supported formats:</h3>
                 <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  <li>• <strong>Simple:</strong> First line = name, rest = notes</li>
-                  <li>• <strong>Labels:</strong> Name:, Top:, Bottom:, Coaching:, Skills:</li>
+                  <li>• <strong>JSON array:</strong> [{"{ name: '...' }"}]</li>
+                  <li>• <strong>JSON object:</strong> {"{ games: [...] }"}</li>
+                  <li>• <strong>Nested JSON:</strong> Any structure with game objects</li>
+                  <li>• <strong>Text format:</strong> Name, Top/Bottom/Coaching labels</li>
                   <li>• <strong>Hashtags:</strong> #guard #escape become skills</li>
-                  <li>• <strong>Topic:</strong> Auto-detected or set with Topic: label</li>
                 </ul>
+                <p className="text-xs text-gray-500 mt-2">
+                  Auto-detects game objects by finding "name" + game-related fields
+                </p>
               </div>
             </div>
           ) : (
@@ -556,7 +713,7 @@ Skills: mount, submissions, pressure`;
                   Select File
                 </button>
                 <p className="mt-4 text-xs text-gray-400">
-                  Accepts JSON arrays or objects with games
+                  Accepts any JSON structure with game objects
                 </p>
               </div>
             </div>
@@ -632,12 +789,9 @@ Skills: mount, submissions, pressure`;
                         <strong>Bottom:</strong> {game.bottomPlayer.substring(0, 80)}{game.bottomPlayer.length > 80 ? '...' : ''}
                       </p>
                     )}
-                    {(game.skills || game.techniques?.length > 0) && (
+                    {(game.skills?.length > 0 || game.techniques?.length > 0) && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {(Array.isArray(game.skills)
-                          ? game.skills
-                          : (game.skills || '').split(/[#,\s]+/).filter(s => s.trim())
-                        ).slice(0, 3).map((skill, i) => (
+                        {(Array.isArray(game.skills) ? game.skills : []).slice(0, 3).map((skill, i) => (
                           <span key={i} className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">
                             #{skill.replace(/^#/, '')}
                           </span>

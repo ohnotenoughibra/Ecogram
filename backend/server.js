@@ -15,6 +15,9 @@ const topicsRoutes = require('./routes/topics');
 const competitionsRoutes = require('./routes/competitions');
 const goalsRoutes = require('./routes/goals');
 
+// Import seed function for default games
+const { initializeDefaultGames } = require('./seeds/seedGames');
+
 // Initialize express app
 const app = express();
 const server = http.createServer(app);
@@ -27,8 +30,15 @@ const io = new Server(server, {
   }
 });
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB and initialize default games
+connectDB().then(async () => {
+  try {
+    const result = await initializeDefaultGames();
+    console.log(`Default games initialized: ${result.added} added, ${result.total} total`);
+  } catch (err) {
+    console.error('Failed to initialize default games:', err.message);
+  }
+});
 
 // Middleware
 app.use(cors({

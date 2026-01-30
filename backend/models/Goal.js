@@ -26,7 +26,7 @@ const goalSchema = new mongoose.Schema({
   target: {
     value: { type: Number, required: true }, // e.g., 3 sessions per week
     period: { type: String, enum: ['day', 'week', 'month', 'total'], default: 'week' },
-    topic: { type: String, enum: ['offensive', 'defensive', 'control', 'transition', 'any'], default: 'any' }
+    topic: { type: String, enum: ['offensive', 'defensive', 'control', 'transition', 'competition', 'any'], default: 'any' }
   },
   // Progress tracking
   progress: {
