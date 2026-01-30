@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { resetOnboarding } from '../components/Onboarding';
 import { resetFeatureTour } from '../components/FeatureTour';
-import ConfirmDialog from '../components/ConfirmDialog';
 
 // Toggle switch component for cleaner code
 function Toggle({ enabled, onChange, label, description }) {
@@ -36,31 +35,20 @@ function Toggle({ enabled, onChange, label, description }) {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, updatePassword, updatePreferences, logout } = useAuth();
+  const { user, updatePreferences } = useAuth();
   const { darkMode, setDarkMode, showToast } = useApp();
 
-  // Password change state
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-
-  // App preferences (synced to backend)
+  // App preferences
   const [timerSound, setTimerSound] = useState(user?.preferences?.timerSound ?? true);
   const [defaultTimer, setDefaultTimer] = useState(user?.preferences?.defaultTimerDuration ?? 300);
 
-  // Display preferences (synced to backend)
+  // Display preferences
   const [showQuickAccess, setShowQuickAccess] = useState(user?.preferences?.showQuickAccess ?? true);
   const [showRecommendations, setShowRecommendations] = useState(user?.preferences?.showRecommendations ?? true);
   const [showGameOfDay, setShowGameOfDay] = useState(user?.preferences?.showGameOfDay ?? true);
   const [showSkillBalance, setShowSkillBalance] = useState(user?.preferences?.showSkillBalance ?? true);
   const [showPositionChips, setShowPositionChips] = useState(user?.preferences?.showPositionChips ?? true);
   const [compactMode, setCompactMode] = useState(user?.preferences?.compactMode ?? false);
-
-  // Dialog states
-  const [showConfirmLogout, setShowConfirmLogout] = useState(false);
 
   // Update local state when user data loads
   useEffect(() => {
@@ -76,49 +64,12 @@ export default function Profile() {
     }
   }, [user]);
 
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
-    setPasswordError('');
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
-      return;
-    }
-
-    setPasswordLoading(true);
-    const result = await updatePassword(currentPassword, newPassword);
-    setPasswordLoading(false);
-
-    if (result.success) {
-      showToast('Password updated successfully', 'success');
-      setShowPasswordForm(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } else {
-      setPasswordError(result.error);
-    }
-  };
-
   const handlePreferenceSave = async (key, value) => {
     const prefs = { [key]: value };
     const result = await updatePreferences(prefs);
     if (result.success) {
       showToast('Settings saved', 'success');
     }
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
   };
 
   const formatDuration = (seconds) => {
@@ -133,7 +84,7 @@ export default function Profile() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your account and preferences</p>
+          <p className="text-gray-600 dark:text-gray-400">Manage your preferences</p>
         </div>
 
         {/* User Info Card */}
@@ -141,17 +92,14 @@ export default function Profile() {
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
               <span className="text-primary-600 dark:text-primary-400 font-bold text-2xl">
-                {user?.username?.[0]?.toUpperCase() || 'U'}
+                {user?.username?.[0]?.toUpperCase() || 'C'}
               </span>
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {user?.username}
+                {user?.username || 'Coach'}
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Member since {user?.createdAt ? formatDate(user.createdAt) : 'N/A'}
-              </p>
+              <p className="text-gray-600 dark:text-gray-400">BJJ Training Game Library</p>
             </div>
             <button
               onClick={() => navigate('/stats')}
@@ -295,91 +243,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Security Card */}
-        <div className="card p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Security
-          </h3>
-
-          {!showPasswordForm ? (
-            <button
-              onClick={() => setShowPasswordForm(true)}
-              className="btn-secondary"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
-                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
-              </svg>
-              Change Password
-            </button>
-          ) : (
-            <form onSubmit={handlePasswordChange} className="space-y-4">
-              {passwordError && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>
-                </div>
-              )}
-
-              <div>
-                <label className="label">Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="label">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="input"
-                  required
-                  minLength={6}
-                />
-              </div>
-
-              <div>
-                <label className="label">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input"
-                  required
-                  minLength={6}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={passwordLoading}
-                  className="btn-primary"
-                >
-                  {passwordLoading ? <span className="spinner" /> : 'Update Password'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordForm(false);
-                    setPasswordError('');
-                    setCurrentPassword('');
-                    setNewPassword('');
-                    setConfirmPassword('');
-                  }}
-                  className="btn-secondary"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-
         {/* Help & Tips Card */}
         <div className="card p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -426,7 +289,7 @@ export default function Profile() {
         </div>
 
         {/* About Card */}
-        <div className="card p-6 mb-6">
+        <div className="card p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             About Ecogram
           </h3>
@@ -443,38 +306,6 @@ export default function Profile() {
             </p>
           </div>
         </div>
-
-        {/* Account Actions */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Account
-          </h3>
-
-          <button
-            onClick={() => setShowConfirmLogout(true)}
-            className="w-full btn-secondary text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
-              <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clipRule="evenodd" />
-              <path fillRule="evenodd" d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-.943a.75.75 0 10-1.004-1.114l-2.5 2.25a.75.75 0 000 1.114l2.5 2.25a.75.75 0 101.004-1.114l-1.048-.943h9.546A.75.75 0 0019 10z" clipRule="evenodd" />
-            </svg>
-            Sign Out
-          </button>
-        </div>
-
-        {/* Confirm Logout Dialog */}
-        <ConfirmDialog
-          isOpen={showConfirmLogout}
-          onClose={() => setShowConfirmLogout(false)}
-          onConfirm={() => {
-            logout();
-            setShowConfirmLogout(false);
-          }}
-          title="Sign Out"
-          message="Are you sure you want to sign out?"
-          confirmText="Sign Out"
-          type="warning"
-        />
       </div>
     </div>
   );

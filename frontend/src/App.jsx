@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useApp } from './context/AppContext';
 
 // Layout components
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import ToastContainer from './components/Toast';
-import Loading from './components/Loading';
 import Timer from './components/Timer';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
 import OfflineIndicator from './components/OfflineIndicator';
@@ -16,10 +14,6 @@ import FeatureTour from './components/FeatureTour';
 import QuickActions from './components/QuickActions';
 
 // Pages
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import Games from './pages/Games';
 import Favorites from './pages/Favorites';
@@ -34,45 +28,6 @@ import CompetitionPrep from './pages/CompetitionPrep';
 import Goals from './pages/Goals';
 import ProblemSolver from './pages/ProblemSolver';
 import Learn from './pages/Learn';
-
-// Protected route wrapper
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
-        <Loading text="Loading..." />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  return children;
-}
-
-// Public route wrapper (redirect to home if authenticated)
-function PublicRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
-        <Loading text="Loading..." />
-      </div>
-    );
-  }
-
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
-  return children;
-}
 
 // Main layout with navbar
 function MainLayout({ children }) {
@@ -204,181 +159,27 @@ function MainLayout({ children }) {
 export default function App() {
   return (
     <Routes>
-      {/* Public routes */}
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <Register />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/forgot-password"
-        element={
-          <PublicRoute>
-            <ForgotPassword />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/reset-password/:token"
-        element={
-          <PublicRoute>
-            <ResetPassword />
-          </PublicRoute>
-        }
-      />
+      {/* All routes are now accessible without authentication */}
+      <Route path="/" element={<MainLayout><Games /></MainLayout>} />
+      <Route path="/favorites" element={<MainLayout><Favorites /></MainLayout>} />
+      <Route path="/recent" element={<MainLayout><Recent /></MainLayout>} />
+      <Route path="/sessions" element={<MainLayout><Sessions /></MainLayout>} />
+      <Route path="/session/:id" element={<MainLayout><SessionView /></MainLayout>} />
+      <Route path="/stats" element={<MainLayout><Stats /></MainLayout>} />
+      <Route path="/ai" element={<MainLayout><AIDesigner /></MainLayout>} />
+      <Route path="/import" element={<MainLayout><Import /></MainLayout>} />
+      <Route path="/practice" element={<MainLayout><Practice /></MainLayout>} />
+      <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
+      <Route path="/competition" element={<MainLayout><CompetitionPrep /></MainLayout>} />
+      <Route path="/goals" element={<MainLayout><Goals /></MainLayout>} />
+      <Route path="/problems" element={<MainLayout><ProblemSolver /></MainLayout>} />
+      <Route path="/learn" element={<MainLayout><Learn /></MainLayout>} />
 
-      {/* Protected routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Games />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/favorites"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Favorites />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/recent"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Recent />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/sessions"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Sessions />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/session/:id"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <SessionView />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/stats"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Stats />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ai"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <AIDesigner />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/import"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Import />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/practice"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Practice />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Profile />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/competition"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <CompetitionPrep />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/goals"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Goals />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/problems"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <ProblemSolver />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/learn"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Learn />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
+      {/* Redirect old auth routes to home */}
+      <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/register" element={<Navigate to="/" replace />} />
+      <Route path="/forgot-password" element={<Navigate to="/" replace />} />
+      <Route path="/reset-password/:token" element={<Navigate to="/" replace />} />
 
       {/* Catch all - redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />

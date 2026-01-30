@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 
 const navItems = [
@@ -48,7 +47,6 @@ const icons = {
 
 export default function Navbar() {
   const location = useLocation();
-  const { user, logout } = useAuth();
   const { darkMode, setDarkMode, exportGames } = useApp();
   const [showMenu, setShowMenu] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
@@ -101,7 +99,7 @@ export default function Navbar() {
                 )}
               </button>
 
-              {/* User menu */}
+              {/* Menu */}
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
@@ -109,11 +107,11 @@ export default function Navbar() {
                 >
                   <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
                     <span className="text-primary-600 dark:text-primary-400 font-medium">
-                      {user?.username?.[0]?.toUpperCase() || 'U'}
+                      C
                     </span>
                   </div>
                   <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {user?.username}
+                    Coach
                   </span>
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-gray-400">
                     <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
@@ -134,9 +132,9 @@ export default function Navbar() {
                           className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                            <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
+                            <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
                           </svg>
-                          Profile
+                          Settings
                         </Link>
                         <div className="divider my-2" />
                         <button
@@ -155,16 +153,6 @@ export default function Navbar() {
                         >
                           Import Games
                         </Link>
-                        <div className="divider my-2" />
-                        <button
-                          onClick={() => {
-                            logout();
-                            setShowMenu(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                        >
-                          Logout
-                        </button>
                       </div>
                     </div>
                   </>
