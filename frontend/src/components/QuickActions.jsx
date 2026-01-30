@@ -5,6 +5,7 @@ const actions = [
   {
     id: 'new-game',
     label: 'New Game',
+    shortcut: 'N',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
         <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -16,6 +17,7 @@ const actions = [
   {
     id: 'ai-designer',
     label: 'AI Designer',
+    shortcut: 'A',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
         <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.683a1 1 0 01-.633-.633L6.95 5.684z" />
@@ -27,6 +29,7 @@ const actions = [
   {
     id: 'new-session',
     label: 'New Session',
+    shortcut: 'S',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
         <path d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h12.5c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0016.25 5h-4.836a.25.25 0 01-.177-.073L9.823 3.513A1.75 1.75 0 008.586 3H3.75z" />
@@ -39,6 +42,7 @@ const actions = [
   {
     id: 'practice',
     label: 'Quick Practice',
+    shortcut: 'T',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
         <path fillRule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z" clipRule="evenodd" />
@@ -133,8 +137,14 @@ export default function QuickActions({ onNewGame, onNewSession }) {
               transitionDelay: isOpen ? `${index * 50}ms` : '0ms',
               animation: isOpen ? `slideIn 0.2s ease-out ${index * 50}ms both` : 'none'
             }}
+            title={action.shortcut ? `Press ${action.shortcut}` : undefined}
           >
             <span className="text-sm font-medium whitespace-nowrap">{action.label}</span>
+            {action.shortcut && (
+              <span className="text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded ml-1">
+                {action.shortcut}
+              </span>
+            )}
             {action.icon}
           </button>
         ))}

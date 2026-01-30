@@ -28,16 +28,31 @@ export function AppProvider({ children }) {
   const [selectedGames, setSelectedGames] = useState(new Set());
   const [toasts, setToasts] = useState([]);
 
-  // Filter state
-  const [filters, setFilters] = useState({
-    topic: '',
-    search: '',
-    favorite: false,
-    position: '',
-    technique: '',
-    sortBy: 'createdAt',
-    sortOrder: 'desc'
+  // Filter state - restore from sessionStorage
+  const [filters, setFilters] = useState(() => {
+    const saved = sessionStorage.getItem('ecogram_filters');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    return {
+      topic: '',
+      search: '',
+      favorite: false,
+      position: '',
+      technique: '',
+      sortBy: 'createdAt',
+      sortOrder: 'desc'
+    };
   });
+
+  // Persist filters to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('ecogram_filters', JSON.stringify(filters));
+  }, [filters]);
 
   // Apply dark mode
   useEffect(() => {
