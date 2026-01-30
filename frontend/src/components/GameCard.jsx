@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import api from '../utils/api';
+import SimilarGames from './SimilarGames';
 
 const topicLabels = {
   offensive: 'Offensive / Submissions',
@@ -677,6 +678,12 @@ ${game.personalNotes ? `\nPersonal Notes:\n${game.personalNotes}` : ''}`;
                   )}
                 </div>
               )}
+
+              {/* Similar Games & Progressions */}
+              <SimilarGames
+                game={game}
+                onSelectGame={(selectedGame) => onEdit(selectedGame)}
+              />
 
               {/* Meta info */}
               <div className="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-800">

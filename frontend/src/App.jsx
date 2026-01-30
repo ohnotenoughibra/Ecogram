@@ -12,6 +12,7 @@ import OfflineIndicator from './components/OfflineIndicator';
 import Onboarding from './components/Onboarding';
 import FeatureTour from './components/FeatureTour';
 import QuickActions from './components/QuickActions';
+import GlobalSearch from './components/GlobalSearch';
 
 // Pages
 import Profile from './pages/Profile';
@@ -36,16 +37,24 @@ function MainLayout({ children }) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [showFeatureTour, setShowFeatureTour] = useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
 
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ignore if typing in input
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      const isMod = e.ctrlKey || e.metaKey;
+
+      // Cmd/Ctrl+K - Global search (works even in inputs)
+      if (isMod && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowGlobalSearch(prev => !prev);
         return;
       }
 
-      const isMod = e.ctrlKey || e.metaKey;
+      // Ignore other shortcuts if typing in input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
 
       // Navigation shortcuts with Ctrl/Cmd
       if (isMod) {
@@ -152,6 +161,12 @@ function MainLayout({ children }) {
 
       {/* Quick actions FAB */}
       <QuickActions />
+
+      {/* Global search modal (Cmd/Ctrl+K) */}
+      <GlobalSearch
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
+      />
     </div>
   );
 }
