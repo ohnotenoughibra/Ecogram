@@ -1,51 +1,121 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import api from '../utils/api';
 
 const topics = [
-  { value: '', label: 'Mixed (All Topics)', icon: '🎯', color: 'bg-gray-500' },
-  { value: 'offensive', label: 'Offensive', icon: '⚔️', color: 'bg-red-500' },
-  { value: 'defensive', label: 'Defensive', icon: '🛡️', color: 'bg-blue-500' },
-  { value: 'control', label: 'Control', icon: '🔒', color: 'bg-purple-500' },
-  { value: 'transition', label: 'Transition', icon: '🔄', color: 'bg-green-500' }
+  { value: '', label: 'Any Topic', color: 'bg-gray-500' },
+  { value: 'offensive', label: 'Offensive', color: 'bg-red-500' },
+  { value: 'defensive', label: 'Defensive', color: 'bg-blue-500' },
+  { value: 'control', label: 'Control', color: 'bg-purple-500' },
+  { value: 'transition', label: 'Transition', color: 'bg-green-500' },
+  { value: 'competition', label: 'Competition', color: 'bg-orange-500' }
 ];
 
-const durations = [
-  { value: 'short', label: 'Quick', description: '~30 min (3 games)', icon: '⚡' },
-  { value: 'medium', label: 'Standard', description: '~45-60 min (5 games)', icon: '⏱️' },
-  { value: 'long', label: 'Extended', description: '~90 min (7 games)', icon: '🏋️' }
+const positions = [
+  { value: '', label: 'Any Position' },
+  { value: 'guard', label: 'Guard' },
+  { value: 'half-guard', label: 'Half Guard' },
+  { value: 'mount', label: 'Mount' },
+  { value: 'side-control', label: 'Side Control' },
+  { value: 'back', label: 'Back' },
+  { value: 'turtle', label: 'Turtle' },
+  { value: 'standing', label: 'Standing' }
+];
+
+const difficulties = [
+  { value: '', label: 'Any Level' },
+  { value: 'beginner', label: 'Beginner', desc: 'Fundamental concepts' },
+  { value: 'intermediate', label: 'Intermediate', desc: 'Building complexity' },
+  { value: 'advanced', label: 'Advanced', desc: 'High-level details' }
 ];
 
 export default function SmartSessionBuilder({ isOpen, onClose, onSessionCreated }) {
   const navigate = useNavigate();
-  const { showToast, fetchSessions } = useApp();
-  const [selectedTopic, setSelectedTopic] = useState('');
-  const [selectedDuration, setSelectedDuration] = useState('medium');
+  const { showToast, fetchSessions, games } = useApp();
+
+  // Constraints
   const [sessionName, setSessionName] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState('');
+  const [selectedPosition, setSelectedPosition] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState(45);
+  const [gameCount, setGameCount] = useState(0); // 0 = auto from duration
+  const [useExactGameCount, setUseExactGameCount] = useState(false);
+
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Calculate preview based on constraints
+  const preview = useMemo(() => {
+    let count;
+    if (useExactGameCount && gameCount > 0) {
+      count = gameCount;
+    } else {
+      count = Math.round(durationMinutes / 8);
+    }
+    count = Math.min(Math.max(1, count), 15);
+
+    let warmup = 0, cooldown = 0, main = count;
+    if (count > 3) {
+      warmup = 1;
+      main = count - 1;
+    }
+    if (count > 5) {
+      cooldown = 1;
+      main = count - 2;
+    }
+
+    // Count matching games in library
+    let matchingGames = games || [];
+    if (selectedTopic) {
+      matchingGames = matchingGames.filter(g => g.topic === selectedTopic);
+    }
+    if (selectedPosition) {
+      matchingGames = matchingGames.filter(g => g.position === selectedPosition);
+    }
+    if (selectedDifficulty) {
+      matchingGames = matchingGames.filter(g => g.difficulty === selectedDifficulty);
+    }
+
+    return {
+      total: count,
+      warmup,
+      main,
+      cooldown,
+      estimatedMinutes: count * 8,
+      matchingGames: matchingGames.length,
+      hasEnoughGames: matchingGames.length >= count
+    };
+  }, [durationMinutes, gameCount, useExactGameCount, selectedTopic, selectedPosition, selectedDifficulty, games]);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      const response = await api.post('/sessions/smart-build', {
+      const payload = {
+        name: sessionName.trim() || undefined,
         topic: selectedTopic || undefined,
-        duration: selectedDuration,
-        name: sessionName.trim() || undefined
-      });
+        position: selectedPosition || undefined,
+        difficulty: selectedDifficulty || undefined
+      };
+
+      if (useExactGameCount && gameCount > 0) {
+        payload.gameCount = gameCount;
+      } else {
+        payload.durationMinutes = durationMinutes;
+      }
+
+      const response = await api.post('/sessions/smart-build', payload);
 
       const { session, summary } = response.data;
 
       await fetchSessions();
-      showToast(`Session created with ${summary.total} games!`, 'success');
+      showToast(`Session created: ${summary.total} games (~${summary.estimatedMinutes} min)`, 'success');
 
       if (onSessionCreated) {
         onSessionCreated(session);
       }
 
       onClose();
-
-      // Navigate to the session
       navigate(`/session/${session._id}`);
     } catch (error) {
       showToast(
@@ -73,7 +143,7 @@ export default function SmartSessionBuilder({ isOpen, onClose, onSessionCreated 
                 Smart Session Builder
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Auto-generate a balanced training session
+                Set your constraints, we'll pick the games
               </p>
             </div>
             <button onClick={onClose} className="btn-icon" title="Close">
@@ -83,8 +153,8 @@ export default function SmartSessionBuilder({ isOpen, onClose, onSessionCreated 
             </button>
           </div>
 
-          {/* Session Name (optional) */}
-          <div className="mb-6">
+          {/* Session Name */}
+          <div className="mb-4">
             <label className="label">Session Name (optional)</label>
             <input
               type="text"
@@ -95,80 +165,169 @@ export default function SmartSessionBuilder({ isOpen, onClose, onSessionCreated 
             />
           </div>
 
-          {/* Topic Selection */}
-          <div className="mb-6">
-            <label className="label mb-2">Training Focus</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {topics.map((topic) => (
-                <button
-                  key={topic.value}
-                  onClick={() => setSelectedTopic(topic.value)}
-                  className={`p-3 rounded-lg border-2 transition-all text-left ${
-                    selectedTopic === topic.value
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${topic.color}`} />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {topic.label}
-                    </span>
-                  </div>
-                </button>
-              ))}
+          {/* Duration / Game Count Toggle */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="label mb-0">Session Size</label>
+              <button
+                onClick={() => setUseExactGameCount(!useExactGameCount)}
+                className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+              >
+                {useExactGameCount ? 'Use duration instead' : 'Set exact game count'}
+              </button>
+            </div>
+
+            {useExactGameCount ? (
+              <div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={gameCount || 5}
+                    onChange={(e) => setGameCount(parseInt(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-lg font-bold text-primary-600 dark:text-primary-400 w-16 text-center">
+                    {gameCount || 5} games
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  ~{(gameCount || 5) * 8} minutes estimated
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="15"
+                    max="120"
+                    step="5"
+                    value={durationMinutes}
+                    onChange={(e) => setDurationMinutes(parseInt(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-lg font-bold text-primary-600 dark:text-primary-400 w-20 text-center">
+                    {durationMinutes} min
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  ~{preview.total} games at ~8 min each
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Filters Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            {/* Topic */}
+            <div>
+              <label className="label text-xs">Focus</label>
+              <select
+                value={selectedTopic}
+                onChange={(e) => setSelectedTopic(e.target.value)}
+                className="input py-2 text-sm"
+              >
+                {topics.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Position */}
+            <div>
+              <label className="label text-xs">Position</label>
+              <select
+                value={selectedPosition}
+                onChange={(e) => setSelectedPosition(e.target.value)}
+                className="input py-2 text-sm"
+              >
+                {positions.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Difficulty */}
+            <div>
+              <label className="label text-xs">Skill Level</label>
+              <select
+                value={selectedDifficulty}
+                onChange={(e) => setSelectedDifficulty(e.target.value)}
+                className="input py-2 text-sm"
+              >
+                {difficulties.map(d => (
+                  <option key={d.value} value={d.value}>{d.label}</option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* Duration Selection */}
-          <div className="mb-6">
-            <label className="label mb-2">Session Length</label>
-            <div className="grid grid-cols-3 gap-2">
-              {durations.map((dur) => (
-                <button
-                  key={dur.value}
-                  onClick={() => setSelectedDuration(dur.value)}
-                  className={`p-3 rounded-lg border-2 transition-all text-center ${
-                    selectedDuration === dur.value
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <div className="text-xl mb-1">{dur.icon}</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {dur.label}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {dur.description}
-                  </div>
-                </button>
-              ))}
+          {/* Preview Card */}
+          <div className={`mb-6 p-4 rounded-lg border-2 ${
+            preview.hasEnoughGames
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+              : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+          }`}>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                Session Preview
+              </h4>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                preview.hasEnoughGames
+                  ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-300'
+              }`}>
+                {preview.matchingGames} matching games
+              </span>
             </div>
-          </div>
 
-          {/* Preview */}
-          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Session Preview
-            </h4>
-            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                Warmup
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="p-2 bg-white dark:bg-gray-800 rounded">
+                <p className="text-xl font-bold text-primary-600 dark:text-primary-400">{preview.total}</p>
+                <p className="text-[10px] text-gray-500 uppercase">Total</p>
               </div>
-              <span>→</span>
-              <div className="flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${
-                  topics.find(t => t.value === selectedTopic)?.color || 'bg-gray-500'
-                }`} />
-                Main Drills
+              <div className="p-2 bg-white dark:bg-gray-800 rounded">
+                <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{preview.warmup}</p>
+                <p className="text-[10px] text-gray-500 uppercase">Warmup</p>
               </div>
-              <span>→</span>
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-cyan-500" />
-                Cooldown
+              <div className="p-2 bg-white dark:bg-gray-800 rounded">
+                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{preview.main}</p>
+                <p className="text-[10px] text-gray-500 uppercase">Main</p>
+              </div>
+              <div className="p-2 bg-white dark:bg-gray-800 rounded">
+                <p className="text-xl font-bold text-cyan-600 dark:text-cyan-400">{preview.cooldown}</p>
+                <p className="text-[10px] text-gray-500 uppercase">Cooldown</p>
               </div>
             </div>
+
+            <div className="mt-3 flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+              <span className="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                  <path fillRule="evenodd" d="M1 8a7 7 0 1114 0A7 7 0 011 8zm7.75-4.25a.75.75 0 00-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5h-2.5v-3.5z" clipRule="evenodd" />
+                </svg>
+                ~{preview.estimatedMinutes} min
+              </span>
+              {selectedTopic && (
+                <span className="flex items-center gap-1">
+                  <span className={`w-2 h-2 rounded-full ${topics.find(t => t.value === selectedTopic)?.color}`} />
+                  {topics.find(t => t.value === selectedTopic)?.label}
+                </span>
+              )}
+              {selectedPosition && (
+                <span>{positions.find(p => p.value === selectedPosition)?.label}</span>
+              )}
+              {selectedDifficulty && (
+                <span>{difficulties.find(d => d.value === selectedDifficulty)?.label}</span>
+              )}
+            </div>
+
+            {!preview.hasEnoughGames && (
+              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                Only {preview.matchingGames} games match your filters. Some filters may be relaxed.
+              </p>
+            )}
           </div>
 
           {/* Actions */}
@@ -182,8 +341,8 @@ export default function SmartSessionBuilder({ isOpen, onClose, onSessionCreated 
             </button>
             <button
               onClick={handleGenerate}
-              disabled={isGenerating}
-              className="btn-primary flex-1"
+              disabled={isGenerating || (games?.length || 0) === 0}
+              className="btn-primary flex-1 flex items-center justify-center"
             >
               {isGenerating ? (
                 <>
@@ -195,7 +354,7 @@ export default function SmartSessionBuilder({ isOpen, onClose, onSessionCreated 
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
                     <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.683a1 1 0 01-.633-.633L6.95 5.684z" />
                   </svg>
-                  Generate Session
+                  Build Session
                 </>
               )}
             </button>
