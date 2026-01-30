@@ -82,21 +82,32 @@ router.post('/', protect, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, gameIds, scheduledDate, duration, focusPosition } = req.body;
+    const { name, gameIds, scheduledDate, duration, focusPosition, description } = req.body;
 
-    // Verify all games belong to user
+    // Verify games and filter to only valid ones owned by user
+    let validGameIds = [];
+    let invalidCount = 0;
+
     if (gameIds && gameIds.length > 0) {
-      const gamesCount = await Game.countDocuments({
+      // Find all valid games that belong to this user
+      const validGames = await Game.find({
         _id: { $in: gameIds },
         user: req.user._id
-      });
+      }).select('_id');
 
-      if (gamesCount !== gameIds.length) {
-        return res.status(400).json({ message: 'Some games not found or not owned by user' });
-      }
+      const validIdSet = new Set(validGames.map(g => g._id.toString()));
+
+      // Filter to only valid IDs, preserving order
+      validGameIds = gameIds.filter(id => validIdSet.has(id.toString()));
+      invalidCount = gameIds.length - validGameIds.length;
     }
 
-    const games = (gameIds || []).map((gameId, index) => ({
+    // If no valid games, return error
+    if (gameIds && gameIds.length > 0 && validGameIds.length === 0) {
+      return res.status(400).json({ message: 'No valid games found. All specified games may have been deleted.' });
+    }
+
+    const games = validGameIds.map((gameId, index) => ({
       game: gameId,
       order: index,
       completed: false
@@ -106,6 +117,7 @@ router.post('/', protect, [
       user: req.user._id,
       name,
       games,
+      description: description || '',
       scheduledDate: scheduledDate || null,
       duration: duration || 0,
       focusPosition: focusPosition || ''
@@ -114,7 +126,13 @@ router.post('/', protect, [
     const populatedSession = await Session.findById(session._id)
       .populate('games.game', 'name topic skills');
 
-    res.status(201).json(populatedSession);
+    // Include warning if some games were skipped
+    const response = { ...populatedSession.toObject() };
+    if (invalidCount > 0) {
+      response._warning = `${invalidCount} game(s) were skipped (not found or deleted)`;
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     console.error('Create session error:', error);
     res.status(500).json({ message: 'Server error creating session' });
