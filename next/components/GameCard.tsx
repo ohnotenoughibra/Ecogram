@@ -2,6 +2,7 @@
 
 import { useGameStore } from '@/store'
 import { Card, Badge, Button } from '@/components/ui'
+import { StarRating } from '@/components/StarRating'
 import { formatDuration, capitalizeFirst } from '@/lib/utils'
 import type { Game } from '@/types/database'
 
@@ -34,7 +35,7 @@ export function GameCard({
   selected,
   onSelect,
 }: GameCardProps) {
-  const { toggleFavorite, deleteGame } = useGameStore()
+  const { toggleFavorite, deleteGame, rateGame } = useGameStore()
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this game?')) {
@@ -124,6 +125,18 @@ export function GameCard({
           </span>
         )}
       </div>
+
+      {/* Rating */}
+      {!selectable && (
+        <div className="flex items-center gap-2 mb-3" onClick={(e) => e.stopPropagation()}>
+          <StarRating
+            rating={game.rating}
+            onRate={(rating) => rateGame(game.id, rating)}
+            size="sm"
+          />
+          {game.rating && <span className="text-xs text-muted-foreground">({game.rating}/5)</span>}
+        </div>
+      )}
 
       {/* Techniques */}
       {game.techniques.length > 0 && (

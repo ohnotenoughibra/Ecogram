@@ -18,6 +18,7 @@ interface GameState {
   deleteGame: (id: string) => Promise<void>
   toggleFavorite: (id: string) => Promise<void>
   incrementPlayCount: (id: string) => Promise<void>
+  rateGame: (id: string, rating: number) => Promise<void>
   setFilters: (filters: Partial<GameFilters>) => void
   resetFilters: () => void
 
@@ -154,6 +155,25 @@ export const useGameStore = create<GameState>()(
           set((state) => ({
             games: state.games.map((g) =>
               g.id === id ? { ...g, play_count: g.play_count + 1 } : g
+            ),
+          }))
+        } catch (error) {
+          set({ error: (error as Error).message })
+        }
+      },
+
+      rateGame: async (id, rating) => {
+        try {
+          const supabase = getSupabase()
+          const { error } = await supabase
+            .from('games')
+            .update({ rating })
+            .eq('id', id)
+
+          if (error) throw error
+          set((state) => ({
+            games: state.games.map((g) =>
+              g.id === id ? { ...g, rating } : g
             ),
           }))
         } catch (error) {

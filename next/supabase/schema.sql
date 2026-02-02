@@ -17,9 +17,12 @@ CREATE TABLE IF NOT EXISTS games (
   variations TEXT[] DEFAULT '{}',
   is_favorite BOOLEAN DEFAULT FALSE,
   play_count INTEGER DEFAULT 0,
+  rating INTEGER DEFAULT NULL,
+  video_url TEXT DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
+  CONSTRAINT valid_rating CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
   CONSTRAINT valid_position CHECK (position IN ('guard', 'half-guard', 'mount', 'side-control', 'back', 'turtle', 'standing', 'other')),
   CONSTRAINT valid_difficulty CHECK (difficulty IN ('beginner', 'intermediate', 'advanced')),
   CONSTRAINT valid_category CHECK (category IN ('warmup', 'main', 'cooldown', 'drill', 'positional'))
@@ -97,3 +100,15 @@ CREATE TRIGGER update_user_preferences_updated_at
 INSERT INTO user_preferences (id)
 SELECT uuid_generate_v4()
 WHERE NOT EXISTS (SELECT 1 FROM user_preferences LIMIT 1);
+
+-- Migration: Add new columns to existing games table
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'rating') THEN
+    ALTER TABLE games ADD COLUMN rating INTEGER DEFAULT NULL;
+    ALTER TABLE games ADD CONSTRAINT valid_rating CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'video_url') THEN
+    ALTER TABLE games ADD COLUMN video_url TEXT DEFAULT NULL;
+  END IF;
+END $$;

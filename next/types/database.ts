@@ -27,6 +27,8 @@ export interface Game {
   variations: string[];
   is_favorite: boolean;
   play_count: number;
+  rating: number | null;
+  video_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -67,6 +69,7 @@ export interface GameFormData {
   duration_minutes: number;
   techniques: string[];
   variations: string[];
+  video_url?: string;
 }
 
 export interface ClassPrepFormData {
