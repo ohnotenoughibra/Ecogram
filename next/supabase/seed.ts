@@ -1,7 +1,18 @@
+import { config } from 'dotenv'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+// Load environment variables from .env.local
+config({ path: '.env.local' })
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing environment variables. Make sure .env.local exists with:')
+  console.error('  NEXT_PUBLIC_SUPABASE_URL=your_url')
+  console.error('  NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key')
+  process.exit(1)
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
