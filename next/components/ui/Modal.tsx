@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
 interface ModalProps {
@@ -8,10 +8,22 @@ interface ModalProps {
   onClose: () => void
   title?: string
   children: ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
 }
 
 export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const sizes = {
@@ -19,33 +31,34 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    full: 'max-w-full mx-4 sm:max-w-2xl',
   }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
-      {/* Modal container */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      {/* Modal container - centered on desktop, bottom sheet on mobile */}
+      <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
         <div
           className={cn(
-            'relative w-full bg-[#0F0F0F] rounded-xl shadow-2xl',
-            'border border-[#262626]',
-            'animate-slide-up',
+            'relative w-full bg-card rounded-t-xl sm:rounded-xl shadow-2xl',
+            'border-t sm:border border-border',
+            'animate-slide-up max-h-[90vh] overflow-y-auto',
             sizes[size]
           )}
         >
           {/* Header */}
           {title && (
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#262626]">
-              <h2 className="text-lg font-semibold text-white">{title}</h2>
+            <div className="sticky top-0 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border bg-card z-10">
+              <h2 className="text-lg font-semibold text-card-foreground">{title}</h2>
               <button
                 onClick={onClose}
-                className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+                className="touch-target p-2 -mr-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent transition-colors"
               >
                 <svg
                   className="w-5 h-5"
@@ -65,7 +78,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           )}
 
           {/* Content */}
-          <div className="px-6 py-4">{children}</div>
+          <div className="px-4 sm:px-6 py-4">{children}</div>
         </div>
       </div>
     </div>
@@ -81,7 +94,9 @@ export function ModalFooter({ children, className }: ModalFooterProps) {
   return (
     <div
       className={cn(
-        'flex items-center justify-end gap-3 px-6 py-4 border-t border-[#262626] -mx-6 -mb-4 mt-4',
+        'flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3',
+        'px-4 sm:px-6 py-4 border-t border-border -mx-4 sm:-mx-6 -mb-4 mt-4',
+        'sticky bottom-0 bg-card',
         className
       )}
     >

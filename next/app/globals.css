@@ -4,22 +4,60 @@
 
 @layer base {
   :root {
-    --background: #000000;
-    --foreground: #ffffff;
+    /* Light mode (default) */
+    --background: 250 250 250;
+    --foreground: 10 10 10;
+    --card: 255 255 255;
+    --card-foreground: 10 10 10;
+    --primary: 10 10 10;
+    --primary-foreground: 255 255 255;
+    --secondary: 245 245 245;
+    --secondary-foreground: 10 10 10;
+    --muted: 229 229 229;
+    --muted-foreground: 115 115 115;
+    --accent: 245 245 245;
+    --accent-foreground: 10 10 10;
+    --border: 229 229 229;
+    --input: 255 255 255;
+    --ring: 10 10 10;
+  }
+
+  .dark {
+    /* Dark mode */
+    --background: 10 10 10;
+    --foreground: 250 250 250;
+    --card: 23 23 23;
+    --card-foreground: 250 250 250;
+    --primary: 250 250 250;
+    --primary-foreground: 10 10 10;
+    --secondary: 38 38 38;
+    --secondary-foreground: 250 250 250;
+    --muted: 38 38 38;
+    --muted-foreground: 163 163 163;
+    --accent: 38 38 38;
+    --accent-foreground: 250 250 250;
+    --border: 38 38 38;
+    --input: 23 23 23;
+    --ring: 250 250 250;
+  }
+
+  * {
+    @apply border-border;
   }
 
   html {
     scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
-    @apply bg-black text-white antialiased;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    @apply w-2;
+    @apply w-2 h-2;
   }
 
   ::-webkit-scrollbar-track {
@@ -27,38 +65,39 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-[#262626] rounded-full;
+    @apply bg-muted rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-[#404040];
+    @apply bg-muted-foreground/50;
   }
 
   /* Focus visible styles */
   *:focus-visible {
-    @apply outline-none ring-2 ring-white ring-offset-2 ring-offset-black;
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 
 @layer components {
   .page-container {
-    @apply min-h-screen bg-black;
+    @apply min-h-screen bg-background safe-bottom;
   }
 
   .content-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
+    @apply max-w-7xl mx-auto px-4 py-4 pb-20 sm:px-6 sm:py-6 lg:px-8 lg:py-8;
   }
 
   .section-title {
-    @apply text-2xl font-bold text-white mb-6;
+    @apply text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6;
   }
 
+  /* Mobile-first card grid */
   .card-grid {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3;
   }
 
   .glass-effect {
-    @apply bg-white/5 backdrop-blur-md border border-white/10;
+    @apply bg-card/80 backdrop-blur-md border border-border;
   }
 }
 
@@ -74,4 +113,28 @@
   .slide-in-from-bottom {
     animation: slideUp 0.3s ease-out;
   }
+
+  /* Safe area for mobile notches */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Touch-friendly tap targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

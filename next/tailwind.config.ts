@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,52 +10,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Core black/white palette
-        primary: {
-          DEFAULT: '#FFFFFF',
-          50: '#FFFFFF',
-          100: '#F5F5F5',
-          200: '#E5E5E5',
-          300: '#D4D4D4',
-          400: '#A3A3A3',
-          500: '#737373',
-          600: '#525252',
-          700: '#404040',
-          800: '#262626',
-          900: '#171717',
-          950: '#0A0A0A',
+        // Theme-aware colors using CSS variables
+        background: 'rgb(var(--background) / <alpha-value>)',
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
+        card: {
+          DEFAULT: 'rgb(var(--card) / <alpha-value>)',
+          foreground: 'rgb(var(--card-foreground) / <alpha-value>)',
         },
-        dark: {
-          DEFAULT: '#000000',
-          50: '#1A1A1A',
-          100: '#171717',
-          200: '#141414',
-          300: '#0F0F0F',
-          400: '#0A0A0A',
-          500: '#000000',
+        primary: {
+          DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
+          foreground: 'rgb(var(--primary-foreground) / <alpha-value>)',
+        },
+        secondary: {
+          DEFAULT: 'rgb(var(--secondary) / <alpha-value>)',
+          foreground: 'rgb(var(--secondary-foreground) / <alpha-value>)',
+        },
+        muted: {
+          DEFAULT: 'rgb(var(--muted) / <alpha-value>)',
+          foreground: 'rgb(var(--muted-foreground) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: '#CCCCCC',
-          light: '#E5E5E5',
-          dark: '#999999',
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          foreground: 'rgb(var(--accent-foreground) / <alpha-value>)',
         },
-      },
-      backgroundColor: {
-        page: '#000000',
-        card: '#0A0A0A',
-        'card-hover': '#141414',
-        input: '#1A1A1A',
-        modal: '#0F0F0F',
-      },
-      textColor: {
-        primary: '#FFFFFF',
-        secondary: '#CCCCCC',
-        muted: '#737373',
-      },
-      borderColor: {
-        DEFAULT: '#262626',
-        light: '#404040',
-        focus: '#FFFFFF',
+        border: 'rgb(var(--border) / <alpha-value>)',
+        input: 'rgb(var(--input) / <alpha-value>)',
+        ring: 'rgb(var(--ring) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

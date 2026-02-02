@@ -10,9 +10,9 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', children, ...props }, ref) => {
     const variants = {
-      default: 'bg-[#0A0A0A]',
-      interactive: 'bg-[#0A0A0A] hover:bg-[#141414] cursor-pointer transition-colors',
-      bordered: 'bg-transparent border border-[#262626]',
+      default: 'bg-card shadow-sm',
+      interactive: 'bg-card shadow-sm hover:shadow-md hover:bg-accent/50 cursor-pointer transition-all active:scale-[0.99]',
+      bordered: 'bg-transparent border border-border',
     }
 
     return (
@@ -49,7 +49,7 @@ const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingEleme
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn('text-lg font-semibold text-white', className)}
+      className={cn('text-lg font-semibold text-card-foreground', className)}
       {...props}
     />
   )
@@ -61,7 +61,7 @@ const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLPara
   ({ className, ...props }, ref) => (
     <p
       ref={ref}
-      className={cn('text-sm text-gray-400', className)}
+      className={cn('text-sm text-muted-foreground', className)}
       {...props}
     />
   )
@@ -81,7 +81,7 @@ const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex items-center gap-2 mt-4 pt-4 border-t border-[#262626]', className)}
+      className={cn('flex items-center gap-2 mt-4 pt-4 border-t border-border', className)}
       {...props}
     />
   )

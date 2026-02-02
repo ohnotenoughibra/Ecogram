@@ -11,18 +11,18 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', loading, disabled, children, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed'
+    const baseStyles = 'touch-target inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]'
 
     const variants = {
-      primary: 'bg-white text-black hover:bg-gray-200 focus:ring-white',
-      secondary: 'bg-transparent text-white border border-white/30 hover:border-white hover:bg-white/5 focus:ring-white/50',
-      ghost: 'bg-transparent text-white hover:bg-white/10 focus:ring-white/30',
+      primary: 'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-ring',
+      secondary: 'bg-secondary text-secondary-foreground border border-border hover:bg-accent focus:ring-ring/50',
+      ghost: 'bg-transparent text-foreground hover:bg-accent focus:ring-ring/30',
       danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
     }
 
     const sizes = {
       sm: 'px-3 py-1.5 text-sm rounded-md',
-      md: 'px-4 py-2 text-sm rounded-lg',
+      md: 'px-4 py-2.5 text-sm rounded-lg',
       lg: 'px-6 py-3 text-base rounded-lg',
     }
 
