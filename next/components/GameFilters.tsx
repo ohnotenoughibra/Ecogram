@@ -51,7 +51,7 @@ export function GameFilters() {
     filters.favorites_only
 
   return (
-    <div className="bg-[#0A0A0A] rounded-xl p-4 mb-6">
+    <div className="bg-card rounded-xl p-4 mb-6 border border-border">
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Search */}
         <div className="flex-1">
@@ -93,15 +93,15 @@ export function GameFilters() {
       </div>
 
       {/* Secondary filters */}
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#262626]">
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
             checked={filters.favorites_only}
             onChange={(e) => setFilters({ favorites_only: e.target.checked })}
-            className="w-4 h-4 rounded bg-[#1A1A1A] border-[#262626] text-white focus:ring-white focus:ring-offset-black"
+            className="w-4 h-4 rounded bg-input border-border text-primary focus:ring-ring focus:ring-offset-background"
           />
-          <span className="text-sm text-gray-400">Favorites only</span>
+          <span className="text-sm text-muted-foreground">Favorites only</span>
         </label>
 
         {hasActiveFilters && (

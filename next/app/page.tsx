@@ -32,10 +32,10 @@ export default function GamesPage() {
   return (
     <div className="content-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white">Game Library</h1>
-          <p className="text-gray-400 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Game Library</h1>
+          <p className="text-muted-foreground mt-1">
             {games.length} games • {filtered.length} shown
           </p>
         </div>
@@ -63,16 +63,16 @@ export default function GamesPage() {
       {/* Loading state */}
       {isLoading && games.length === 0 && (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full" />
+          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
         </div>
       )}
 
       {/* Empty state */}
       {!isLoading && filtered.length === 0 && (
-        <div className="text-center py-20">
-          <div className="w-16 h-16 bg-[#1A1A1A] rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="text-center py-16 sm:py-20">
+          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
             <svg
-              className="w-8 h-8 text-gray-500"
+              className="w-8 h-8 text-muted-foreground"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -85,8 +85,8 @@ export default function GamesPage() {
               />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">No games found</h3>
-          <p className="text-gray-400 mb-6">
+          <h3 className="text-lg font-medium text-foreground mb-2">No games found</h3>
+          <p className="text-muted-foreground mb-6">
             {games.length === 0
               ? 'Add your first game to get started'
               : 'Try adjusting your filters'}
