@@ -104,6 +104,11 @@ export function Navigation() {
               <span className="text-xs font-medium">{item.label}</span>
             </Link>
           ))}
+          {/* Theme toggle for mobile */}
+          <div className="flex flex-col items-center justify-center flex-1 h-full gap-1">
+            <ThemeToggle />
+            <span className="text-xs font-medium text-muted-foreground">Theme</span>
+          </div>
         </div>
       </nav>
     </>
