@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useClassPrepStore, useGameStore } from '@/store'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import type { Game } from '@/types/database'
 
-export default function TimerPage() {
+function TimerContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const sessionId = searchParams.get('session')
@@ -165,7 +165,6 @@ export default function TimerPage() {
         'min-h-screen flex flex-col bg-background select-none',
         isFullscreen && 'fixed inset-0 z-50'
       )}
-      // Swipe gesture handlers
       onTouchStart={(e) => {
         const touch = e.touches[0]
         ;(e.currentTarget as any)._touchStartX = touch.clientX
@@ -184,12 +183,10 @@ export default function TimerPage() {
         }
       }}
     >
-      {/* Hidden audio element for beeps */}
       <audio ref={audioRef} preload="auto">
         <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Ch4GHfnx8fYOHioqHhYN+enp8f4OGh4iHhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoa=" type="audio/wav" />
       </audio>
 
-      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <button
           onClick={() => router.back()}
@@ -220,7 +217,6 @@ export default function TimerPage() {
         </button>
       </div>
 
-      {/* Progress bar */}
       <div className="h-1 bg-muted">
         <div
           className="h-full bg-primary transition-all duration-1000"
@@ -228,14 +224,11 @@ export default function TimerPage() {
         />
       </div>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-        {/* Game name */}
         <h1 className="text-2xl sm:text-4xl font-bold text-foreground mb-2">
           {currentGame?.name}
         </h1>
 
-        {/* Game info */}
         <div className="flex items-center gap-2 mb-8">
           <span className="px-2 py-1 text-sm bg-secondary rounded text-secondary-foreground">
             {currentGame?.position}
@@ -245,7 +238,6 @@ export default function TimerPage() {
           </span>
         </div>
 
-        {/* Timer display */}
         <div
           className={cn(
             'text-7xl sm:text-9xl font-mono font-bold mb-8 transition-colors',
@@ -255,14 +247,12 @@ export default function TimerPage() {
           {formatTime(timeRemaining)}
         </div>
 
-        {/* Description */}
         {currentGame?.description && (
           <p className="text-muted-foreground max-w-md mb-8 text-sm sm:text-base">
             {currentGame.description}
           </p>
         )}
 
-        {/* Controls */}
         <div className="flex items-center gap-4">
           <button
             onClick={handlePrev}
@@ -300,7 +290,6 @@ export default function TimerPage() {
           </button>
         </div>
 
-        {/* Reset button */}
         <button
           onClick={handleReset}
           className="mt-4 text-sm text-muted-foreground hover:text-foreground"
@@ -309,7 +298,6 @@ export default function TimerPage() {
         </button>
       </div>
 
-      {/* Game list preview */}
       <div className="border-t border-border p-4 overflow-x-auto">
         <div className="flex gap-2 min-w-max">
           {sessionGames.map((game, index) => (
@@ -335,10 +323,25 @@ export default function TimerPage() {
         </div>
       </div>
 
-      {/* Swipe hint */}
       <p className="text-center text-xs text-muted-foreground pb-4">
         Swipe left/right to change games
       </p>
     </div>
+  )
+}
+
+function TimerLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+    </div>
+  )
+}
+
+export default function TimerPage() {
+  return (
+    <Suspense fallback={<TimerLoading />}>
+      <TimerContent />
+    </Suspense>
   )
 }
