@@ -2,6 +2,7 @@
 
 import { useGameStore } from '@/store'
 import { Card, Badge, Button } from '@/components/ui'
+import { StarRating } from '@/components/StarRating'
 import { formatDuration, capitalizeFirst } from '@/lib/utils'
 import type { Game } from '@/types/database'
 
@@ -34,7 +35,7 @@ export function GameCard({
   selected,
   onSelect,
 }: GameCardProps) {
-  const { toggleFavorite, deleteGame } = useGameStore()
+  const { toggleFavorite, deleteGame, rateGame } = useGameStore()
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this game?')) {
@@ -45,14 +46,14 @@ export function GameCard({
   return (
     <Card
       variant={selectable ? 'interactive' : 'default'}
-      className={`relative group ${selected ? 'ring-2 ring-white' : ''}`}
+      className={`relative group ${selected ? 'ring-2 ring-primary' : ''}`}
       onClick={selectable ? onSelect : undefined}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white truncate">{game.name}</h3>
-          <p className="text-sm text-gray-400">{game.topic}</p>
+          <h3 className="font-semibold text-foreground truncate">{game.name}</h3>
+          <p className="text-sm text-muted-foreground">{game.topic}</p>
         </div>
 
         {/* Favorite button */}
@@ -61,11 +62,11 @@ export function GameCard({
             e.stopPropagation()
             toggleFavorite(game.id)
           }}
-          className="p-1 hover:bg-white/10 rounded transition-colors"
+          className="p-1 hover:bg-accent rounded transition-colors"
         >
           <svg
             className={`w-5 h-5 ${
-              game.is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-gray-500'
+              game.is_favorite ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'
             }`}
             viewBox="0 0 20 20"
             fill="none"
@@ -83,7 +84,7 @@ export function GameCard({
 
       {/* Description */}
       {game.description && (
-        <p className="text-sm text-gray-400 line-clamp-2 mb-3">
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
           {game.description}
         </p>
       )}
@@ -98,7 +99,7 @@ export function GameCard({
       </div>
 
       {/* Meta info */}
-      <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
         <span className="flex items-center gap-1">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -125,19 +126,31 @@ export function GameCard({
         )}
       </div>
 
+      {/* Rating */}
+      {!selectable && (
+        <div className="flex items-center gap-2 mb-3" onClick={(e) => e.stopPropagation()}>
+          <StarRating
+            rating={game.rating}
+            onRate={(rating) => rateGame(game.id, rating)}
+            size="sm"
+          />
+          {game.rating && <span className="text-xs text-muted-foreground">({game.rating}/5)</span>}
+        </div>
+      )}
+
       {/* Techniques */}
       {game.techniques.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-4">
           {game.techniques.slice(0, 3).map((tech) => (
             <span
               key={tech}
-              className="px-2 py-0.5 bg-white/5 rounded text-xs text-gray-400"
+              className="px-2 py-0.5 bg-secondary rounded text-xs text-muted-foreground"
             >
               {tech}
             </span>
           ))}
           {game.techniques.length > 3 && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               +{game.techniques.length - 3} more
             </span>
           )}
@@ -161,13 +174,13 @@ export function GameCard({
         <div
           className={`absolute top-3 right-3 w-5 h-5 rounded-full border-2 transition-colors ${
             selected
-              ? 'bg-white border-white'
-              : 'border-gray-500 group-hover:border-gray-400'
+              ? 'bg-primary border-primary'
+              : 'border-muted-foreground group-hover:border-foreground'
           }`}
         >
           {selected && (
             <svg
-              className="w-full h-full text-black"
+              className="w-full h-full text-primary-foreground"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

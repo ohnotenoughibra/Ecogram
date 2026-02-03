@@ -19,7 +19,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'rounded-xl p-4',
+          'rounded-xl p-4 sm:p-5 border border-border',
           variants[variant],
           className
         )}

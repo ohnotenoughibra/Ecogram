@@ -84,16 +84,16 @@
   }
 
   .content-container {
-    @apply max-w-7xl mx-auto px-4 py-4 pb-20 sm:px-6 sm:py-6 lg:px-8 lg:py-8;
+    @apply max-w-7xl mx-auto px-4 py-6 pb-24 sm:px-6 sm:py-8 lg:px-8 lg:py-10;
   }
 
   .section-title {
     @apply text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6;
   }
 
-  /* Mobile-first card grid */
+  /* Mobile-first card grid with better spacing */
   .card-grid {
-    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3;
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6;
   }
 
   .glass-effect {
