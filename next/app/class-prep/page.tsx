@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useClassPrepStore, useGameStore } from '@/store'
+import { useClassPrepStore, useGameStore, useTechniqueStore, useClassLogStore } from '@/store'
 import { ClassPrepCard } from '@/components/ClassPrepCard'
 import { ClassPrepModal } from '@/components/ClassPrepModal'
 import { Button, Input, Select } from '@/components/ui'
@@ -12,13 +12,17 @@ import type { ClassPrep } from '@/types/database'
 export default function ClassPrepPage() {
   const { classPreps, isLoading, fetchClassPreps, filters, setFilters } = useClassPrepStore()
   const { games, fetchGames } = useGameStore()
+  const { fetchTechniques } = useTechniqueStore()
+  const { fetchClassLogs } = useClassLogStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingPrep, setEditingPrep] = useState<ClassPrep | null>(null)
 
   useEffect(() => {
     fetchClassPreps()
     fetchGames()
-  }, [fetchClassPreps, fetchGames])
+    fetchTechniques()
+    fetchClassLogs()
+  }, [fetchClassPreps, fetchGames, fetchTechniques, fetchClassLogs])
 
   const handleEdit = (prep: ClassPrep) => {
     setEditingPrep(prep)

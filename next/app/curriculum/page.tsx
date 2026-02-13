@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useCurriculumStore, useClassPrepStore } from '@/store'
 import { Button, Card, Badge, Input, Select, Modal, ModalFooter, Textarea } from '@/components/ui'
-import { Plus, Search, Edit, Trash2, Loader2, BookMarked, Calendar, ChevronRight } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Loader2, BookMarked, Calendar, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { capitalizeFirst } from '@/lib/utils'
 import type { Curriculum, CurriculumFormData, BeltLevel, EnvironmentTag } from '@/types/database'
@@ -35,7 +35,7 @@ const beltColors: Record<string, string> = {
 }
 
 export default function CurriculumPage() {
-  const { curricula, isLoading, fetchCurricula, addCurriculum, updateCurriculum, deleteCurriculum } = useCurriculumStore()
+  const { curricula, isLoading, fetchCurricula, addCurriculum, updateCurriculum, deleteCurriculum, reorderSessions } = useCurriculumStore()
   const { classPreps: sessions, fetchClassPreps } = useClassPrepStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCurriculum, setEditingCurriculum] = useState<Curriculum | null>(null)
@@ -69,6 +69,15 @@ export default function CurriculumPage() {
       await addCurriculum(data)
     }
     handleClose()
+  }
+
+  const handleMoveSession = async (curriculumId: string, sessionIds: string[], index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return
+    if (direction === 'down' && index === sessionIds.length - 1) return
+    const newIds = [...sessionIds]
+    const swapIdx = direction === 'up' ? index - 1 : index + 1
+    ;[newIds[index], newIds[swapIdx]] = [newIds[swapIdx], newIds[index]]
+    await reorderSessions(curriculumId, newIds)
   }
 
   const getSessionName = (id: string) => {
@@ -163,13 +172,29 @@ export default function CurriculumPage() {
                       </p>
                     )}
 
-                    {/* Expanded sessions */}
+                    {/* Expanded sessions with reorder */}
                     {expandedId === curr.id && curr.session_ids.length > 0 && (
                       <div className="mt-4 space-y-2 border-t border-border/50 pt-4">
                         {curr.session_ids.map((sid, j) => (
-                          <div key={sid} className="flex items-center gap-2 text-sm">
+                          <div key={sid} className="flex items-center gap-2 text-sm group/session">
                             <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">{j + 1}</span>
-                            <span className="text-foreground">{getSessionName(sid)}</span>
+                            <span className="text-foreground flex-1">{getSessionName(sid)}</span>
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover/session:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleMoveSession(curr.id, curr.session_ids, j, 'up')}
+                                disabled={j === 0}
+                                className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleMoveSession(curr.id, curr.session_ids, j, 'down')}
+                                disabled={j === curr.session_ids.length - 1}
+                                className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>

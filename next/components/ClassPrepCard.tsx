@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useClassPrepStore } from '@/store'
+import { useClassPrepStore, useClassLogStore, useTechniqueStore } from '@/store'
 import { Card, Badge, Button } from '@/components/ui'
 import { formatDate, formatDuration, capitalizeFirst } from '@/lib/utils'
-import { Printer, Share2, Edit, Trash2, Check, Clock, Dumbbell } from 'lucide-react'
+import { Printer, Share2, Edit, Trash2, Check, Clock, Dumbbell, ClipboardList, Zap, Link2 } from 'lucide-react'
 import type { ClassPrep, Game } from '@/types/database'
 
 interface ClassPrepCardProps {
@@ -15,7 +15,10 @@ interface ClassPrepCardProps {
 
 export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
   const { deleteClassPrep } = useClassPrepStore()
+  const { addClassLog } = useClassLogStore()
+  const { techniques } = useTechniqueStore()
   const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [logCreated, setLogCreated] = useState(false)
 
   const prepGames = prep.game_ids
     .map((id) => games.find((g) => g.id === id))
@@ -28,6 +31,38 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
   }
 
   const totalDuration = prepGames.reduce((sum, g) => sum + g.duration_minutes, 0)
+
+  // Collect unique environment tags and techniques from games
+  const allEnvTags = [...new Set(prepGames.flatMap((g) => g.environment_tags || []))]
+  const allIntensities = [...new Set(prepGames.map((g) => g.intensity).filter(Boolean))]
+  const allTechniqueIds = [...new Set(prepGames.flatMap((g) => g.technique_ids || []))]
+  const linkedTechniques = techniques.filter((t) => allTechniqueIds.includes(t.id))
+  const allConstraintCount = prepGames.reduce((sum, g) => sum + (g.rule_constraints?.length || 0), 0)
+
+  // Infer CLA arc phase from game categories
+  const arcPhases = prepGames.map((g) => {
+    if (g.category === 'warmup' && (g.intensity === 'low' || !g.intensity)) return 'Movement Prep'
+    if (g.category === 'drill') return 'Technique Intro'
+    if (g.category === 'positional' || (g.category === 'main' && g.rule_constraints?.length)) return 'Guided Discovery'
+    if (g.category === 'main') return 'Open Play'
+    if (g.category === 'cooldown') return 'Cool Down'
+    return g.category
+  })
+  const uniquePhases = [...new Set(arcPhases)]
+
+  const handleLogThisClass = async () => {
+    const allTechNames = prepGames.flatMap((g) => g.techniques || [])
+    await addClassLog({
+      session_id: prep.id,
+      date: new Date().toISOString().split('T')[0],
+      duration_minutes: totalDuration,
+      intensity_level: allIntensities.length === 1 ? allIntensities[0]! : 'medium',
+      techniques_drilled: [...new Set(allTechNames)],
+      student_ids: [],
+    })
+    setLogCreated(true)
+    setTimeout(() => setLogCreated(false), 3000)
+  }
 
   const handlePrint = () => {
     const printContent = `
@@ -72,9 +107,12 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
               <div class="game-meta">
                 <span class="badge ${game.difficulty === 'beginner' ? 'badge-green' : game.difficulty === 'intermediate' ? 'badge-yellow' : 'badge-red'}">${capitalizeFirst(game.difficulty)}</span>
                 ${capitalizeFirst(game.position)} | ${capitalizeFirst(game.category)}
+                ${game.environment_tags?.length ? ` | ${game.environment_tags.join(', ')}` : ''}
+                ${game.intensity ? ` | Intensity: ${capitalizeFirst(game.intensity)}` : ''}
               </div>
               ${game.description ? `<p style="margin-top: 8px; color: #666;">${game.description}</p>` : ''}
               ${game.techniques.length > 0 ? `<p style="margin-top: 4px; font-size: 13px;"><strong>Techniques:</strong> ${game.techniques.join(', ')}</p>` : ''}
+              ${game.rule_constraints?.length ? `<p style="margin-top: 4px; font-size: 13px;"><strong>Constraints:</strong> ${game.rule_constraints.map((c) => `${c.type}: ${c.description}`).join('; ')}</p>` : ''}
             </div>
           `).join('')}
 
@@ -171,6 +209,59 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
             {prep.focus && <span>Focus: {prep.focus}</span>}
           </div>
 
+          {/* Environment & Intensity badges */}
+          {(allEnvTags.length > 0 || allIntensities.length > 0 || allConstraintCount > 0) && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {allEnvTags.map((tag) => (
+                <span key={tag} className="px-2 py-0.5 bg-secondary/50 border border-border/30 rounded-full text-xs text-muted-foreground">
+                  {tag === 'nogi' ? 'No-Gi' : capitalizeFirst(tag)}
+                </span>
+              ))}
+              {allIntensities.map((intensity) => (
+                <span key={intensity} className={`px-2 py-0.5 rounded-full text-xs ${
+                  intensity === 'high' ? 'bg-error/10 text-error border border-error/20' :
+                  intensity === 'medium' ? 'bg-warning/10 text-warning border border-warning/20' :
+                  'bg-success/10 text-success border border-success/20'
+                }`}>
+                  <Zap className="w-3 h-3 inline mr-0.5" />{capitalizeFirst(intensity!)}
+                </span>
+              ))}
+              {allConstraintCount > 0 && (
+                <span className="px-2 py-0.5 bg-accent/10 text-accent border border-accent/20 rounded-full text-xs">
+                  {allConstraintCount} CLA constraint{allConstraintCount !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* CLA Arc Phases */}
+          {uniquePhases.length > 1 && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {uniquePhases.map((phase) => (
+                <span key={phase} className="px-2 py-0.5 bg-primary/5 border border-primary/10 rounded text-xs text-primary">
+                  {phase}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Linked Techniques */}
+          {linkedTechniques.length > 0 && (
+            <div className="mb-3">
+              <div className="flex items-center gap-1 mb-1">
+                <Link2 className="w-3 h-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium">Linked Techniques</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {linkedTechniques.map((t) => (
+                  <span key={t.id} className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-xs text-primary">
+                    {t.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Description */}
           {prep.description && (
             <p className="text-sm text-muted-foreground mb-3">{prep.description}</p>
@@ -203,10 +294,21 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
               Link copied to clipboard!
             </div>
           )}
+
+          {/* Log created notification */}
+          {logCreated && (
+            <div className="mt-3 p-2 bg-success/20 text-success border border-success/30 rounded-lg text-sm flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              Class log created! Check the Class Log page.
+            </div>
+          )}
         </div>
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button size="sm" variant="ghost" onClick={handleLogThisClass} title="Log This Class">
+            <ClipboardList className="w-4 h-4" />
+          </Button>
           <Button size="sm" variant="ghost" onClick={handlePrint} title="Print">
             <Printer className="w-4 h-4" />
           </Button>

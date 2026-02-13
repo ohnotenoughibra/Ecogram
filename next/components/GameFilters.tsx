@@ -3,7 +3,7 @@
 import { useGameStore } from '@/store'
 import { Input, Select, Button } from '@/components/ui'
 import { Search, Filter, X, Star } from 'lucide-react'
-import type { Position, Difficulty, GameCategory } from '@/types/database'
+import type { Position, Difficulty, GameCategory, EnvironmentTag, Intensity } from '@/types/database'
 
 const positionOptions = [
   { value: '', label: 'All Positions' },
@@ -33,6 +33,22 @@ const categoryOptions = [
   { value: 'positional', label: 'Positional' },
 ]
 
+const environmentOptions = [
+  { value: '', label: 'All Environments' },
+  { value: 'gi', label: 'Gi' },
+  { value: 'nogi', label: 'No-Gi' },
+  { value: 'wrestling', label: 'Wrestling' },
+  { value: 'judo', label: 'Judo' },
+  { value: 'mma', label: 'MMA' },
+]
+
+const intensityOptions = [
+  { value: '', label: 'All Intensities' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+]
+
 export function GameFilters() {
   const { filters, setFilters, resetFilters, games } = useGameStore()
 
@@ -48,7 +64,9 @@ export function GameFilters() {
     filters.difficulty ||
     filters.category ||
     filters.topic ||
-    filters.favorites_only
+    filters.favorites_only ||
+    filters.environment ||
+    filters.intensity
 
   return (
     <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 mb-6 border border-border/50">
@@ -86,6 +104,18 @@ export function GameFilters() {
             options={topicOptions}
             value={filters.topic}
             onChange={(e) => setFilters({ topic: e.target.value })}
+            className="w-36"
+          />
+          <Select
+            options={environmentOptions}
+            value={filters.environment}
+            onChange={(e) => setFilters({ environment: e.target.value as EnvironmentTag | '' })}
+            className="w-36"
+          />
+          <Select
+            options={intensityOptions}
+            value={filters.intensity}
+            onChange={(e) => setFilters({ intensity: e.target.value as Intensity | '' })}
             className="w-36"
           />
         </div>
