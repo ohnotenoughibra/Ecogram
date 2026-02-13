@@ -33,6 +33,8 @@ const defaultFilters: GameFilters = {
   category: '',
   topic: '',
   favorites_only: false,
+  environment: '',
+  intensity: '',
 }
 
 export const useGameStore = create<GameState>()(
@@ -207,6 +209,8 @@ export const useGameStore = create<GameState>()(
           if (filters.category && game.category !== filters.category) return false
           if (filters.topic && game.topic !== filters.topic) return false
           if (filters.favorites_only && !game.is_favorite) return false
+          if (filters.environment && (!game.environment_tags || !game.environment_tags.includes(filters.environment))) return false
+          if (filters.intensity && game.intensity !== filters.intensity) return false
           return true
         })
       },

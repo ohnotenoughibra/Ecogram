@@ -1,2 +1,6 @@
 export { useGameStore } from './useGameStore'
 export { useClassPrepStore } from './useClassPrepStore'
+export { useTechniqueStore } from './useTechniqueStore'
+export { useStudentStore } from './useStudentStore'
+export { useCurriculumStore } from './useCurriculumStore'
+export { useClassLogStore } from './useClassLogStore'
