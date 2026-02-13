@@ -197,7 +197,7 @@ export default function StudentsPage() {
                         {student.environment_preference === 'nogi' ? 'No-Gi' : capitalizeFirst(student.environment_preference)}
                       </Badge>
                     )}
-                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
 
@@ -225,7 +225,7 @@ export default function StudentsPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                   <Button size="sm" variant="ghost" onClick={() => handleEdit(student)}>
                     <Edit className="w-4 h-4 mr-1" /> Edit
                   </Button>
@@ -658,9 +658,9 @@ function StudentModal({ isOpen, onClose, student, onSave }: {
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Name" placeholder="Student name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Select label="Belt" options={beltOptions.filter((o) => o.value !== '')} value={form.belt_rank} onChange={(e) => setForm((f) => ({ ...f, belt_rank: e.target.value as BeltLevel }))} />
-          <Input label="Stripes" type="number" min={0} max={4} value={form.stripes} onChange={(e) => setForm((f) => ({ ...f, stripes: parseInt(e.target.value) || 0 }))} />
+          <Input label="Stripes" type="number" min={0} max={4} value={form.stripes} inputMode="numeric" onChange={(e) => setForm((f) => ({ ...f, stripes: parseInt(e.target.value) || 0 }))} />
           <Input label="Start Date" type="date" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} />
         </div>
 

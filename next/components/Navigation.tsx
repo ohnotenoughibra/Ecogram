@@ -205,7 +205,7 @@ export function Navigation() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.2 }}
-              className="absolute bottom-full left-0 right-0 mb-0 bg-background border-t border-border/50 shadow-xl"
+              className="absolute bottom-full left-0 right-0 mb-0 bg-background border-t border-border/50 shadow-xl max-h-[60vh] overflow-y-auto"
             >
               <div className="grid grid-cols-2 gap-1 p-3">
                 {moreNavItems.map((item) => {
@@ -237,7 +237,7 @@ export function Navigation() {
       <Link
         href="/smart-builder"
         className={cn(
-          'fixed bottom-20 right-4 z-30 sm:hidden',
+          'fixed bottom-20 right-4 z-50 sm:hidden',
           'w-14 h-14 rounded-full',
           'bg-gradient-to-br from-primary to-accent',
           'shadow-xl shadow-primary/30',

@@ -81,42 +81,42 @@ export function GameFilters() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3">
           <Select
             options={positionOptions}
             value={filters.position}
             onChange={(e) => setFilters({ position: e.target.value as Position | '' })}
-            className="w-36"
+            className="sm:w-36"
           />
           <Select
             options={difficultyOptions}
             value={filters.difficulty}
             onChange={(e) => setFilters({ difficulty: e.target.value as Difficulty | '' })}
-            className="w-36"
+            className="sm:w-36"
           />
           <Select
             options={categoryOptions}
             value={filters.category}
             onChange={(e) => setFilters({ category: e.target.value as GameCategory | '' })}
-            className="w-36"
+            className="sm:w-36"
           />
           <Select
             options={topicOptions}
             value={filters.topic}
             onChange={(e) => setFilters({ topic: e.target.value })}
-            className="w-36"
+            className="sm:w-36"
           />
           <Select
             options={environmentOptions}
             value={filters.environment}
             onChange={(e) => setFilters({ environment: e.target.value as EnvironmentTag | '' })}
-            className="w-36"
+            className="sm:w-36"
           />
           <Select
             options={intensityOptions}
             value={filters.intensity}
             onChange={(e) => setFilters({ intensity: e.target.value as Intensity | '' })}
-            className="w-36"
+            className="sm:w-36"
           />
         </div>
       </div>

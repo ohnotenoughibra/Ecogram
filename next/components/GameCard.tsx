@@ -169,7 +169,7 @@ export function GameCard({
 
       {/* Actions */}
       {!selectable && (
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <Button size="sm" variant="ghost" onClick={onEdit}>
             <Edit className="w-4 h-4 mr-1" />
             Edit

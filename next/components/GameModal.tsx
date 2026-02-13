@@ -249,7 +249,7 @@ export function GameModal({ isOpen, onClose, game }: GameModalProps) {
           {...register('description')}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Position"
             options={positionOptions}
@@ -264,7 +264,7 @@ export function GameModal({ isOpen, onClose, game }: GameModalProps) {
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Select
             label="Difficulty"
             options={difficultyOptions}
@@ -280,6 +280,7 @@ export function GameModal({ isOpen, onClose, game }: GameModalProps) {
           <Input
             label="Duration (min)"
             type="number"
+            inputMode="numeric"
             min={1}
             max={120}
             error={errors.duration_minutes?.message}
@@ -337,12 +338,12 @@ export function GameModal({ isOpen, onClose, game }: GameModalProps) {
         {/* Linked Techniques (from Technique store) */}
         {allTechniques.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
               <label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                 <Link2 className="w-3.5 h-3.5" />
                 Linked Techniques ({selectedTechniqueIds.length})
               </label>
-              <div className="relative w-40">
+              <div className="relative w-full sm:w-40">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <input
                   placeholder="Search..."
