@@ -35,6 +35,7 @@ export const useStudentStore = create<StudentState>()(
       filters: defaultFilters,
 
       fetchStudents: async () => {
+        const existing = get().students
         set({ isLoading: true, error: null })
         try {
           const supabase = getSupabase()
@@ -46,7 +47,7 @@ export const useStudentStore = create<StudentState>()(
           if (error) throw error
           set({ students: data || [], isLoading: false })
         } catch (error) {
-          set({ error: (error as Error).message, isLoading: false })
+          set({ error: (error as Error).message, isLoading: false, students: existing })
         }
       },
 
@@ -137,7 +138,7 @@ export const useStudentStore = create<StudentState>()(
     }),
     {
       name: 'ecogram-students',
-      partialize: (state) => ({ filters: state.filters }),
+      partialize: (state) => ({ students: state.students, filters: state.filters }),
     }
   )
 )

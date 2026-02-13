@@ -273,7 +273,7 @@ export default function TechniquesPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                   <Button size="sm" variant="ghost" onClick={() => handleEdit(tech)}>
                     <Edit className="w-4 h-4 mr-1" /> Edit
                   </Button>
@@ -385,12 +385,12 @@ function TechniqueModal({ isOpen, onClose, technique, onSave }: {
 
         <Textarea label="Description" placeholder="How to perform this technique..." rows={3} value={form.description || ''} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select label="Position" options={positionOptions.filter((o) => o.value !== '')} value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value as Position }))} />
           <Select label="Category" options={categoryOptions.filter((o) => o.value !== '')} value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as TechniqueCategory }))} />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Select label="Gi / No-Gi" options={giNogiOptions.filter((o) => o.value !== '')} value={form.gi_nogi} onChange={(e) => setForm((f) => ({ ...f, gi_nogi: e.target.value as 'gi' | 'nogi' | 'both' }))} />
           <Select label="Min Belt" options={beltOptions.filter((o) => o.value !== '')} value={form.belt_level_min} onChange={(e) => setForm((f) => ({ ...f, belt_level_min: e.target.value as BeltLevel }))} />
           <Select label="Max Belt" options={beltOptions.filter((o) => o.value !== '')} value={form.belt_level_max} onChange={(e) => setForm((f) => ({ ...f, belt_level_max: e.target.value as BeltLevel }))} />
@@ -401,12 +401,12 @@ function TechniqueModal({ isOpen, onClose, technique, onSave }: {
         {/* Prerequisites */}
         {allTechniques.length > 1 && (
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
               <label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                 <Link2 className="w-3.5 h-3.5" />
                 Prerequisites ({(form.prerequisite_ids || []).length})
               </label>
-              <div className="relative w-40">
+              <div className="relative w-full sm:w-40">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <input
                   placeholder="Search..."

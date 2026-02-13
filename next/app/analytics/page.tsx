@@ -200,7 +200,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {statCards.map((stat, i) => {
           const Icon = stat.icon
           return (
@@ -212,8 +212,8 @@ export default function AnalyticsPage() {
             >
               <Card className="text-center">
                 <Icon className={`w-5 h-5 ${stat.color} mx-auto mb-2`} />
-                <div className="text-3xl font-bold text-foreground">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                <div className="text-2xl sm:text-3xl font-bold text-foreground">{stat.value}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">{stat.label}</div>
               </Card>
             </motion.div>
           )

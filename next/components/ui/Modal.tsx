@@ -72,7 +72,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
                 </div>
               )}
 
-              <div className="px-4 sm:px-6 py-4">{children}</div>
+              <div className="px-4 sm:px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">{children}</div>
             </motion.div>
           </div>
         </div>

@@ -79,24 +79,24 @@ export default function ClassPrepPage() {
               onChange={(e) => setFilters({ search: e.target.value })}
             />
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
             <Select
               options={focusOptions}
               value={filters.focus}
               onChange={(e) => setFilters({ focus: e.target.value })}
-              className="w-36"
+              className="w-full sm:w-36"
             />
             <Input
               type="date"
               value={filters.date_from}
               onChange={(e) => setFilters({ date_from: e.target.value })}
-              className="w-36"
+              className="w-full sm:w-36"
             />
             <Input
               type="date"
               value={filters.date_to}
               onChange={(e) => setFilters({ date_to: e.target.value })}
-              className="w-36"
+              className="w-full sm:w-36"
             />
           </div>
         </div>

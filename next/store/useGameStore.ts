@@ -46,6 +46,7 @@ export const useGameStore = create<GameState>()(
       filters: defaultFilters,
 
       fetchGames: async () => {
+        const existing = get().games
         set({ isLoading: true, error: null })
         try {
           const supabase = getSupabase()
@@ -57,7 +58,8 @@ export const useGameStore = create<GameState>()(
           if (error) throw error
           set({ games: data || [], isLoading: false })
         } catch (error) {
-          set({ error: (error as Error).message, isLoading: false })
+          // Keep existing data (e.g. seeded) when Supabase is unavailable
+          set({ error: (error as Error).message, isLoading: false, games: existing })
         }
       },
 
@@ -217,7 +219,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'ecogram-games',
-      partialize: (state) => ({ filters: state.filters }),
+      partialize: (state) => ({ games: state.games, filters: state.filters }),
     }
   )
 )

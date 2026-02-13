@@ -29,6 +29,7 @@ export const useClassLogStore = create<ClassLogState>()(
       error: null,
 
       fetchClassLogs: async () => {
+        const existing = get().classLogs
         set({ isLoading: true, error: null })
         try {
           const supabase = getSupabase()
@@ -40,7 +41,7 @@ export const useClassLogStore = create<ClassLogState>()(
           if (error) throw error
           set({ classLogs: data || [], isLoading: false })
         } catch (error) {
-          set({ error: (error as Error).message, isLoading: false })
+          set({ error: (error as Error).message, isLoading: false, classLogs: existing })
         }
       },
 
@@ -131,7 +132,7 @@ export const useClassLogStore = create<ClassLogState>()(
     }),
     {
       name: 'ecogram-class-logs',
-      partialize: () => ({}),
+      partialize: (state) => ({ classLogs: state.classLogs }),
     }
   )
 )

@@ -330,12 +330,12 @@ function ClassLogModal({ isOpen, onClose, log, onSave, students, sessions }: {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={log ? 'Edit Class Log' : 'Log a Class'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Date" type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
-          <Input label="Duration (min)" type="number" min={1} max={300} value={form.duration_minutes} onChange={(e) => setForm((f) => ({ ...f, duration_minutes: parseInt(e.target.value) || 60 }))} />
+          <Input label="Duration (min)" type="number" inputMode="numeric" min={1} max={300} value={form.duration_minutes} onChange={(e) => setForm((f) => ({ ...f, duration_minutes: parseInt(e.target.value) || 60 }))} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select label="Intensity" options={intensityOptions} value={form.intensity_level} onChange={(e) => setForm((f) => ({ ...f, intensity_level: e.target.value as Intensity }))} />
           <Select label="Linked Session" options={sessionOptions} value={form.session_id || ''} onChange={(e) => setForm((f) => ({ ...f, session_id: e.target.value || undefined }))} />
         </div>

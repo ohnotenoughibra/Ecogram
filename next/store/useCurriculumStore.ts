@@ -27,6 +27,7 @@ export const useCurriculumStore = create<CurriculumState>()(
       error: null,
 
       fetchCurricula: async () => {
+        const existing = get().curricula
         set({ isLoading: true, error: null })
         try {
           const supabase = getSupabase()
@@ -38,7 +39,7 @@ export const useCurriculumStore = create<CurriculumState>()(
           if (error) throw error
           set({ curricula: data || [], isLoading: false })
         } catch (error) {
-          set({ error: (error as Error).message, isLoading: false })
+          set({ error: (error as Error).message, isLoading: false, curricula: existing })
         }
       },
 
@@ -168,7 +169,7 @@ export const useCurriculumStore = create<CurriculumState>()(
     }),
     {
       name: 'ecogram-curricula',
-      partialize: () => ({}),
+      partialize: (state) => ({ curricula: state.curricula }),
     }
   )
 )
