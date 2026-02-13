@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useGameStore } from '@/store'
+import { useToast } from '@/components/Toast'
 import { Modal, ModalFooter, Button, Input, Select } from './ui'
 import type { GameFormData, Position, Difficulty, GameCategory } from '@/types/database'
 
@@ -36,6 +37,7 @@ const categoryOptions = [
 
 export function QuickAdd({ isOpen, onClose }: QuickAddProps) {
   const { addGame, isLoading } = useGameStore()
+  const { warning: toastWarning } = useToast()
   const [mode, setMode] = useState<'quick' | 'voice' | 'photo'>('quick')
   const [isListening, setIsListening] = useState(false)
   const [voiceText, setVoiceText] = useState('')
@@ -67,7 +69,7 @@ export function QuickAdd({ isOpen, onClose }: QuickAddProps) {
   // Voice recognition
   const startVoiceInput = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Voice input not supported in this browser. Try Chrome.')
+      toastWarning('Voice not supported', 'Try Chrome for voice input.')
       return
     }
 

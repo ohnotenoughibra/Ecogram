@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useClassLogStore, useStudentStore, useClassPrepStore } from '@/store'
+import { useToast } from '@/components/Toast'
 import { Button, Card, Badge, Input, Select, Modal, ModalFooter, Textarea } from '@/components/ui'
 import { Plus, Search, Edit, Trash2, Loader2, ClipboardList, Calendar, Zap, ChevronDown } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -24,6 +25,7 @@ export default function ClassLogPage() {
   const { classLogs, isLoading, fetchClassLogs, addClassLog, updateClassLog, deleteClassLog } = useClassLogStore()
   const { students, fetchStudents } = useStudentStore()
   const { classPreps: sessions, fetchClassPreps } = useClassPrepStore()
+  const { confirm: confirmDialog, success: toastSuccess } = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingLog, setEditingLog] = useState<ClassLog | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -40,8 +42,15 @@ export default function ClassLogPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Delete this class log?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Class Log',
+      description: 'This class log entry will be permanently removed.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    })
+    if (ok) {
       await deleteClassLog(id)
+      toastSuccess('Class log deleted')
     }
   }
 
@@ -53,8 +62,10 @@ export default function ClassLogPage() {
   const handleSave = async (data: ClassLogFormData) => {
     if (editingLog) {
       await updateClassLog(editingLog.id, data)
+      toastSuccess('Class log updated')
     } else {
       await addClassLog(data)
+      toastSuccess('Class logged')
     }
     handleClose()
   }

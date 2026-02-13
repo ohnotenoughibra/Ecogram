@@ -2,7 +2,9 @@
 
 import { useEffect } from 'react'
 import { ThemeProvider } from './ThemeProvider'
+import { ToastProvider } from './Toast'
 import { PWAInstallPrompt } from './PWAInstallPrompt'
+import { KeyboardShortcuts } from './KeyboardShortcuts'
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   // Register service worker
@@ -21,8 +23,11 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider>
-      {children}
-      <PWAInstallPrompt />
+      <ToastProvider>
+        {children}
+        <PWAInstallPrompt />
+        <KeyboardShortcuts />
+      </ToastProvider>
     </ThemeProvider>
   )
 }

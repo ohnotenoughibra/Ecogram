@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useGameStore } from '@/store'
+import { useGameStore, useTechniqueStore } from '@/store'
 import { Modal, ModalFooter, Button, Input, Select, Textarea } from '@/components/ui'
 import type { Game, GameFormData, Position, Difficulty, GameCategory, EnvironmentTag, Intensity, RuleConstraint, ConstraintType } from '@/types/database'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Link2, Search } from 'lucide-react'
 
 const gameSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -83,11 +83,18 @@ const constraintTypeOptions = [
 
 export function GameModal({ isOpen, onClose, game }: GameModalProps) {
   const { addGame, updateGame, isLoading } = useGameStore()
+  const { techniques: allTechniques, fetchTechniques } = useTechniqueStore()
   const [techniquesInput, setTechniquesInput] = useState('')
   const [variationsInput, setVariationsInput] = useState('')
   const [ruleConstraints, setRuleConstraints] = useState<RuleConstraint[]>([])
   const [newConstraintType, setNewConstraintType] = useState<ConstraintType>('task')
   const [newConstraintDesc, setNewConstraintDesc] = useState('')
+  const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([])
+  const [techniqueSearch, setTechniqueSearch] = useState('')
+
+  useEffect(() => {
+    fetchTechniques()
+  }, [fetchTechniques])
 
   const {
     register,
@@ -132,10 +139,12 @@ export function GameModal({ isOpen, onClose, game }: GameModalProps) {
         environment_tags: game.environment_tags || [],
         intensity: game.intensity || 'medium',
         rule_constraints: game.rule_constraints || [],
+        technique_ids: game.technique_ids || [],
       })
       setTechniquesInput(game.techniques.join(', '))
       setVariationsInput(game.variations.join(', '))
       setRuleConstraints(game.rule_constraints || [])
+      setSelectedTechniqueIds(game.technique_ids || [])
     } else {
       reset({
         name: '',
@@ -150,10 +159,12 @@ export function GameModal({ isOpen, onClose, game }: GameModalProps) {
         environment_tags: [],
         intensity: 'medium',
         rule_constraints: [],
+        technique_ids: [],
       })
       setTechniquesInput('')
       setVariationsInput('')
       setRuleConstraints([])
+      setSelectedTechniqueIds([])
     }
   }, [game, reset])
 
@@ -191,8 +202,23 @@ export function GameModal({ isOpen, onClose, game }: GameModalProps) {
     setValue('rule_constraints', updated)
   }
 
+  const handleToggleTechnique = (id: string) => {
+    setSelectedTechniqueIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+      setValue('technique_ids', next)
+      return next
+    })
+  }
+
+  const filteredTechniques = allTechniques.filter((t) =>
+    techniqueSearch
+      ? t.name.toLowerCase().includes(techniqueSearch.toLowerCase()) ||
+        t.category.toLowerCase().includes(techniqueSearch.toLowerCase())
+      : true
+  )
+
   const onSubmit = async (data: GameFormData) => {
-    const submitData = { ...data, rule_constraints: ruleConstraints }
+    const submitData = { ...data, rule_constraints: ruleConstraints, technique_ids: selectedTechniqueIds }
     if (game) {
       await updateGame(game.id, submitData)
     } else {
@@ -307,6 +333,50 @@ export function GameModal({ isOpen, onClose, game }: GameModalProps) {
           options={intensityOptions}
           {...register('intensity')}
         />
+
+        {/* Linked Techniques (from Technique store) */}
+        {allTechniques.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <Link2 className="w-3.5 h-3.5" />
+                Linked Techniques ({selectedTechniqueIds.length})
+              </label>
+              <div className="relative w-40">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  placeholder="Search..."
+                  value={techniqueSearch}
+                  onChange={(e) => setTechniqueSearch(e.target.value)}
+                  className="w-full pl-7 pr-2 py-1.5 bg-input border border-border/50 rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+              </div>
+            </div>
+            <div className="max-h-32 overflow-y-auto space-y-1 border border-border/50 rounded-xl p-2">
+              {filteredTechniques.map((t) => {
+                const selected = selectedTechniqueIds.includes(t.id)
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleToggleTechnique(t.id)}
+                    className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center justify-between ${
+                      selected
+                        ? 'bg-primary/10 text-primary border border-primary/20'
+                        : 'text-foreground hover:bg-secondary/50'
+                    }`}
+                  >
+                    <span>{t.name}</span>
+                    <span className="text-xs text-muted-foreground">{t.position} &middot; {t.category}</span>
+                  </button>
+                )
+              })}
+              {filteredTechniques.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-2">No techniques found</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Rule Constraints (CLA) */}
         <div>
