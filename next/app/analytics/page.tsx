@@ -16,6 +16,9 @@ const positionLabels: Record<Position, string> = {
   back: 'Back',
   turtle: 'Turtle',
   standing: 'Standing',
+  'open-guard': 'Open Guard',
+  'closed-guard': 'Closed Guard',
+  clinch: 'Clinch',
   other: 'Other',
 }
 
@@ -41,16 +44,16 @@ export default function AnalyticsPage() {
 
     const positionCounts: Record<Position, number> = {
       guard: 0, 'half-guard': 0, mount: 0, 'side-control': 0,
-      back: 0, turtle: 0, standing: 0, other: 0,
+      back: 0, turtle: 0, standing: 0, 'open-guard': 0, 'closed-guard': 0, clinch: 0, other: 0,
     }
     games.forEach((g) => { positionCounts[g.position]++ })
 
     const positionUsage: Record<Position, number> = {
       guard: 0, 'half-guard': 0, mount: 0, 'side-control': 0,
-      back: 0, turtle: 0, standing: 0, other: 0,
+      back: 0, turtle: 0, standing: 0, 'open-guard': 0, 'closed-guard': 0, clinch: 0, other: 0,
     }
     classPreps.forEach((prep) => {
-      prep.game_ids.forEach((gameId) => {
+      prep.game_ids.forEach((gameId: string) => {
         const game = games.find((g) => g.id === gameId)
         if (game) positionUsage[game.position]++
       })
@@ -249,7 +252,7 @@ export default function AnalyticsPage() {
           <div className="space-y-3">
             {analytics.recentSessions.map((session) => {
               const sessionGames = session.game_ids
-                .map((id) => games.find((g) => g.id === id))
+                .map((id: string) => games.find((g) => g.id === id))
                 .filter(Boolean)
               return (
                 <div

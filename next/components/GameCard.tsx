@@ -4,7 +4,7 @@ import { useGameStore } from '@/store'
 import { Card, Badge, Button } from '@/components/ui'
 import { StarRating } from '@/components/StarRating'
 import { formatDuration, capitalizeFirst } from '@/lib/utils'
-import { Star, Clock, Play, Edit, Trash2, Check } from 'lucide-react'
+import { Star, Clock, Play, Edit, Trash2, Check, Zap, Shield } from 'lucide-react'
 import type { Game } from '@/types/database'
 
 interface GameCardProps {
@@ -87,6 +87,11 @@ export function GameCard({
         </Badge>
         <Badge variant="outline">{capitalizeFirst(game.position)}</Badge>
         <Badge variant="outline">{categoryLabels[game.category]}</Badge>
+        {game.environment_tags?.map((tag) => (
+          <Badge key={tag} variant="outline" className="text-primary border-primary/30">
+            {tag === 'nogi' ? 'No-Gi' : capitalizeFirst(tag)}
+          </Badge>
+        ))}
       </div>
 
       {/* Meta info */}
@@ -101,7 +106,26 @@ export function GameCard({
             {game.play_count} plays
           </span>
         )}
+        {game.intensity && (
+          <span className={`flex items-center gap-1 ${
+            game.intensity === 'high' ? 'text-error' :
+            game.intensity === 'medium' ? 'text-warning' : 'text-success'
+          }`}>
+            <Zap className="w-4 h-4" />
+            {capitalizeFirst(game.intensity)}
+          </span>
+        )}
       </div>
+
+      {/* CLA Constraints */}
+      {game.rule_constraints && game.rule_constraints.length > 0 && (
+        <div className="flex items-center gap-1.5 mb-3">
+          <Shield className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">
+            {game.rule_constraints.length} constraint{game.rule_constraints.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
 
       {/* Rating */}
       {!selectable && (
