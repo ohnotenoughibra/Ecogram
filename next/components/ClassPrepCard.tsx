@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useClassPrepStore, useClassLogStore, useTechniqueStore } from '@/store'
+import { useToast } from '@/components/Toast'
 import { Card, Badge, Button } from '@/components/ui'
 import { formatDate, formatDuration, capitalizeFirst } from '@/lib/utils'
 import { Printer, Share2, Edit, Trash2, Check, Clock, Dumbbell, ClipboardList, Zap, Link2 } from 'lucide-react'
@@ -17,6 +18,7 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
   const { deleteClassPrep } = useClassPrepStore()
   const { addClassLog } = useClassLogStore()
   const { techniques } = useTechniqueStore()
+  const { confirm: confirmDialog, success: toastSuccess, error: toastError } = useToast()
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [logCreated, setLogCreated] = useState(false)
 
@@ -25,8 +27,15 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
     .filter(Boolean) as Game[]
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this session?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Session',
+      description: 'This class session and its game list will be removed.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    })
+    if (ok) {
       await deleteClassPrep(prep.id)
+      toastSuccess('Session deleted')
     }
   }
 
@@ -60,8 +69,7 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
       techniques_drilled: [...new Set(allTechNames)],
       student_ids: [],
     })
-    setLogCreated(true)
-    setTimeout(() => setLogCreated(false), 3000)
+    toastSuccess('Class logged', 'Check the Class Log page for details.')
   }
 
   const handlePrint = () => {
@@ -166,10 +174,9 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
 
     try {
       await navigator.clipboard.writeText(url)
-      setShareUrl(url)
-      setTimeout(() => setShareUrl(null), 3000)
+      toastSuccess('Link copied', 'Share URL copied to clipboard.')
     } catch {
-      alert('Failed to copy link')
+      toastError('Failed to copy link')
     }
   }
 
@@ -287,21 +294,6 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
             <p className="mt-3 text-sm text-muted-foreground italic">{prep.notes}</p>
           )}
 
-          {/* Share URL notification */}
-          {shareUrl && (
-            <div className="mt-3 p-2 bg-success/20 text-success border border-success/30 rounded-lg text-sm flex items-center gap-2">
-              <Check className="w-4 h-4" />
-              Link copied to clipboard!
-            </div>
-          )}
-
-          {/* Log created notification */}
-          {logCreated && (
-            <div className="mt-3 p-2 bg-success/20 text-success border border-success/30 rounded-lg text-sm flex items-center gap-2">
-              <Check className="w-4 h-4" />
-              Class log created! Check the Class Log page.
-            </div>
-          )}
         </div>
 
         {/* Actions */}

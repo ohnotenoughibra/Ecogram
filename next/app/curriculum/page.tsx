@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useCurriculumStore, useClassPrepStore, useTechniqueStore, useStudentStore, useGameStore } from '@/store'
+import { useToast } from '@/components/Toast'
 import { Button, Card, Badge, Input, Select, Modal, ModalFooter, Textarea } from '@/components/ui'
 import { Plus, Search, Edit, Trash2, Loader2, BookMarked, Calendar, ChevronRight, ArrowUp, ArrowDown, Sparkles, Zap, Users, CheckCircle2 } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -58,6 +59,7 @@ export default function CurriculumPage() {
   const { techniques, fetchTechniques } = useTechniqueStore()
   const { students, fetchStudents } = useStudentStore()
   const { games, fetchGames } = useGameStore()
+  const { confirm: confirmDialog, success: toastSuccess } = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCurriculum, setEditingCurriculum] = useState<Curriculum | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -77,8 +79,15 @@ export default function CurriculumPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Delete this curriculum?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Curriculum',
+      description: 'This curriculum plan will be permanently removed.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    })
+    if (ok) {
       await deleteCurriculum(id)
+      toastSuccess('Curriculum deleted')
     }
   }
 
@@ -90,8 +99,10 @@ export default function CurriculumPage() {
   const handleSave = async (data: CurriculumFormData) => {
     if (editingCurriculum) {
       await updateCurriculum(editingCurriculum.id, data)
+      toastSuccess('Curriculum updated')
     } else {
       await addCurriculum(data)
+      toastSuccess('Curriculum created')
     }
     handleClose()
   }
@@ -153,6 +164,7 @@ export default function CurriculumPage() {
             })
             await fetchClassPreps()
             setShowAutoGen(false)
+            toastSuccess('Curriculum generated', `${generatedSessions.length} sessions created.`)
           }}
           onClose={() => setShowAutoGen(false)}
         />

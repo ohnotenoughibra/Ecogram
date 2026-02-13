@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useTechniqueStore } from '@/store'
+import { useToast } from '@/components/Toast'
 import { Button, Card, Badge, Input, Select, Modal, ModalFooter, Textarea } from '@/components/ui'
 import { Plus, Search, Edit, Trash2, Loader2, BookOpen, X, GitBranch, Link2 } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -74,6 +75,7 @@ const categoryColors: Record<string, string> = {
 
 export default function TechniquesPage() {
   const { techniques, isLoading, fetchTechniques, addTechnique, updateTechnique, deleteTechnique, filteredTechniques, setFilters } = useTechniqueStore()
+  const { confirm: confirmDialog, success: toastSuccess } = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTechnique, setEditingTechnique] = useState<Technique | null>(null)
   const [searchValue, setSearchValue] = useState('')
@@ -94,8 +96,15 @@ export default function TechniquesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Delete this technique?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Technique',
+      description: 'This technique and its prerequisite links will be removed.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    })
+    if (ok) {
       await deleteTechnique(id)
+      toastSuccess('Technique deleted')
     }
   }
 
@@ -107,8 +116,10 @@ export default function TechniquesPage() {
   const handleSave = async (data: TechniqueFormData) => {
     if (editingTechnique) {
       await updateTechnique(editingTechnique.id, data)
+      toastSuccess('Technique updated')
     } else {
       await addTechnique(data)
+      toastSuccess('Technique added')
     }
     handleClose()
   }

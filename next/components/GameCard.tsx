@@ -1,6 +1,7 @@
 'use client'
 
 import { useGameStore } from '@/store'
+import { useToast } from '@/components/Toast'
 import { Card, Badge, Button } from '@/components/ui'
 import { StarRating } from '@/components/StarRating'
 import { formatDuration, capitalizeFirst } from '@/lib/utils'
@@ -37,10 +38,18 @@ export function GameCard({
   onSelect,
 }: GameCardProps) {
   const { toggleFavorite, deleteGame, rateGame } = useGameStore()
+  const { confirm: confirmDialog, success: toastSuccess } = useToast()
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this game?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Game',
+      description: `"${game.name}" will be permanently removed.`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    })
+    if (ok) {
       await deleteGame(game.id)
+      toastSuccess('Game deleted')
     }
   }
 

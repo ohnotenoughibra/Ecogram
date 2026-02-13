@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useStudentStore, useClassLogStore, useTechniqueStore } from '@/store'
+import { useToast } from '@/components/Toast'
 import { Button, Card, Badge, Input, Select, Modal, ModalFooter, Textarea } from '@/components/ui'
 import { Plus, Search, Edit, Trash2, Loader2, Users, AlertCircle, ChevronRight, TrendingUp, CheckCircle2, Circle, Award, Calendar, BarChart3, ArrowLeft } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -40,6 +41,7 @@ export default function StudentsPage() {
   const { students, isLoading, fetchStudents, addStudent, updateStudent, deleteStudent, filteredStudents, setFilters } = useStudentStore()
   const { classLogs, fetchClassLogs } = useClassLogStore()
   const { techniques, fetchTechniques } = useTechniqueStore()
+  const { confirm: confirmDialog, success: toastSuccess } = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [searchValue, setSearchValue] = useState('')
@@ -62,8 +64,15 @@ export default function StudentsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Remove this student?')) {
+    const ok = await confirmDialog({
+      title: 'Remove Student',
+      description: 'This student and their progress data will be removed.',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    })
+    if (ok) {
       await deleteStudent(id)
+      toastSuccess('Student removed')
     }
   }
 
@@ -75,8 +84,10 @@ export default function StudentsPage() {
   const handleSave = async (data: StudentFormData) => {
     if (editingStudent) {
       await updateStudent(editingStudent.id, data)
+      toastSuccess('Student updated')
     } else {
       await addStudent(data)
+      toastSuccess('Student added')
     }
     handleClose()
   }
