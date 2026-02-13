@@ -39,6 +39,7 @@ export const useTechniqueStore = create<TechniqueState>()(
       filters: defaultFilters,
 
       fetchTechniques: async () => {
+        const existing = get().techniques
         set({ isLoading: true, error: null })
         try {
           const supabase = getSupabase()
@@ -50,7 +51,7 @@ export const useTechniqueStore = create<TechniqueState>()(
           if (error) throw error
           set({ techniques: data || [], isLoading: false })
         } catch (error) {
-          set({ error: (error as Error).message, isLoading: false })
+          set({ error: (error as Error).message, isLoading: false, techniques: existing })
         }
       },
 
@@ -161,7 +162,7 @@ export const useTechniqueStore = create<TechniqueState>()(
     }),
     {
       name: 'ecogram-techniques',
-      partialize: (state) => ({ filters: state.filters }),
+      partialize: (state) => ({ techniques: state.techniques, filters: state.filters }),
     }
   )
 )

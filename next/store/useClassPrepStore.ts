@@ -120,6 +120,7 @@ export const useClassPrepStore = create<ClassPrepState>()(
       filters: defaultFilters,
 
       fetchClassPreps: async () => {
+        const existing = get().classPreps
         set({ isLoading: true, error: null })
         try {
           const supabase = getSupabase()
@@ -131,7 +132,7 @@ export const useClassPrepStore = create<ClassPrepState>()(
           if (error) throw error
           set({ classPreps: data || [], isLoading: false })
         } catch (error) {
-          set({ error: (error as Error).message, isLoading: false })
+          set({ error: (error as Error).message, isLoading: false, classPreps: existing })
         }
       },
 
@@ -373,7 +374,7 @@ export const useClassPrepStore = create<ClassPrepState>()(
     }),
     {
       name: 'ecogram-class-preps',
-      partialize: (state) => ({ filters: state.filters }),
+      partialize: (state) => ({ classPreps: state.classPreps, filters: state.filters }),
     }
   )
 )
