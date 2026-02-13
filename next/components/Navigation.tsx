@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Calendar, BarChart3, Zap, Plus, BookOpen, Users, BookMarked, ClipboardList, MoreHorizontal } from 'lucide-react'
+import { Home, Calendar, BarChart3, Zap, Plus, BookOpen, Users, BookMarked, ClipboardList, MoreHorizontal, Database } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -20,6 +20,7 @@ const moreNavItems = [
   { href: '/students', label: 'Students', icon: Users },
   { href: '/curriculum', label: 'Curriculum', icon: BookMarked },
   { href: '/class-log', label: 'Class Log', icon: ClipboardList },
+  { href: '/seed', label: 'Seed Data', icon: Database },
 ]
 
 export function Navigation() {
