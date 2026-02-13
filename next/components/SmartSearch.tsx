@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useGameStore } from '@/store'
-import { Input } from './ui'
+import { Search, Sparkles } from 'lucide-react'
 import type { Game } from '@/types/database'
 
 interface SmartSearchProps {
@@ -18,13 +18,11 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const { games } = useGameStore()
 
-  // Load recent searches
   useEffect(() => {
     const saved = localStorage.getItem('ecogram-recent-searches')
     if (saved) setRecentSearches(JSON.parse(saved))
   }, [])
 
-  // Keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -41,14 +39,12 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
-  // Focus input when opened
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [isOpen])
 
-  // Parse natural language query
   const parseQuery = (q: string) => {
     const lower = q.toLowerCase()
     const filters: {
@@ -59,7 +55,6 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
       text: string
     } = { text: '' }
 
-    // Position detection
     const positions = ['guard', 'half-guard', 'mount', 'side-control', 'back', 'turtle', 'standing']
     for (const pos of positions) {
       if (lower.includes(pos)) {
@@ -67,7 +62,6 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
       }
     }
 
-    // Difficulty detection
     if (lower.includes('beginner') || lower.includes('easy') || lower.includes('basic')) {
       filters.difficulty = 'beginner'
     } else if (lower.includes('advanced') || lower.includes('hard') || lower.includes('expert')) {
@@ -76,7 +70,6 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
       filters.difficulty = 'intermediate'
     }
 
-    // Category detection
     if (lower.includes('warmup') || lower.includes('warm up')) {
       filters.category = 'warmup'
     } else if (lower.includes('cooldown') || lower.includes('cool down')) {
@@ -85,13 +78,11 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
       filters.category = 'drill'
     }
 
-    // Duration detection (e.g., "under 5 min", "less than 10 minutes")
     const durationMatch = lower.match(/(?:under|less than|max|<)\s*(\d+)\s*(?:min|minutes?)/)
     if (durationMatch) {
       filters.maxDuration = parseInt(durationMatch[1])
     }
 
-    // Extract remaining text for fuzzy search
     let text = q
     positions.forEach(p => text = text.replace(new RegExp(p, 'gi'), ''))
     text = text.replace(/beginner|intermediate|advanced|easy|hard|basic|expert/gi, '')
@@ -102,26 +93,17 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
     return filters
   }
 
-  // Filter games
   const results = useMemo(() => {
     if (!query.trim()) return []
 
     const filters = parseQuery(query)
 
     return games.filter((game) => {
-      // Position filter
       if (filters.position && game.position !== filters.position) return false
-
-      // Difficulty filter
       if (filters.difficulty && game.difficulty !== filters.difficulty) return false
-
-      // Category filter
       if (filters.category && game.category !== filters.category) return false
-
-      // Duration filter
       if (filters.maxDuration && game.duration_minutes > filters.maxDuration) return false
 
-      // Text search
       if (filters.text) {
         const searchText = filters.text.toLowerCase()
         const matchesName = game.name.toLowerCase().includes(searchText)
@@ -138,7 +120,6 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
     }).slice(0, 10)
   }, [query, games])
 
-  // Suggestions based on recent + popular
   const suggestions = useMemo(() => {
     if (query.trim()) return []
     return [
@@ -151,7 +132,6 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
   }, [query, recentSearches])
 
   const handleSelect = (game: Game) => {
-    // Save to recent searches
     const updated = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5)
     setRecentSearches(updated)
     localStorage.setItem('ecogram-recent-searches', JSON.stringify(updated))
@@ -170,33 +150,26 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors touch-target"
+        className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 touch-target"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
+        <Search className="w-4 h-4" />
         <span className="text-sm hidden sm:inline">Search games...</span>
-        <kbd className="hidden sm:inline px-1.5 py-0.5 text-xs bg-muted rounded">⌘K</kbd>
+        <kbd className="hidden sm:inline px-1.5 py-0.5 text-xs bg-background/50 rounded border border-border/50 font-mono">⌘K</kbd>
       </button>
     )
   }
 
   return createPortal(
     <div className="fixed inset-0 z-50">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
         onClick={() => setIsOpen(false)}
       />
 
-      {/* Search modal */}
       <div className="relative max-w-lg mx-auto mt-[10vh] px-4">
-        <div className="bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
-          {/* Search input */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-            <svg className="w-5 h-5 text-muted-foreground flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        <div className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50">
+            <Search className="w-5 h-5 text-muted-foreground flex-shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -205,20 +178,21 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
               placeholder='Try "guard games under 5 min for beginners"'
               className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
-            <kbd className="hidden sm:inline px-2 py-1 text-xs bg-muted rounded text-muted-foreground">ESC</kbd>
+            <kbd className="hidden sm:inline px-2 py-1 text-xs bg-secondary/50 rounded border border-border/50 text-muted-foreground font-mono">ESC</kbd>
           </div>
 
-          {/* Results or suggestions */}
           <div className="max-h-[60vh] overflow-y-auto">
-            {/* Suggestions when empty */}
             {suggestions.length > 0 && (
               <div className="p-2">
-                <p className="px-2 py-1 text-xs text-muted-foreground font-medium">Try searching for...</p>
+                <p className="px-2 py-1 text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Try searching for...
+                </p>
                 {suggestions.map((suggestion, i) => (
                   <button
                     key={i}
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-colors"
                   >
                     {suggestion}
                   </button>
@@ -226,7 +200,6 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
               </div>
             )}
 
-            {/* Search results */}
             {results.length > 0 && (
               <div className="p-2">
                 <p className="px-2 py-1 text-xs text-muted-foreground font-medium">
@@ -236,17 +209,17 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
                   <button
                     key={game.id}
                     onClick={() => handleSelect(game)}
-                    className="w-full text-left px-3 py-3 rounded-lg hover:bg-accent transition-colors"
+                    className="w-full text-left px-3 py-3 rounded-lg hover:bg-secondary/50 transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-card-foreground">{game.name}</span>
                       <span className="text-xs text-muted-foreground">{game.duration_minutes}m</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs px-1.5 py-0.5 bg-secondary rounded text-secondary-foreground">
+                      <span className="text-xs px-1.5 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-primary">
                         {game.position}
                       </span>
-                      <span className="text-xs px-1.5 py-0.5 bg-secondary rounded text-secondary-foreground">
+                      <span className="text-xs px-1.5 py-0.5 bg-secondary rounded-full text-secondary-foreground">
                         {game.difficulty}
                       </span>
                       <span className="text-xs text-muted-foreground">{game.topic}</span>
@@ -256,7 +229,6 @@ export function SmartSearch({ onSelect, onClose }: SmartSearchProps) {
               </div>
             )}
 
-            {/* No results */}
             {query.trim() && results.length === 0 && (
               <div className="p-8 text-center">
                 <p className="text-muted-foreground">No games found</p>

@@ -2,47 +2,113 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @layer base {
   :root {
-    /* Light mode (default) */
-    --background: 250 250 250;
-    --foreground: 10 10 10;
-    --card: 255 255 255;
-    --card-foreground: 10 10 10;
-    --primary: 10 10 10;
+    /* ── Steel Theme (default) ── */
+    --p-400: 96 165 250;
+    --p-500: 59 130 246;
+    --p-600: 37 99 235;
+    --a-400: 34 211 238;
+    --a-500: 6 182 212;
+
+    /* Mesh gradient colors */
+    --mesh-1: 59 130 246;
+    --mesh-2: 6 182 212;
+    --mesh-3: 99 102 241;
+
+    /* ── Dark mode (default) ── */
+    --background: 15 23 42;
+    --foreground: 248 250 252;
+    --card: 30 41 59;
+    --card-foreground: 248 250 252;
+    --primary: 59 130 246;
     --primary-foreground: 255 255 255;
-    --secondary: 245 245 245;
-    --secondary-foreground: 10 10 10;
-    --muted: 229 229 229;
-    --muted-foreground: 115 115 115;
-    --accent: 245 245 245;
-    --accent-foreground: 10 10 10;
-    --border: 229 229 229;
-    --input: 255 255 255;
-    --ring: 10 10 10;
+    --secondary: 51 65 85;
+    --secondary-foreground: 226 232 240;
+    --muted: 51 65 85;
+    --muted-foreground: 148 163 184;
+    --accent: 6 182 212;
+    --accent-foreground: 255 255 255;
+    --border: 51 65 85;
+    --input: 30 41 59;
+    --ring: 59 130 246;
+    --text-muted: 100 116 139;
+
+    /* Semantic */
+    --success: 34 197 94;
+    --warning: 234 179 8;
+    --error: 239 68 68;
+
+    color-scheme: dark;
   }
 
-  .dark {
-    /* Dark mode */
-    --background: 10 10 10;
-    --foreground: 250 250 250;
-    --card: 23 23 23;
-    --card-foreground: 250 250 250;
-    --primary: 250 250 250;
-    --primary-foreground: 10 10 10;
-    --secondary: 38 38 38;
-    --secondary-foreground: 250 250 250;
-    --muted: 38 38 38;
-    --muted-foreground: 163 163 163;
-    --accent: 38 38 38;
-    --accent-foreground: 250 250 250;
-    --border: 38 38 38;
-    --input: 23 23 23;
-    --ring: 250 250 250;
+  /* ── Rose Theme ── */
+  [data-theme="rose"] {
+    --p-400: 244 114 182;
+    --p-500: 236 72 153;
+    --p-600: 219 39 119;
+    --a-400: 251 113 133;
+    --a-500: 244 63 94;
+    --mesh-1: 236 72 153;
+    --mesh-2: 244 63 94;
+    --mesh-3: 168 85 247;
+    --primary: 236 72 153;
+    --ring: 236 72 153;
+    --accent: 244 63 94;
+  }
+
+  /* ── Emerald Theme ── */
+  [data-theme="emerald"] {
+    --p-400: 52 211 153;
+    --p-500: 16 185 129;
+    --p-600: 5 150 105;
+    --a-400: 74 222 128;
+    --a-500: 34 197 94;
+    --mesh-1: 16 185 129;
+    --mesh-2: 34 197 94;
+    --mesh-3: 6 182 212;
+    --primary: 16 185 129;
+    --ring: 16 185 129;
+    --accent: 34 197 94;
+  }
+
+  /* ── Amber Theme ── */
+  [data-theme="amber"] {
+    --p-400: 251 191 36;
+    --p-500: 245 158 11;
+    --p-600: 217 119 6;
+    --a-400: 251 146 60;
+    --a-500: 249 115 22;
+    --mesh-1: 245 158 11;
+    --mesh-2: 249 115 22;
+    --mesh-3: 239 68 68;
+    --primary: 245 158 11;
+    --ring: 245 158 11;
+    --accent: 249 115 22;
+  }
+
+  /* ── Light mode overrides ── */
+  body.light-mode {
+    --background: 248 250 252;
+    --foreground: 15 23 42;
+    --card: 255 255 255;
+    --card-foreground: 15 23 42;
+    --primary-foreground: 255 255 255;
+    --secondary: 241 245 249;
+    --secondary-foreground: 30 41 59;
+    --muted: 226 232 240;
+    --muted-foreground: 100 116 139;
+    --accent-foreground: 255 255 255;
+    --border: 226 232 240;
+    --input: 255 255 255;
+    --text-muted: 148 163 184;
+    color-scheme: light;
   }
 
   * {
-    @apply border-border;
+    border-color: rgb(var(--border) / 0.5);
   }
 
   html {
@@ -51,53 +117,150 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    @apply w-2 h-2;
+    width: 8px;
+    height: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background: #1e293b;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-muted rounded-full;
+    background: #475569;
+    border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
+    background: #64748b;
+  }
+
+  body.light-mode ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+
+  body.light-mode ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+  }
+
+  body.light-mode ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
   }
 
   /* Focus visible styles */
   *:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(var(--ring) / 0.5);
   }
 }
 
 @layer components {
+  /* ── Mesh gradient background ── */
+  .bg-mesh {
+    background-image:
+      radial-gradient(at 40% 20%, rgb(var(--mesh-1) / 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, rgb(var(--mesh-2) / 0.06) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, rgb(var(--mesh-1) / 0.05) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, rgb(var(--mesh-3) / 0.04) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgb(var(--mesh-1) / 0.05) 0px, transparent 50%);
+  }
+
+  body.light-mode .bg-mesh {
+    background-image:
+      radial-gradient(at 40% 20%, rgb(var(--mesh-1) / 0.06) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, rgb(var(--mesh-2) / 0.04) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, rgb(var(--mesh-1) / 0.03) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, rgb(var(--mesh-3) / 0.03) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgb(var(--mesh-1) / 0.04) 0px, transparent 50%);
+  }
+
   .page-container {
-    @apply min-h-screen bg-background safe-bottom;
+    min-height: 100vh;
+    background-color: rgb(var(--background));
   }
 
   .content-container {
-    @apply max-w-7xl mx-auto px-4 py-6 pb-24 sm:px-6 sm:py-8 lg:px-8 lg:py-10;
+    max-width: 80rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1.5rem 1rem 6rem;
+  }
+
+  @media (min-width: 640px) {
+    .content-container {
+      padding: 2rem 1.5rem 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .content-container {
+      padding: 2.5rem 2rem 2.5rem;
+    }
   }
 
   .section-title {
-    @apply text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: rgb(var(--foreground));
+    margin-bottom: 1rem;
   }
 
-  /* Mobile-first card grid with better spacing */
+  @media (min-width: 640px) {
+    .section-title {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+  }
+
+  /* Mobile-first card grid */
   .card-grid {
-    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
-  .glass-effect {
-    @apply bg-card/80 backdrop-blur-md border border-border;
+  @media (min-width: 640px) {
+    .card-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .card-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+  }
+
+  /* ── Glass morphism ── */
+  .glass {
+    background: rgb(255 255 255 / 0.05);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgb(255 255 255 / 0.1);
+  }
+
+  body.light-mode .glass {
+    background: rgb(255 255 255 / 0.6);
+    border-color: rgb(var(--border) / 0.4);
+  }
+
+  /* ── Gradient text for hero headings ── */
+  .gradient-text {
+    background: linear-gradient(to right, rgb(var(--p-400)), rgb(var(--a-400)), rgb(var(--p-500)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
 
@@ -125,7 +288,8 @@
 
   /* Touch-friendly tap targets */
   .touch-target {
-    @apply min-h-[44px] min-w-[44px];
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 
@@ -135,6 +299,21 @@
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }

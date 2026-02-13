@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useGameStore, useClassPrepStore } from '@/store'
 import { Modal, ModalFooter, Button, Input, Card } from './ui'
 import { formatDateISO } from '@/lib/utils'
+import { ChevronRight, ChevronLeft, Clock, Dumbbell } from 'lucide-react'
 
 interface SessionTemplatesProps {
   isOpen: boolean
@@ -29,7 +30,7 @@ const PRESET_TEMPLATES: Template[] = [
     id: 'fundamentals',
     name: 'Fundamentals Class',
     description: 'Basic positions and escapes for beginners',
-    icon: '🥋',
+    icon: '\u{1F94B}',
     duration: 60,
     structure: {
       warmup: { count: 2, filters: { difficulty: 'beginner' } },
@@ -41,7 +42,7 @@ const PRESET_TEMPLATES: Template[] = [
     id: 'guard-day',
     name: 'Guard Day',
     description: 'Focus on guard retention, sweeps, and submissions',
-    icon: '🛡️',
+    icon: '\u{1F6E1}\uFE0F',
     duration: 60,
     structure: {
       warmup: { count: 1, filters: { position: 'guard' } },
@@ -53,7 +54,7 @@ const PRESET_TEMPLATES: Template[] = [
     id: 'passing-day',
     name: 'Passing Day',
     description: 'Guard passing techniques and pressure',
-    icon: '⚡',
+    icon: '\u26A1',
     duration: 60,
     structure: {
       warmup: { count: 1 },
@@ -65,7 +66,7 @@ const PRESET_TEMPLATES: Template[] = [
     id: 'competition-prep',
     name: 'Competition Prep',
     description: 'High intensity drilling for competitors',
-    icon: '🏆',
+    icon: '\u{1F3C6}',
     duration: 90,
     structure: {
       warmup: { count: 2, filters: { difficulty: 'intermediate' } },
@@ -77,7 +78,7 @@ const PRESET_TEMPLATES: Template[] = [
     id: 'takedown-focus',
     name: 'Takedown Focus',
     description: 'Standing work and wrestling integration',
-    icon: '🤼',
+    icon: '\u{1F93C}',
     duration: 60,
     structure: {
       warmup: { count: 2, filters: { position: 'standing' } },
@@ -89,7 +90,7 @@ const PRESET_TEMPLATES: Template[] = [
     id: 'quick-flow',
     name: 'Quick Flow Session',
     description: 'Short technical session with light sparring',
-    icon: '💨',
+    icon: '\u{1F4A8}',
     duration: 30,
     structure: {
       warmup: { count: 1 },
@@ -113,12 +114,10 @@ export function SessionTemplates({ isOpen, onClose, onSelectTemplate }: SessionT
       cooldown: [],
     }
 
-    // Get games by category
     const warmupGames = games.filter((g) => g.category === 'warmup')
     const mainGames = games.filter((g) => ['main', 'drill', 'positional'].includes(g.category))
     const cooldownGames = games.filter((g) => g.category === 'cooldown')
 
-    // Apply filters and select games
     const selectFiltered = (
       pool: typeof games,
       count: number,
@@ -138,7 +137,6 @@ export function SessionTemplates({ isOpen, onClose, onSelectTemplate }: SessionT
         )
       }
 
-      // Shuffle and take count
       const shuffled = filtered.sort(() => Math.random() - 0.5)
       return shuffled.slice(0, count).map((g) => g.id)
     }
@@ -176,7 +174,6 @@ export function SessionTemplates({ isOpen, onClose, onSelectTemplate }: SessionT
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Session Templates" size="full">
       {!selectedTemplate ? (
-        // Template list
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground mb-4">
             Choose a template to quickly create a structured session
@@ -194,31 +191,28 @@ export function SessionTemplates({ isOpen, onClose, onSelectTemplate }: SessionT
                   <h3 className="font-medium text-card-foreground">{template.name}</h3>
                   <p className="text-sm text-muted-foreground">{template.description}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs px-2 py-0.5 bg-secondary rounded">
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-primary">
+                      <Clock className="w-3 h-3" />
                       {template.duration} min
                     </span>
-                    <span className="text-xs px-2 py-0.5 bg-secondary rounded">
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-secondary rounded-full text-secondary-foreground">
+                      <Dumbbell className="w-3 h-3" />
                       {template.structure.warmup.count + template.structure.main.count + template.structure.cooldown.count} games
                     </span>
                   </div>
                 </div>
-                <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </Card>
             </button>
           ))}
         </div>
       ) : (
-        // Template confirmation
         <div>
           <button
             onClick={() => setSelectedTemplate(null)}
-            className="flex items-center gap-2 text-sm text-muted-foreground mb-4"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            <ChevronLeft className="w-4 h-4" />
             Back to templates
           </button>
 
@@ -228,11 +222,11 @@ export function SessionTemplates({ isOpen, onClose, onSelectTemplate }: SessionT
             <p className="text-muted-foreground">{selectedTemplate.description}</p>
           </div>
 
-          <div className="bg-secondary rounded-lg p-4 mb-6">
+          <div className="bg-background/50 rounded-xl p-4 mb-6 border border-border/30">
             <h3 className="font-medium text-foreground mb-3">Session Structure</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-green-600">Warmup</span>
+                <span className="text-success">Warmup</span>
                 <span className="text-muted-foreground">{selectedTemplate.structure.warmup.count} games</span>
               </div>
               <div className="flex justify-between">
@@ -240,10 +234,10 @@ export function SessionTemplates({ isOpen, onClose, onSelectTemplate }: SessionT
                 <span className="text-muted-foreground">{selectedTemplate.structure.main.count} games</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-blue-600">Cooldown</span>
+                <span className="text-primary">Cooldown</span>
                 <span className="text-muted-foreground">{selectedTemplate.structure.cooldown.count} games</span>
               </div>
-              <div className="flex justify-between pt-2 border-t border-border">
+              <div className="flex justify-between pt-2 border-t border-border/50">
                 <span className="font-medium text-foreground">Total Duration</span>
                 <span className="text-muted-foreground">~{selectedTemplate.duration} min</span>
               </div>

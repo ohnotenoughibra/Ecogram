@@ -2,6 +2,7 @@
 
 import { useState, useRef, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { Trash2, Star } from 'lucide-react'
 
 interface SwipeableCardProps {
   children: ReactNode
@@ -25,14 +26,14 @@ export function SwipeableCard({
   onSwipeLeft,
   onSwipeRight,
   leftAction = {
-    icon: <TrashIcon />,
+    icon: <Trash2 className="w-6 h-6" />,
     label: 'Delete',
-    color: 'bg-red-500',
+    color: 'bg-error',
   },
   rightAction = {
-    icon: <StarIcon />,
+    icon: <Star className="w-6 h-6" />,
     label: 'Favorite',
-    color: 'bg-yellow-500',
+    color: 'bg-warning',
   },
   className,
 }: SwipeableCardProps) {
@@ -146,21 +147,5 @@ export function SwipeableCard({
         {children}
       </div>
     </div>
-  )
-}
-
-function TrashIcon() {
-  return (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-    </svg>
-  )
-}
-
-function StarIcon() {
-  return (
-    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-    </svg>
   )
 }

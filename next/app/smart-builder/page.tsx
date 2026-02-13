@@ -4,6 +4,8 @@ import { useEffect, useState, useMemo } from 'react'
 import { useGameStore, useClassPrepStore } from '@/store'
 import { Card, Button, Input, Select, Badge } from '@/components/ui'
 import { formatDuration, formatDateISO } from '@/lib/utils'
+import { Zap, Sparkles, Save, RefreshCw } from 'lucide-react'
+import { motion } from 'framer-motion'
 import type { Game, Position, Difficulty, SmartBuilderConstraints } from '@/types/database'
 
 const positionOptions = [
@@ -46,12 +48,10 @@ export default function SmartBuilderPage() {
     fetchGames()
   }, [fetchGames])
 
-  // Get unique topics
   const topics = useMemo(() => {
     return [...new Set(games.map((g) => g.topic))].sort()
   }, [games])
 
-  // Live preview calculation
   const preview = useMemo(() => {
     const constraints: SmartBuilderConstraints = {
       position: position || undefined,
@@ -65,7 +65,6 @@ export default function SmartBuilderPage() {
       constraints.duration_minutes = durationMinutes
     }
 
-    // Filter games based on constraints
     let filtered = [...games]
     if (position) filtered = filtered.filter((g) => g.position === position)
     if (difficulty) filtered = filtered.filter((g) => g.difficulty === difficulty)
@@ -75,7 +74,6 @@ export default function SmartBuilderPage() {
     const mains = filtered.filter((g) => ['main', 'drill', 'positional'].includes(g.category))
     const cooldowns = filtered.filter((g) => g.category === 'cooldown')
 
-    // Calculate target counts
     let warmupCount = 1
     let mainCount = 3
     let cooldownCount = 1
@@ -145,31 +143,34 @@ export default function SmartBuilderPage() {
     setSessionName('')
   }
 
-  const renderGameList = (title: string, gamesInSection: Game[], color: string) => (
+  const renderGameList = (title: string, gamesInSection: Game[], colorClass: string) => (
     <div className="mb-6">
-      <h4 className={`text-sm font-medium ${color} mb-3`}>{title}</h4>
+      <h4 className={`text-sm font-medium ${colorClass} mb-3`}>{title}</h4>
       {gamesInSection.length === 0 ? (
-        <p className="text-gray-500 text-sm">No games selected</p>
+        <p className="text-muted-foreground text-sm">No games selected</p>
       ) : (
         <div className="space-y-2">
           {gamesInSection.map((game, index) => (
-            <div
+            <motion.div
               key={game.id}
-              className="flex items-center justify-between p-3 bg-[#0A0A0A] rounded-lg"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/30"
             >
               <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-gray-400">
+                <span className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs text-primary font-medium">
                   {index + 1}
                 </span>
                 <div>
-                  <p className="text-white font-medium">{game.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {game.position} • {formatDuration(game.duration_minutes)}
+                  <p className="text-foreground font-medium">{game.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {game.position} &middot; {formatDuration(game.duration_minutes)}
                   </p>
                 </div>
               </div>
               <Badge variant="outline">{game.difficulty}</Badge>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -178,45 +179,51 @@ export default function SmartBuilderPage() {
 
   return (
     <div className="content-container">
-      <h1 className="text-3xl font-bold text-white mb-2">Smart Session Builder</h1>
-      <p className="text-gray-400 mb-8">
-        Generate an optimized training session based on your constraints
-      </p>
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold">
+          <span className="gradient-text">Smart Session Builder</span>
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Generate an optimized training session based on your constraints
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Constraints */}
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-6">Session Constraints</h3>
+          <div className="flex items-center gap-2 mb-6">
+            <Zap className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">Session Constraints</h3>
+          </div>
 
           {/* Duration/Game count toggle */}
-          <div className="flex items-center gap-4 mb-6 p-3 bg-[#1A1A1A] rounded-lg">
+          <div className="flex items-center gap-2 mb-6 p-1 bg-secondary/50 rounded-lg">
             <button
               onClick={() => setUseExactGameCount(false)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                 !useExactGameCount
-                  ? 'bg-white text-black'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               By Duration
             </button>
             <button
               onClick={() => setUseExactGameCount(true)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                 useExactGameCount
-                  ? 'bg-white text-black'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               By Game Count
             </button>
           </div>
 
-          {/* Duration slider or game count */}
           {useExactGameCount ? (
             <div className="mb-6">
-              <label className="block text-sm font-medium text-white mb-2">
-                Number of Games: {gameCount}
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Number of Games: <span className="text-primary">{gameCount}</span>
               </label>
               <input
                 type="range"
@@ -224,17 +231,17 @@ export default function SmartBuilderPage() {
                 max={12}
                 value={gameCount}
                 onChange={(e) => setGameCount(Number(e.target.value))}
-                className="w-full h-2 bg-[#262626] rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>3</span>
                 <span>12</span>
               </div>
             </div>
           ) : (
             <div className="mb-6">
-              <label className="block text-sm font-medium text-white mb-2">
-                Session Duration: {formatDuration(durationMinutes)}
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Session Duration: <span className="text-primary">{formatDuration(durationMinutes)}</span>
               </label>
               <input
                 type="range"
@@ -243,9 +250,9 @@ export default function SmartBuilderPage() {
                 step={5}
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full h-2 bg-[#262626] rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>15m</span>
                 <span>2h</span>
               </div>
@@ -279,73 +286,68 @@ export default function SmartBuilderPage() {
           />
 
           {/* Preview */}
-          <div className="bg-[#1A1A1A] rounded-lg p-4 mb-6">
-            <h4 className="text-sm font-medium text-white mb-3">Session Preview</h4>
+          <div className="bg-background/50 rounded-xl p-4 mb-6 border border-border/30">
+            <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-accent" />
+              Session Preview
+            </h4>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className={`text-2xl font-bold ${preview.hasEnoughWarmups ? 'text-green-400' : 'text-yellow-400'}`}>
+                <p className={`text-2xl font-bold ${preview.hasEnoughWarmups ? 'text-success' : 'text-warning'}`}>
                   {preview.warmupCount}
                 </p>
-                <p className="text-xs text-gray-500">Warmup</p>
+                <p className="text-xs text-muted-foreground">Warmup</p>
               </div>
               <div>
-                <p className={`text-2xl font-bold ${preview.hasEnoughMains ? 'text-white' : 'text-yellow-400'}`}>
+                <p className={`text-2xl font-bold ${preview.hasEnoughMains ? 'text-foreground' : 'text-warning'}`}>
                   {preview.mainCount}
                 </p>
-                <p className="text-xs text-gray-500">Main</p>
+                <p className="text-xs text-muted-foreground">Main</p>
               </div>
               <div>
-                <p className={`text-2xl font-bold ${preview.hasEnoughCooldowns ? 'text-blue-400' : 'text-yellow-400'}`}>
+                <p className={`text-2xl font-bold ${preview.hasEnoughCooldowns ? 'text-primary' : 'text-warning'}`}>
                   {preview.cooldownCount}
                 </p>
-                <p className="text-xs text-gray-500">Cooldown</p>
+                <p className="text-xs text-muted-foreground">Cooldown</p>
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-[#262626] text-center">
-              <p className="text-sm text-gray-400">
-                ~{formatDuration(preview.estimatedDuration)} •{' '}
+            <div className="mt-3 pt-3 border-t border-border/30 text-center">
+              <p className="text-sm text-muted-foreground">
+                ~{formatDuration(preview.estimatedDuration)} &middot;{' '}
                 {preview.matchingGames} matching games
               </p>
             </div>
           </div>
 
-          <Button onClick={handleGenerate} className="w-full">
+          <Button onClick={handleGenerate} className="w-full" size="lg">
+            <Zap className="w-5 h-5 mr-2" />
             Generate Session
           </Button>
         </Card>
 
         {/* Generated Session */}
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-6">Generated Session</h3>
+          <div className="flex items-center gap-2 mb-6">
+            <Sparkles className="w-5 h-5 text-accent" />
+            <h3 className="text-lg font-semibold text-foreground">Generated Session</h3>
+          </div>
 
           {!generatedSession ? (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-[#1A1A1A] rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-gray-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
+              <div className="w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-8 h-8 text-primary" />
               </div>
-              <p className="text-gray-400">
+              <p className="text-muted-foreground">
                 Configure constraints and click Generate
               </p>
             </div>
           ) : (
             <>
-              {renderGameList('Warmup', generatedSession.warmup, 'text-green-400')}
-              {renderGameList('Main Drills', generatedSession.main, 'text-white')}
-              {renderGameList('Cooldown', generatedSession.cooldown, 'text-blue-400')}
+              {renderGameList('Warmup', generatedSession.warmup, 'text-success')}
+              {renderGameList('Main Drills', generatedSession.main, 'text-foreground')}
+              {renderGameList('Cooldown', generatedSession.cooldown, 'text-primary')}
 
-              <div className="border-t border-[#262626] pt-4 mt-4">
+              <div className="border-t border-border/50 pt-4 mt-4">
                 <Input
                   label="Session Name"
                   placeholder="e.g., Monday Guard Class"
@@ -359,6 +361,7 @@ export default function SmartBuilderPage() {
                     onClick={handleGenerate}
                     className="flex-1"
                   >
+                    <RefreshCw className="w-4 h-4 mr-2" />
                     Regenerate
                   </Button>
                   <Button
@@ -366,6 +369,7 @@ export default function SmartBuilderPage() {
                     loading={isSaving}
                     className="flex-1"
                   >
+                    <Save className="w-4 h-4 mr-2" />
                     Save Session
                   </Button>
                 </div>

@@ -5,6 +5,8 @@ import { useClassPrepStore, useGameStore } from '@/store'
 import { ClassPrepCard } from '@/components/ClassPrepCard'
 import { ClassPrepModal } from '@/components/ClassPrepModal'
 import { Button, Input, Select } from '@/components/ui'
+import { Plus, Calendar, Loader2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import type { ClassPrep } from '@/types/database'
 
 export default function ClassPrepPage() {
@@ -28,7 +30,6 @@ export default function ClassPrepPage() {
     setEditingPrep(null)
   }
 
-  // Filter class preps
   const filtered = classPreps.filter((prep) => {
     if (filters.search) {
       const search = filters.search.toLowerCase()
@@ -40,7 +41,6 @@ export default function ClassPrepPage() {
     return true
   })
 
-  // Get unique focus areas
   const focusAreas = [...new Set(classPreps.map((p) => p.focus).filter(Boolean))]
   const focusOptions = [
     { value: '', label: 'All Focus Areas' },
@@ -52,31 +52,21 @@ export default function ClassPrepPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Class Preparations</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">
+            <span className="gradient-text">Class Preparations</span>
+          </h1>
           <p className="text-muted-foreground mt-1">
             {classPreps.length} sessions planned
           </p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
-          <svg
-            className="w-5 h-5 sm:mr-2"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
+          <Plus className="w-5 h-5 sm:mr-2" />
           <span className="hidden sm:inline">New Session</span>
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="bg-card rounded-xl p-4 mb-6 border border-border">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 mb-6 border border-border/50">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1">
             <Input
@@ -111,27 +101,19 @@ export default function ClassPrepPage() {
       {/* Loading state */}
       {isLoading && classPreps.length === 0 && (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       )}
 
       {/* Empty state */}
       {!isLoading && filtered.length === 0 && (
-        <div className="text-center py-16 sm:py-20">
-          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-muted-foreground"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-16 sm:py-20"
+        >
+          <div className="w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Calendar className="w-8 h-8 text-primary" />
           </div>
           <h3 className="text-lg font-medium text-foreground mb-2">No sessions found</h3>
           <p className="text-muted-foreground mb-6">
@@ -140,21 +122,30 @@ export default function ClassPrepPage() {
               : 'Try adjusting your filters'}
           </p>
           {classPreps.length === 0 && (
-            <Button onClick={() => setIsModalOpen(true)}>Plan Your First Session</Button>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Plan Your First Session
+            </Button>
           )}
-        </div>
+        </motion.div>
       )}
 
       {/* Session list */}
       {filtered.length > 0 && (
         <div className="space-y-4">
-          {filtered.map((prep) => (
-            <ClassPrepCard
+          {filtered.map((prep, i) => (
+            <motion.div
               key={prep.id}
-              prep={prep}
-              games={games}
-              onEdit={() => handleEdit(prep)}
-            />
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.05, 0.3) }}
+            >
+              <ClassPrepCard
+                prep={prep}
+                games={games}
+                onEdit={() => handleEdit(prep)}
+              />
+            </motion.div>
           ))}
         </div>
       )}

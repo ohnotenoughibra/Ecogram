@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from './ui'
+import { X, Share2, Download } from 'lucide-react'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -65,11 +66,11 @@ export function PWAInstallPrompt() {
 
   return (
     <div className="fixed bottom-20 sm:bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 animate-slide-up">
-      <div className="bg-card border border-border rounded-xl p-4 shadow-2xl">
+      <div className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl p-4 shadow-2xl shadow-black/20">
         <div className="flex items-start gap-3">
           {/* App icon */}
-          <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-primary-foreground font-bold text-xl">E</span>
+          <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/25">
+            <span className="text-white font-bold text-xl">E</span>
           </div>
 
           <div className="flex-1 min-w-0">
@@ -84,26 +85,18 @@ export function PWAInstallPrompt() {
           {/* Close button */}
           <button
             onClick={handleDismiss}
-            className="p-1 text-muted-foreground hover:text-foreground rounded-lg"
+            className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary/50 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* iOS instructions */}
         {isIOS && (
-          <div className="flex items-center gap-2 mt-3 p-2 bg-secondary rounded-lg">
-            <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
+          <div className="flex items-center gap-2 mt-3 p-2.5 bg-secondary/50 rounded-xl border border-border/30">
+            <Share2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <span className="text-sm text-muted-foreground">
-              Tap <span className="inline-flex items-center justify-center w-5 h-5 bg-accent rounded">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-                </svg>
-              </span> then "Add to Home Screen"
+              Tap the share button, then &ldquo;Add to Home Screen&rdquo;
             </span>
           </div>
         )}
@@ -115,6 +108,7 @@ export function PWAInstallPrompt() {
               Not now
             </Button>
             <Button size="sm" onClick={handleInstall} className="flex-1">
+              <Download className="w-4 h-4 mr-1.5" />
               Install
             </Button>
           </div>

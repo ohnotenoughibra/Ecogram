@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense, useMemo } from 'react'
 import { Card, Badge } from '@/components/ui'
 import { formatDate, formatDuration, capitalizeFirst } from '@/lib/utils'
+import { Loader2, AlertCircle } from 'lucide-react'
 
 interface SharedGame {
   name: string
@@ -43,7 +44,10 @@ function ShareContent() {
     return (
       <div className="content-container">
         <div className="text-center py-20">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Invalid Share Link</h1>
+          <div className="w-16 h-16 bg-error/10 border border-error/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-error" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Invalid Share Link</h1>
           <p className="text-muted-foreground">
             This share link is invalid or has expired.
           </p>
@@ -58,16 +62,18 @@ function ShareContent() {
     <div className="content-container">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{session.name}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">
+          <span className="gradient-text">{session.name}</span>
+        </h1>
         <div className="flex flex-wrap items-center gap-2 mt-2">
           <Badge variant="outline">{formatDate(session.date)}</Badge>
-          <span className="text-muted-foreground">•</span>
+          <span className="text-muted-foreground">&middot;</span>
           <span className="text-muted-foreground">{session.games.length} games</span>
-          <span className="text-muted-foreground">•</span>
+          <span className="text-muted-foreground">&middot;</span>
           <span className="text-muted-foreground">{formatDuration(totalDuration)}</span>
           {session.focus && (
             <>
-              <span className="text-muted-foreground">•</span>
+              <span className="text-muted-foreground">&middot;</span>
               <span className="text-muted-foreground">Focus: {session.focus}</span>
             </>
           )}
@@ -98,10 +104,12 @@ function ShareContent() {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-muted-foreground font-mono">{index + 1}.</span>
+                  <span className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs text-primary font-medium">
+                    {index + 1}
+                  </span>
                   <h3 className="font-semibold text-foreground">{game.name}</h3>
                 </div>
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="flex flex-wrap gap-1.5 mb-2">
                   <Badge
                     variant={
                       game.difficulty === 'beginner'
@@ -124,7 +132,7 @@ function ShareContent() {
                     {game.techniques.map((tech) => (
                       <span
                         key={tech}
-                        className="px-2 py-0.5 bg-secondary rounded text-xs text-muted-foreground"
+                        className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-xs text-primary"
                       >
                         {tech}
                       </span>
@@ -150,7 +158,7 @@ function ShareContent() {
 
       {/* Footer */}
       <div className="mt-8 text-center text-sm text-muted-foreground">
-        <p>Shared from Ecogram - BJJ Training Game Library</p>
+        <p>Shared from <span className="gradient-text font-medium">Ecogram</span> - BJJ Training Game Library</p>
       </div>
     </div>
   )
@@ -160,7 +168,7 @@ function LoadingState() {
   return (
     <div className="content-container">
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     </div>
   )

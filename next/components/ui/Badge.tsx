@@ -12,15 +12,15 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, variant = 'default', size = 'sm', ...props }, ref) => {
     const variants = {
       default: 'bg-secondary text-secondary-foreground',
-      outline: 'bg-transparent border border-border text-foreground',
-      success: 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30',
-      warning: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-500/30',
-      danger: 'bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/30',
+      outline: 'bg-transparent border border-border/50 text-muted-foreground',
+      success: 'bg-success/20 text-success border border-success/30',
+      warning: 'bg-warning/20 text-warning border border-warning/30',
+      danger: 'bg-error/20 text-error border border-error/30',
     }
 
     const sizes = {
-      sm: 'px-2 py-0.5 text-xs',
-      md: 'px-2.5 py-1 text-sm',
+      sm: 'px-2.5 py-0.5 text-xs',
+      md: 'px-3 py-1 text-sm',
     }
 
     return (

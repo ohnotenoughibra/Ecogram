@@ -8,6 +8,7 @@ import { useClassPrepStore } from '@/store'
 import { Modal, ModalFooter, Button, Input, Select, Textarea } from '@/components/ui'
 import { GameCard } from '@/components/GameCard'
 import { formatDateISO } from '@/lib/utils'
+import { Search } from 'lucide-react'
 import type { ClassPrep, ClassPrepFormData, Game } from '@/types/database'
 
 const prepSchema = z.object({
@@ -163,20 +164,23 @@ export function ClassPrepModal({ isOpen, onClose, prep, games }: ClassPrepModalP
         </div>
 
         {/* Game selection */}
-        <div className="border-t border-[#262626] pt-4 mt-4">
+        <div className="border-t border-border/50 pt-4 mt-4">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-white">
+            <h4 className="font-medium text-foreground">
               Select Games ({selectedGameIds.length} selected)
             </h4>
-            <Input
-              placeholder="Filter games..."
-              value={gameFilter}
-              onChange={(e) => setGameFilter(e.target.value)}
-              className="w-48"
-            />
+            <div className="relative w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                placeholder="Filter games..."
+                value={gameFilter}
+                onChange={(e) => setGameFilter(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-input border border-border/50 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1">
             {filteredGames.map((game) => (
               <GameCard
                 key={game.id}
@@ -190,7 +194,7 @@ export function ClassPrepModal({ isOpen, onClose, prep, games }: ClassPrepModalP
           </div>
 
           {filteredGames.length === 0 && (
-            <p className="text-center text-gray-500 py-8">No games found</p>
+            <p className="text-center text-muted-foreground py-8">No games found</p>
           )}
         </div>
 
