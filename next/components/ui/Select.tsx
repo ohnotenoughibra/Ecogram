@@ -33,15 +33,14 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={selectId}
           className={cn(
-            'w-full px-3 py-2.5 bg-input border border-border rounded-lg',
+            'w-full px-4 py-3 bg-input border border-border/50 rounded-lg',
             'text-foreground appearance-none cursor-pointer',
-            'focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring',
-            'transition-colors duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent',
+            'transition-all duration-200',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'touch-target',
-            // Dynamic chevron based on theme
-            'bg-[url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%23737373\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10',
-            error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
+            'bg-[url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%2394a3b8\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10',
+            error && 'border-error focus:ring-error',
             className
           )}
           {...props}
@@ -58,7 +57,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ))}
         </select>
         {error && (
-          <p className="mt-1.5 text-sm text-red-500">{error}</p>
+          <p className="mt-1.5 text-sm text-error">{error}</p>
         )}
       </div>
     )

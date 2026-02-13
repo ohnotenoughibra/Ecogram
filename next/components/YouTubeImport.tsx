@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Button, Input, Modal } from '@/components/ui'
+import { Button, Input, Modal, ModalFooter, Select } from '@/components/ui'
 import { useGameStore } from '@/store'
+import { AlertCircle, Video, Loader2 } from 'lucide-react'
 import type { GameFormData, Position, Difficulty, GameCategory } from '@/types/database'
 
 interface YouTubeImportProps {
@@ -76,7 +77,6 @@ function extractTechniques(text: string): string[] {
   const lower = text.toLowerCase()
   keywords.forEach(keyword => {
     if (lower.includes(keyword)) {
-      // Capitalize each word
       const formatted = keyword.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
       if (!techniques.includes(formatted)) {
         techniques.push(formatted)
@@ -84,8 +84,33 @@ function extractTechniques(text: string): string[] {
     }
   })
 
-  return techniques.slice(0, 5) // Limit to 5 techniques
+  return techniques.slice(0, 5)
 }
+
+const positionOptions = [
+  { value: 'guard', label: 'Guard' },
+  { value: 'half-guard', label: 'Half Guard' },
+  { value: 'mount', label: 'Mount' },
+  { value: 'side-control', label: 'Side Control' },
+  { value: 'back', label: 'Back' },
+  { value: 'turtle', label: 'Turtle' },
+  { value: 'standing', label: 'Standing' },
+  { value: 'other', label: 'Other' },
+]
+
+const difficultyOptions = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+]
+
+const categoryOptions = [
+  { value: 'warmup', label: 'Warmup' },
+  { value: 'main', label: 'Main' },
+  { value: 'cooldown', label: 'Cooldown' },
+  { value: 'drill', label: 'Drill' },
+  { value: 'positional', label: 'Positional' },
+]
 
 export function YouTubeImport({ isOpen, onClose }: YouTubeImportProps) {
   const { addGame } = useGameStore()
@@ -108,7 +133,6 @@ export function YouTubeImport({ isOpen, onClose }: YouTubeImportProps) {
     setIsLoading(true)
 
     try {
-      // Use oEmbed API to get video info (no API key needed)
       const response = await fetch(
         `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
       )
@@ -121,17 +145,16 @@ export function YouTubeImport({ isOpen, onClose }: YouTubeImportProps) {
 
       const info: VideoInfo = {
         title: data.title || '',
-        description: '', // oEmbed doesn't provide description
+        description: '',
         videoId,
         thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
       }
 
       setVideoInfo(info)
 
-      // Auto-populate game data based on title
       const combinedText = info.title + ' ' + info.description
       setGameData({
-        name: info.title.slice(0, 100), // Limit name length
+        name: info.title.slice(0, 100),
         description: `Imported from YouTube video`,
         position: guessPosition(combinedText),
         difficulty: guessDifficulty(combinedText),
@@ -173,7 +196,6 @@ export function YouTubeImport({ isOpen, onClose }: YouTubeImportProps) {
     setIsLoading(false)
 
     if (result) {
-      // Reset and close
       setUrl('')
       setVideoInfo(null)
       setGameData({})
@@ -196,7 +218,7 @@ export function YouTubeImport({ isOpen, onClose }: YouTubeImportProps) {
       <div className="space-y-4">
         {/* URL Input */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             YouTube URL
           </label>
           <div className="flex gap-2">
@@ -207,30 +229,36 @@ export function YouTubeImport({ isOpen, onClose }: YouTubeImportProps) {
               className="flex-1"
             />
             <Button onClick={handleFetch} disabled={isLoading || !url}>
-              {isLoading ? 'Loading...' : 'Fetch'}
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                'Fetch'
+              )}
             </Button>
           </div>
         </div>
 
         {error && (
-          <div className="p-3 bg-red-500/20 text-red-700 dark:text-red-400 rounded-lg text-sm">
+          <div className="p-3 bg-error/20 text-error border border-error/30 rounded-lg text-sm flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
             {error}
           </div>
         )}
 
         {/* Video Preview */}
         {videoInfo && (
-          <div className="border border-border rounded-lg p-4">
+          <div className="border border-border/50 rounded-xl p-4 bg-background/50">
             <div className="flex gap-4">
               <img
                 src={videoInfo.thumbnail}
                 alt={videoInfo.title}
-                className="w-32 h-24 object-cover rounded"
+                className="w-32 h-24 object-cover rounded-lg"
               />
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-foreground truncate">{videoInfo.title}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Video ID: {videoInfo.videoId}
+                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                  <Video className="w-3.5 h-3.5" />
+                  {videoInfo.videoId}
                 </p>
               </div>
             </div>
@@ -239,88 +267,57 @@ export function YouTubeImport({ isOpen, onClose }: YouTubeImportProps) {
 
         {/* Game Form (only shown after fetching) */}
         {videoInfo && gameData.name && (
-          <div className="space-y-4 pt-4 border-t border-border">
+          <div className="space-y-4 pt-4 border-t border-border/50">
             <h3 className="font-medium text-foreground">Game Details</h3>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Name</label>
-              <Input
-                value={gameData.name || ''}
-                onChange={(e) => setGameData({ ...gameData, name: e.target.value })}
+            <Input
+              label="Name"
+              value={gameData.name || ''}
+              onChange={(e) => setGameData({ ...gameData, name: e.target.value })}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Position"
+                options={positionOptions}
+                value={gameData.position || 'other'}
+                onChange={(e) => setGameData({ ...gameData, position: e.target.value as Position })}
+              />
+              <Select
+                label="Difficulty"
+                options={difficultyOptions}
+                value={gameData.difficulty || 'intermediate'}
+                onChange={(e) => setGameData({ ...gameData, difficulty: e.target.value as Difficulty })}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Position</label>
-                <select
-                  value={gameData.position || 'other'}
-                  onChange={(e) => setGameData({ ...gameData, position: e.target.value as Position })}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground"
-                >
-                  <option value="guard">Guard</option>
-                  <option value="half-guard">Half Guard</option>
-                  <option value="mount">Mount</option>
-                  <option value="side-control">Side Control</option>
-                  <option value="back">Back</option>
-                  <option value="turtle">Turtle</option>
-                  <option value="standing">Standing</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Difficulty</label>
-                <select
-                  value={gameData.difficulty || 'intermediate'}
-                  onChange={(e) => setGameData({ ...gameData, difficulty: e.target.value as Difficulty })}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground"
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Category</label>
-                <select
-                  value={gameData.category || 'main'}
-                  onChange={(e) => setGameData({ ...gameData, category: e.target.value as GameCategory })}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground"
-                >
-                  <option value="warmup">Warmup</option>
-                  <option value="main">Main</option>
-                  <option value="cooldown">Cooldown</option>
-                  <option value="drill">Drill</option>
-                  <option value="positional">Positional</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Duration (min)</label>
-                <Input
-                  type="number"
-                  value={gameData.duration_minutes || 10}
-                  onChange={(e) => setGameData({ ...gameData, duration_minutes: parseInt(e.target.value) || 10 })}
-                  min={1}
-                  max={60}
-                />
-              </div>
+              <Select
+                label="Category"
+                options={categoryOptions}
+                value={gameData.category || 'main'}
+                onChange={(e) => setGameData({ ...gameData, category: e.target.value as GameCategory })}
+              />
+              <Input
+                label="Duration (min)"
+                type="number"
+                value={gameData.duration_minutes || 10}
+                onChange={(e) => setGameData({ ...gameData, duration_minutes: parseInt(e.target.value) || 10 })}
+                min={1}
+                max={60}
+              />
             </div>
 
             {gameData.techniques && gameData.techniques.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Detected Techniques
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {gameData.techniques.map((tech) => (
                     <span
                       key={tech}
-                      className="px-2 py-1 bg-secondary rounded text-sm text-foreground"
+                      className="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs text-primary"
                     >
                       {tech}
                     </span>
@@ -329,14 +326,14 @@ export function YouTubeImport({ isOpen, onClose }: YouTubeImportProps) {
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-4">
+            <ModalFooter>
               <Button variant="ghost" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button onClick={handleImport} disabled={isLoading}>
-                {isLoading ? 'Importing...' : 'Import Game'}
+              <Button onClick={handleImport} loading={isLoading}>
+                Import Game
               </Button>
-            </div>
+            </ModalFooter>
           </div>
         )}
       </div>

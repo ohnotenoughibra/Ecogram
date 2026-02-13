@@ -1,10 +1,7 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import { Navigation } from '@/components/Navigation'
 import { ClientProviders } from '@/components/ClientProviders'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Ecogram - BJJ Training Game Library',
@@ -12,7 +9,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'Ecogram',
   },
 }
@@ -24,8 +21,8 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fafafa' },
-    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
+    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
   ],
 }
 
@@ -36,10 +33,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen`}>
+      <body className="min-h-screen bg-mesh">
         <ClientProviders>
           <Navigation />
-          <main className="pt-14 sm:pt-16 pb-16 sm:pb-0">
+          <main className="pt-0 pb-20 sm:pt-16 sm:pb-0">
             {children}
           </main>
         </ClientProviders>

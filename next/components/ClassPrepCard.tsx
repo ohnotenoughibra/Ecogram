@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useClassPrepStore } from '@/store'
 import { Card, Badge, Button } from '@/components/ui'
 import { formatDate, formatDuration, capitalizeFirst } from '@/lib/utils'
+import { Printer, Share2, Edit, Trash2, Check, Clock, Dumbbell } from 'lucide-react'
 import type { ClassPrep, Game } from '@/types/database'
 
 interface ClassPrepCardProps {
@@ -91,7 +92,6 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
   }
 
   const handleShare = async () => {
-    // Create a shareable data object
     const shareData = {
       name: prep.name,
       date: prep.date,
@@ -110,11 +110,9 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
       }))
     }
 
-    // Encode to base64
     const encoded = btoa(encodeURIComponent(JSON.stringify(shareData)))
     const url = `${window.location.origin}/share?data=${encoded}`
 
-    // Try native share first
     if (navigator.share) {
       try {
         await navigator.share({
@@ -128,7 +126,6 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
       }
     }
 
-    // Copy to clipboard
     try {
       await navigator.clipboard.writeText(url)
       setShareUrl(url)
@@ -162,9 +159,15 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
           </div>
 
           {/* Meta */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-foreground mb-3">
-            <span>{prep.game_ids.length} games</span>
-            <span>{formatDuration(totalDuration)}</span>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-muted-foreground mb-3">
+            <span className="flex items-center gap-1">
+              <Dumbbell className="w-3.5 h-3.5" />
+              {prep.game_ids.length} games
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {formatDuration(totalDuration)}
+            </span>
             {prep.focus && <span>Focus: {prep.focus}</span>}
           </div>
 
@@ -175,11 +178,11 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
 
           {/* Games preview */}
           {prepGames.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {prepGames.map((game, index) => (
                 <span
                   key={game.id}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-secondary rounded text-sm text-foreground"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs text-foreground"
                 >
                   <span className="text-muted-foreground">{index + 1}.</span>
                   {game.name}
@@ -195,29 +198,26 @@ export function ClassPrepCard({ prep, games, onEdit }: ClassPrepCardProps) {
 
           {/* Share URL notification */}
           {shareUrl && (
-            <div className="mt-3 p-2 bg-green-500/20 text-green-700 dark:text-green-400 rounded text-sm">
+            <div className="mt-3 p-2 bg-success/20 text-success border border-success/30 rounded-lg text-sm flex items-center gap-2">
+              <Check className="w-4 h-4" />
               Link copied to clipboard!
             </div>
           )}
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
           <Button size="sm" variant="ghost" onClick={handlePrint} title="Print">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
+            <Printer className="w-4 h-4" />
           </Button>
           <Button size="sm" variant="ghost" onClick={handleShare} title="Share">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
+            <Share2 className="w-4 h-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={onEdit}>
-            Edit
+          <Button size="sm" variant="ghost" onClick={onEdit} title="Edit">
+            <Edit className="w-4 h-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={handleDelete}>
-            Delete
+          <Button size="sm" variant="ghost" onClick={handleDelete} title="Delete">
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       </div>

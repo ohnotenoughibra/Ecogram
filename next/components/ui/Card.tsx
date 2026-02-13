@@ -10,16 +10,16 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', children, ...props }, ref) => {
     const variants = {
-      default: 'bg-card shadow-sm',
-      interactive: 'bg-card shadow-sm hover:shadow-md hover:bg-accent/50 cursor-pointer transition-all active:scale-[0.99]',
-      bordered: 'bg-transparent border border-border',
+      default: 'bg-card/50 backdrop-blur-sm shadow-lg',
+      interactive: 'bg-card/50 backdrop-blur-sm shadow-lg hover:shadow-xl hover:bg-card/70 cursor-pointer transition-all duration-200 active:scale-[0.99]',
+      bordered: 'bg-transparent border border-border/50',
     }
 
     return (
       <div
         ref={ref}
         className={cn(
-          'rounded-xl p-4 sm:p-5 border border-border',
+          'rounded-xl p-4 sm:p-5 border border-border/50',
           variants[variant],
           className
         )}
@@ -81,7 +81,7 @@ const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex items-center gap-2 mt-4 pt-4 border-t border-border', className)}
+      className={cn('flex items-center gap-2 mt-4 pt-4 border-t border-border/50', className)}
       {...props}
     />
   )

@@ -7,6 +7,8 @@ import { GameFilters } from '@/components/GameFilters'
 import { GameModal } from '@/components/GameModal'
 import { YouTubeImport } from '@/components/YouTubeImport'
 import { Button } from '@/components/ui'
+import { Plus, Dumbbell, Loader2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import type { Game } from '@/types/database'
 
 export default function GamesPage() {
@@ -36,9 +38,11 @@ export default function GamesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Game Library</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">
+            <span className="gradient-text">Game Library</span>
+          </h1>
           <p className="text-muted-foreground mt-1">
-            {games.length} games • {filtered.length} shown
+            {games.length} games &middot; {filtered.length} shown
           </p>
         </div>
         <div className="flex gap-2">
@@ -49,19 +53,7 @@ export default function GamesPage() {
             <span className="hidden sm:inline">YouTube</span>
           </Button>
           <Button onClick={() => setIsModalOpen(true)}>
-            <svg
-              className="w-5 h-5 sm:mr-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+            <Plus className="w-5 h-5 sm:mr-2" />
             <span className="hidden sm:inline">Add Game</span>
           </Button>
         </div>
@@ -73,27 +65,19 @@ export default function GamesPage() {
       {/* Loading state */}
       {isLoading && games.length === 0 && (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       )}
 
       {/* Empty state */}
       {!isLoading && filtered.length === 0 && (
-        <div className="text-center py-16 sm:py-20">
-          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-muted-foreground"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-16 sm:py-20"
+        >
+          <div className="w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Dumbbell className="w-8 h-8 text-primary" />
           </div>
           <h3 className="text-lg font-medium text-foreground mb-2">No games found</h3>
           <p className="text-muted-foreground mb-6">
@@ -102,16 +86,26 @@ export default function GamesPage() {
               : 'Try adjusting your filters'}
           </p>
           {games.length === 0 && (
-            <Button onClick={() => setIsModalOpen(true)}>Add Your First Game</Button>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Your First Game
+            </Button>
           )}
-        </div>
+        </motion.div>
       )}
 
       {/* Game grid */}
       {filtered.length > 0 && (
         <div className="card-grid">
-          {filtered.map((game) => (
-            <GameCard key={game.id} game={game} onEdit={() => handleEdit(game)} />
+          {filtered.map((game, i) => (
+            <motion.div
+              key={game.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.05, 0.3) }}
+            >
+              <GameCard game={game} onEdit={() => handleEdit(game)} />
+            </motion.div>
           ))}
         </div>
       )}

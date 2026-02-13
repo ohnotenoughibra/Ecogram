@@ -2,6 +2,7 @@
 
 import { useGameStore } from '@/store'
 import { Input, Select, Button } from '@/components/ui'
+import { Search, Filter, X, Star } from 'lucide-react'
 import type { Position, Difficulty, GameCategory } from '@/types/database'
 
 const positionOptions = [
@@ -35,7 +36,6 @@ const categoryOptions = [
 export function GameFilters() {
   const { filters, setFilters, resetFilters, games } = useGameStore()
 
-  // Get unique topics from games
   const topics = [...new Set(games.map((g) => g.topic))].sort()
   const topicOptions = [
     { value: '', label: 'All Topics' },
@@ -51,19 +51,18 @@ export function GameFilters() {
     filters.favorites_only
 
   return (
-    <div className="bg-card rounded-xl p-4 mb-6 border border-border">
+    <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 mb-6 border border-border/50">
       <div className="flex flex-col lg:flex-row gap-4">
-        {/* Search */}
-        <div className="flex-1">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search games, techniques..."
             value={filters.search}
             onChange={(e) => setFilters({ search: e.target.value })}
-            className="w-full"
+            className="pl-10"
           />
         </div>
 
-        {/* Filter row */}
         <div className="flex flex-wrap gap-3">
           <Select
             options={positionOptions}
@@ -92,20 +91,21 @@ export function GameFilters() {
         </div>
       </div>
 
-      {/* Secondary filters */}
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-        <label className="flex items-center gap-2 cursor-pointer">
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
+        <label className="flex items-center gap-2 cursor-pointer group">
           <input
             type="checkbox"
             checked={filters.favorites_only}
             onChange={(e) => setFilters({ favorites_only: e.target.checked })}
-            className="w-4 h-4 rounded bg-input border-border text-primary focus:ring-ring focus:ring-offset-background"
+            className="w-4 h-4 rounded bg-input border-border/50 text-primary focus:ring-primary focus:ring-offset-background"
           />
-          <span className="text-sm text-muted-foreground">Favorites only</span>
+          <Star className="w-4 h-4 text-muted-foreground group-hover:text-warning transition-colors" />
+          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">Favorites only</span>
         </label>
 
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={resetFilters}>
+            <X className="w-4 h-4 mr-1" />
             Clear filters
           </Button>
         )}
