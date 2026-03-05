@@ -1,20 +1,11 @@
 {
-  "name": "ecogram",
-  "version": "1.0.0",
-  "description": "Ecogram - Educational gaming platform",
+  "name": "cla-games",
+  "version": "2.0.0",
+  "description": "Constraints-Led Approach game library for nogi grappling",
   "private": true,
   "scripts": {
-    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../next && npm install",
-    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\" \"cd next && npm run dev\"",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:next": "cd next && npm run dev",
-    "build": "cd backend && npm run build && cd ../frontend && npm run build && cd ../next && npm run build",
-    "build:backend": "cd backend && npm run build",
-    "build:frontend": "cd frontend && npm run build",
-    "build:next": "cd next && npm run build"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
+    "dev": "cd next && npm run dev",
+    "build": "cd next && npm run build",
+    "start": "cd next && npm run start"
   }
 }
