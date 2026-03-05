@@ -1,200 +1,101 @@
-'use client'
+'use client';
 
-import { useGameStore } from '@/store'
-import { useToast } from '@/components/Toast'
-import { Card, Badge, Button } from '@/components/ui'
-import { StarRating } from '@/components/StarRating'
-import { formatDuration, capitalizeFirst } from '@/lib/utils'
-import { Star, Clock, Play, Edit, Trash2, Check, Zap, Shield } from 'lucide-react'
-import type { Game } from '@/types/database'
+import { CLAGame, CATEGORY_COLORS } from '@/types';
+import { Clock, Users, ChevronRight, Plus } from 'lucide-react';
+import { useGameStore } from '@/store';
+import { useSessionStore } from '@/store';
 
 interface GameCardProps {
-  game: Game
-  onEdit: () => void
-  selectable?: boolean
-  selected?: boolean
-  onSelect?: () => void
+  game: CLAGame;
+  onAddToSession?: () => void;
 }
 
-const difficultyColors = {
-  beginner: 'success',
-  intermediate: 'warning',
-  advanced: 'danger',
-} as const
+export default function GameCard({ game, onAddToSession }: GameCardProps) {
+  const selectGame = useGameStore((s) => s.selectGame);
+  const activeSession = useSessionStore((s) => s.activeSession);
+  const addGameToSession = useSessionStore((s) => s.addGameToSession);
 
-const categoryLabels = {
-  warmup: 'Warmup',
-  main: 'Main',
-  cooldown: 'Cooldown',
-  drill: 'Drill',
-  positional: 'Positional',
-}
+  const categoryClass = CATEGORY_COLORS[game.category] || '';
 
-export function GameCard({
-  game,
-  onEdit,
-  selectable,
-  selected,
-  onSelect,
-}: GameCardProps) {
-  const { toggleFavorite, deleteGame, rateGame } = useGameStore()
-  const { confirm: confirmDialog, success: toastSuccess } = useToast()
-
-  const handleDelete = async () => {
-    const ok = await confirmDialog({
-      title: 'Delete Game',
-      description: `"${game.name}" will be permanently removed.`,
-      confirmLabel: 'Delete',
-      variant: 'danger',
-    })
-    if (ok) {
-      await deleteGame(game.id)
-      toastSuccess('Game deleted')
+  const handleAddToSession = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (activeSession) {
+      addGameToSession(activeSession.id, game.id);
+      onAddToSession?.();
     }
-  }
+  };
 
   return (
-    <Card
-      variant={selectable ? 'interactive' : 'default'}
-      className={`relative group ${selected ? 'ring-2 ring-primary shadow-primary/20' : ''}`}
-      onClick={selectable ? onSelect : undefined}
+    <button
+      onClick={() => selectGame(game)}
+      className="w-full text-left bg-card/50 border border-border/30 rounded-xl p-4 hover:border-primary/30 hover:bg-card/80 transition-all group"
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground truncate">{game.name}</h3>
-          <p className="text-sm text-muted-foreground">{game.topic}</p>
-        </div>
-
-        {/* Favorite button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            toggleFavorite(game.id)
-          }}
-          className="p-1.5 hover:bg-secondary/50 rounded-lg transition-colors"
-        >
-          <Star
-            className={`w-5 h-5 transition-colors ${
-              game.is_favorite ? 'text-warning fill-warning' : 'text-muted-foreground'
-            }`}
-          />
-        </button>
-      </div>
-
-      {/* Description */}
-      {game.description && (
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-          {game.description}
-        </p>
-      )}
-
-      {/* Badges */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        <Badge variant={difficultyColors[game.difficulty]}>
-          {capitalizeFirst(game.difficulty)}
-        </Badge>
-        <Badge variant="outline">{capitalizeFirst(game.position)}</Badge>
-        <Badge variant="outline">{categoryLabels[game.category]}</Badge>
-        {game.environment_tags?.map((tag) => (
-          <Badge key={tag} variant="outline" className="text-primary border-primary/30">
-            {tag === 'nogi' ? 'No-Gi' : capitalizeFirst(tag)}
-          </Badge>
-        ))}
-      </div>
-
-      {/* Meta info */}
-      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-        <span className="flex items-center gap-1">
-          <Clock className="w-4 h-4" />
-          {formatDuration(game.duration_minutes)}
-        </span>
-        {game.play_count > 0 && (
-          <span className="flex items-center gap-1">
-            <Play className="w-4 h-4" />
-            {game.play_count} plays
-          </span>
-        )}
-        {game.intensity && (
-          <span className={`flex items-center gap-1 ${
-            game.intensity === 'high' ? 'text-error' :
-            game.intensity === 'medium' ? 'text-warning' : 'text-success'
-          }`}>
-            <Zap className="w-4 h-4" />
-            {capitalizeFirst(game.intensity)}
-          </span>
-        )}
-      </div>
-
-      {/* CLA Constraints */}
-      {game.rule_constraints && game.rule_constraints.length > 0 && (
-        <div className="flex items-center gap-1.5 mb-3">
-          <Shield className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">
-            {game.rule_constraints.length} constraint{game.rule_constraints.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-      )}
-
-      {/* Rating */}
-      {!selectable && (
-        <div className="flex items-center gap-2 mb-3" onClick={(e) => e.stopPropagation()}>
-          <StarRating
-            rating={game.rating}
-            onRate={(rating) => rateGame(game.id, rating)}
-            size="sm"
-          />
-          {game.rating && <span className="text-xs text-muted-foreground">({game.rating}/5)</span>}
-        </div>
-      )}
-
-      {/* Techniques */}
-      {game.techniques.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-4">
-          {game.techniques.slice(0, 3).map((tech) => (
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h3 className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors">
+          {game.name}
+        </h3>
+        <div className="flex items-center gap-1 shrink-0">
+          {activeSession && (
             <span
-              key={tech}
-              className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-xs text-primary"
+              onClick={handleAddToSession}
+              className="p-1 rounded-md hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+              role="button"
+              tabIndex={0}
             >
-              {tech}
+              <Plus className="w-3.5 h-3.5" />
+            </span>
+          )}
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        <span
+          className={`px-2 py-0.5 rounded-full text-[10px] font-medium border capitalize ${categoryClass}`}
+        >
+          {game.category}
+        </span>
+        {game.subcategory && (
+          <span className="text-[10px] text-muted-foreground capitalize">
+            {game.subcategory}
+          </span>
+        )}
+      </div>
+
+      <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+        {game.startingPosition}
+      </p>
+
+      <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <Users className="w-3 h-3" />
+          {game.playerA.label} vs {game.playerB.label}
+        </span>
+        {game.duration && (
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {game.duration}min
+          </span>
+        )}
+      </div>
+
+      {game.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {game.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="px-1.5 py-0.5 bg-secondary/50 rounded text-[9px] text-muted-foreground"
+            >
+              {tag}
             </span>
           ))}
-          {game.techniques.length > 3 && (
-            <span className="text-xs text-muted-foreground">
-              +{game.techniques.length - 3} more
+          {game.tags.length > 3 && (
+            <span className="px-1.5 py-0.5 text-[9px] text-muted-foreground">
+              +{game.tags.length - 3}
             </span>
           )}
         </div>
       )}
-
-      {/* Actions */}
-      {!selectable && (
-        <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-          <Button size="sm" variant="ghost" onClick={onEdit}>
-            <Edit className="w-4 h-4 mr-1" />
-            Edit
-          </Button>
-          <Button size="sm" variant="ghost" onClick={handleDelete}>
-            <Trash2 className="w-4 h-4 mr-1" />
-            Delete
-          </Button>
-        </div>
-      )}
-
-      {/* Selection indicator */}
-      {selectable && (
-        <div
-          className={`absolute top-3 right-3 w-5 h-5 rounded-full border-2 transition-all ${
-            selected
-              ? 'bg-primary border-primary'
-              : 'border-muted-foreground/50 group-hover:border-foreground'
-          }`}
-        >
-          {selected && (
-            <Check className="w-full h-full text-primary-foreground p-0.5" />
-          )}
-        </div>
-      )}
-    </Card>
-  )
+    </button>
+  );
 }

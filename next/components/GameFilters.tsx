@@ -1,145 +1,101 @@
-'use client'
+'use client';
 
-import { useGameStore } from '@/store'
-import { Input, Select, Button } from '@/components/ui'
-import { Search, Filter, X, Star } from 'lucide-react'
-import type { Position, Difficulty, GameCategory, EnvironmentTag, Intensity } from '@/types/database'
+import { useGameStore } from '@/store';
+import { CATEGORIES, GameCategory } from '@/types';
+import { X, Search } from 'lucide-react';
+import { useState } from 'react';
 
-const positionOptions = [
-  { value: '', label: 'All Positions' },
-  { value: 'guard', label: 'Guard' },
-  { value: 'half-guard', label: 'Half Guard' },
-  { value: 'mount', label: 'Mount' },
-  { value: 'side-control', label: 'Side Control' },
-  { value: 'back', label: 'Back' },
-  { value: 'turtle', label: 'Turtle' },
-  { value: 'standing', label: 'Standing' },
-  { value: 'other', label: 'Other' },
-]
+export default function GameFilters() {
+  const { filters, setFilters, resetFilters, getSubcategories, filteredGames } =
+    useGameStore();
 
-const difficultyOptions = [
-  { value: '', label: 'All Levels' },
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' },
-]
+  const subcategories =
+    filters.category !== 'all'
+      ? getSubcategories(filters.category as GameCategory)
+      : [];
 
-const categoryOptions = [
-  { value: '', label: 'All Categories' },
-  { value: 'warmup', label: 'Warmup' },
-  { value: 'main', label: 'Main' },
-  { value: 'cooldown', label: 'Cooldown' },
-  { value: 'drill', label: 'Drill' },
-  { value: 'positional', label: 'Positional' },
-]
-
-const environmentOptions = [
-  { value: '', label: 'All Environments' },
-  { value: 'gi', label: 'Gi' },
-  { value: 'nogi', label: 'No-Gi' },
-  { value: 'wrestling', label: 'Wrestling' },
-  { value: 'judo', label: 'Judo' },
-  { value: 'mma', label: 'MMA' },
-]
-
-const intensityOptions = [
-  { value: '', label: 'All Intensities' },
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-]
-
-export function GameFilters() {
-  const { filters, setFilters, resetFilters, games } = useGameStore()
-
-  const topics = [...new Set(games.map((g) => g.topic))].sort()
-  const topicOptions = [
-    { value: '', label: 'All Topics' },
-    ...topics.map((t) => ({ value: t, label: t })),
-  ]
-
-  const hasActiveFilters =
-    filters.search ||
-    filters.position ||
-    filters.difficulty ||
-    filters.category ||
-    filters.topic ||
-    filters.favorites_only ||
-    filters.environment ||
-    filters.intensity
+  const count = filteredGames().length;
+  const hasFilters =
+    filters.category !== 'all' || filters.subcategory || filters.source;
 
   return (
-    <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 mb-6 border border-border/50">
-      <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search games, techniques..."
-            value={filters.search}
-            onChange={(e) => setFilters({ search: e.target.value })}
-            className="pl-10"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3">
-          <Select
-            options={positionOptions}
-            value={filters.position}
-            onChange={(e) => setFilters({ position: e.target.value as Position | '' })}
-            className="sm:w-36"
-          />
-          <Select
-            options={difficultyOptions}
-            value={filters.difficulty}
-            onChange={(e) => setFilters({ difficulty: e.target.value as Difficulty | '' })}
-            className="sm:w-36"
-          />
-          <Select
-            options={categoryOptions}
-            value={filters.category}
-            onChange={(e) => setFilters({ category: e.target.value as GameCategory | '' })}
-            className="sm:w-36"
-          />
-          <Select
-            options={topicOptions}
-            value={filters.topic}
-            onChange={(e) => setFilters({ topic: e.target.value })}
-            className="sm:w-36"
-          />
-          <Select
-            options={environmentOptions}
-            value={filters.environment}
-            onChange={(e) => setFilters({ environment: e.target.value as EnvironmentTag | '' })}
-            className="sm:w-36"
-          />
-          <Select
-            options={intensityOptions}
-            value={filters.intensity}
-            onChange={(e) => setFilters({ intensity: e.target.value as Intensity | '' })}
-            className="sm:w-36"
-          />
-        </div>
+    <div className="space-y-3">
+      {/* Mobile search */}
+      <div className="sm:hidden relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search games..."
+          value={filters.search}
+          onChange={(e) => setFilters({ search: e.target.value })}
+          className="w-full pl-10 pr-4 py-2.5 bg-secondary/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+        />
       </div>
 
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
-        <label className="flex items-center gap-2 cursor-pointer group">
-          <input
-            type="checkbox"
-            checked={filters.favorites_only}
-            onChange={(e) => setFilters({ favorites_only: e.target.checked })}
-            className="w-4 h-4 rounded bg-input border-border/50 text-primary focus:ring-primary focus:ring-offset-background"
-          />
-          <Star className="w-4 h-4 text-muted-foreground group-hover:text-warning transition-colors" />
-          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">Favorites only</span>
-        </label>
+      {/* Category pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <button
+          onClick={() => setFilters({ category: 'all', subcategory: '' })}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+            filters.category === 'all'
+              ? 'bg-primary/20 text-primary border-primary/30'
+              : 'bg-secondary/50 text-muted-foreground border-border/50 hover:text-foreground'
+          }`}
+        >
+          All ({count})
+        </button>
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat.value}
+            onClick={() =>
+              setFilters({
+                category:
+                  filters.category === cat.value ? 'all' : cat.value,
+                subcategory: '',
+              })
+            }
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              filters.category === cat.value
+                ? 'bg-primary/20 text-primary border-primary/30'
+                : 'bg-secondary/50 text-muted-foreground border-border/50 hover:text-foreground'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
 
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={resetFilters}>
-            <X className="w-4 h-4 mr-1" />
-            Clear filters
-          </Button>
+        {hasFilters && (
+          <button
+            onClick={resetFilters}
+            className="shrink-0 px-2 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         )}
       </div>
+
+      {/* Subcategory pills */}
+      {subcategories.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {subcategories.map((sub) => (
+            <button
+              key={sub}
+              onClick={() =>
+                setFilters({
+                  subcategory: filters.subcategory === sub ? '' : sub,
+                })
+              }
+              className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors capitalize ${
+                filters.subcategory === sub
+                  ? 'bg-accent/20 text-accent border-accent/30'
+                  : 'bg-secondary/30 text-muted-foreground border-border/30 hover:text-foreground'
+              }`}
+            >
+              {sub}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
-  )
+  );
 }

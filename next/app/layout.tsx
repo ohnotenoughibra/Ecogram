@@ -1,16 +1,14 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import { Navigation } from '@/components/Navigation'
-import { ClientProviders } from '@/components/ClientProviders'
 
 export const metadata: Metadata = {
-  title: 'Ecogram - BJJ Training Game Library',
-  description: 'Organize your BJJ training games and build effective class sessions',
+  title: 'CLA Games - Constraints-Led Approach Game Library for Nogi Grappling',
+  description: 'Browse, create, and share constraint-based training games for nogi grappling. Inspired by Greg Souders and ecological dynamics.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Ecogram',
+    title: 'CLA Games',
   },
 }
 
@@ -34,12 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-mesh">
-        <ClientProviders>
-          <Navigation />
-          <main className="pt-0 pb-20 sm:pt-16 sm:pb-0">
-            {children}
-          </main>
-        </ClientProviders>
+        {children}
       </body>
     </html>
   )
