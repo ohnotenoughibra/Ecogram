@@ -3,18 +3,25 @@
 import { useGameStore } from '@/store';
 import { CATEGORIES, GameCategory } from '@/types';
 import { X, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo } from 'react';
 
 export default function GameFilters() {
-  const { filters, setFilters, resetFilters, getSubcategories, filteredGames } =
-    useGameStore();
+  const games = useGameStore((s) => s.games);
+  const filters = useGameStore((s) => s.filters);
+  const setFilters = useGameStore((s) => s.setFilters);
+  const resetFilters = useGameStore((s) => s.resetFilters);
 
-  const subcategories =
-    filters.category !== 'all'
-      ? getSubcategories(filters.category as GameCategory)
-      : [];
+  const subcategories = useMemo(() => {
+    if (filters.category === 'all') return [];
+    const subs = new Set(
+      games
+        .filter((g) => g.category === filters.category && g.subcategory)
+        .map((g) => g.subcategory)
+    );
+    return Array.from(subs) as string[];
+  }, [games, filters.category]);
 
-  const count = filteredGames().length;
+  const count = games.length;
   const hasFilters =
     filters.category !== 'all' || filters.subcategory || filters.source;
 

@@ -6,9 +6,32 @@ import GameFilters from '@/components/GameFilters';
 import GameCard from '@/components/GameCard';
 import GameDetail from '@/components/GameDetail';
 
+function useFilteredGames() {
+  const games = useGameStore((s) => s.games);
+  const filters = useGameStore((s) => s.filters);
+
+  return games.filter((g) => {
+    if (filters.category !== 'all' && g.category !== filters.category) return false;
+    if (filters.subcategory && g.subcategory !== filters.subcategory) return false;
+    if (filters.source && g.source !== filters.source) return false;
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      if (
+        !g.name.toLowerCase().includes(q) &&
+        !g.tags.some((t) => t.toLowerCase().includes(q)) &&
+        !g.playerA.objective.toLowerCase().includes(q) &&
+        !g.playerB.objective.toLowerCase().includes(q) &&
+        !g.startingPosition.toLowerCase().includes(q) &&
+        !(g.coachingNotes && g.coachingNotes.toLowerCase().includes(q))
+      )
+        return false;
+    }
+    return true;
+  });
+}
+
 export default function LibraryPage() {
-  const filteredGames = useGameStore((s) => s.filteredGames);
-  const games = filteredGames();
+  const games = useFilteredGames();
 
   return (
     <>
